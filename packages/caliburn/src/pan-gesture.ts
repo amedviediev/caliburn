@@ -1,0 +1,195 @@
+import { EVENT, POINTER_BUTTON, throttleRAF } from "@excalidraw/common";
+import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
+import { getCenter, getDistance } from "@excalidraw/excalidraw/gesture";
+import { getViewportForZoomWithScrollConstraints } from "@excalidraw/excalidraw/viewport";
+import { isHandToolActive } from "@excalidraw/excalidraw/appState";
+
+import type { Gesture } from "@excalidraw/excalidraw/types";
+
+import type { CaliburnEditorComponent } from "./editor.component";
+
+export const gesture: Gesture = {
+  pointers: new Map(),
+  lastCenter: null,
+  initialDistance: null,
+  initialScale: null,
+};
+
+let isPanning = false;
+
+export const isGestureActive = () => gesture.pointers.size >= 2 || isPanning;
+
+let lastPointerUp: (() => void) | null = null;
+
+// Returns whether the event is a panning
+export const handleCanvasPanUsingWheelOrSpaceDrag = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+): boolean => {
+  if (
+    !(
+      gesture.pointers.size <= 1 &&
+      (event.button === POINTER_BUTTON.WHEEL ||
+        (event.button === POINTER_BUTTON.MAIN &&
+          isHandToolActive(editor.state)) ||
+        editor.state.viewModeEnabled)
+    )
+  ) {
+    return false;
+  }
+  isPanning = true;
+
+  event.preventDefault();
+
+  let { clientX: lastX, clientY: lastY } = event;
+  const onPointerMove = throttleRAF((event: PointerEvent) => {
+    const deltaX = lastX - event.clientX;
+    const deltaY = lastY - event.clientY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+
+    editor.viewport.translate({
+      scrollX: editor.state.scrollX - deltaX / editor.state.zoom.value,
+      scrollY: editor.state.scrollY - deltaY / editor.state.zoom.value,
+    });
+  });
+  const teardown = (lastPointerUp = () => {
+    lastPointerUp = null;
+    isPanning = false;
+    editor.setState(
+      {
+        cursorButton: "up",
+      },
+      // Runs after the trailing throttled pointer move has committed, so
+      // the snap-back starts from the pan's actual final viewport.
+      editor.viewport.releaseOverscroll,
+    );
+    window.removeEventListener(EVENT.POINTER_MOVE, onPointerMove);
+    window.removeEventListener(EVENT.POINTER_UP, teardown);
+    window.removeEventListener(EVENT.BLUR, teardown);
+    onPointerMove.flush();
+  });
+  window.addEventListener(EVENT.BLUR, teardown);
+  window.addEventListener(EVENT.POINTER_MOVE, onPointerMove, {
+    passive: true,
+  });
+  window.addEventListener(EVENT.POINTER_UP, teardown);
+  return true;
+};
+
+export const updateGestureOnPointerDown = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+): void => {
+  gesture.pointers.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY,
+  });
+
+  if (gesture.pointers.size === 2) {
+    gesture.lastCenter = getCenter(gesture.pointers);
+    gesture.initialScale = editor.state.zoom.value;
+    gesture.initialDistance = getDistance(
+      Array.from(gesture.pointers.values()),
+    );
+  }
+};
+
+/**
+ * Tracks the pointer within the ongoing multi-touch gesture and applies
+ * the two-finger pinch zoom/pan, if any.
+ */
+export const updateMultiTouchGesture = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+) => {
+  if (gesture.pointers.has(event.pointerId)) {
+    gesture.pointers.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }
+
+  const initialScale = gesture.initialScale;
+  if (
+    gesture.pointers.size === 2 &&
+    gesture.lastCenter &&
+    initialScale &&
+    gesture.initialDistance
+  ) {
+    const center = getCenter(gesture.pointers);
+    const deltaX = center.x - gesture.lastCenter.x;
+    const deltaY = center.y - gesture.lastCenter.y;
+    gesture.lastCenter = center;
+
+    const distance = getDistance(Array.from(gesture.pointers.values()));
+    const scaleFactor =
+      editor.state.activeTool.type === "freedraw" && editor.state.penMode
+        ? 1
+        : distance / gesture.initialDistance;
+
+    const nextZoom = scaleFactor
+      ? getNormalizedZoom(initialScale * scaleFactor)
+      : editor.state.zoom.value;
+
+    editor.setState((state) => {
+      // Preserve any existing screen-space overscroll through the zoom,
+      // then apply this frame's pan delta on top. `viewport.translate`
+      // rubberband-clamps the combined result against the scroll lock.
+      const zoomedViewport = getViewportForZoomWithScrollConstraints(
+        {
+          viewportX: center.x,
+          viewportY: center.y,
+          nextZoom,
+        },
+        state,
+      );
+      const zoomValue = zoomedViewport.zoom.value;
+
+      editor.viewport.translate(
+        {
+          zoom: zoomedViewport.zoom,
+          // 2x multiplier is just a magic number that makes this work correctly
+          // on touchscreen devices (note: if we get report that panning is slower/faster
+          // than actual movement, consider swapping with devicePixelRatio)
+          scrollX: zoomedViewport.scrollX + (2 * deltaX) / zoomValue,
+          scrollY: zoomedViewport.scrollY + (2 * deltaY) / zoomValue,
+          shouldCacheIgnoreZoom: true,
+        },
+        { zoomPreConstrained: true },
+      );
+
+      return null;
+    });
+  } else {
+    gesture.lastCenter = gesture.initialDistance = gesture.initialScale = null;
+  }
+};
+
+export const removePointer = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+) => {
+  const wasMultiTouchGesture = gesture.pointers.size >= 2;
+  gesture.pointers.delete(event.pointerId);
+
+  // the multi-touch viewport gesture just disengaged: release the
+  // rubberband that was withheld while it was active
+  // (see `snapBackToScrollConstraints`)
+  if (
+    wasMultiTouchGesture &&
+    gesture.pointers.size < 2 &&
+    editor.state.scrollConstraints
+  ) {
+    editor.viewport.releaseOverscroll();
+  }
+};
+
+export const resetGesture = () => {
+  isPanning = false;
+  lastPointerUp?.();
+  gesture.pointers.clear();
+  gesture.lastCenter = null;
+  gesture.initialDistance = null;
+  gesture.initialScale = null;
+};

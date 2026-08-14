@@ -7,7 +7,15 @@ import {
   viewChild,
 } from "@angular/core";
 
-import { TOOL_TYPE, updateActiveTool } from "@excalidraw/common";
+import {
+  DEFAULT_UI_OPTIONS,
+  MIN_ZOOM,
+  POINTER_BUTTON,
+  TOOL_TYPE,
+  ZOOM_STEP,
+  debounce,
+  updateActiveTool,
+} from "@excalidraw/common";
 import {
   Scene,
   Store,
@@ -22,7 +30,13 @@ import { KEYS } from "@excalidraw/common";
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
 import { History } from "@excalidraw/excalidraw/history";
-import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
+import {
+  getScrollToContentState,
+  getViewportForZoomWithScrollConstraints,
+} from "@excalidraw/excalidraw/viewport";
+import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
+import { ActionManager } from "./actions/manager";
+import { canvasActions } from "./actions/actionCanvas";
 
 import type { ElementRef } from "@angular/core";
 import type { EditorInterface } from "@excalidraw/common";
@@ -35,8 +49,18 @@ import type {
   ToolType,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
+import type { ActionResult } from "@excalidraw/excalidraw/actions/types";
 
 import { createTestHook } from "./test-hook";
+import {
+  gesture,
+  handleCanvasPanUsingWheelOrSpaceDrag,
+  isGestureActive,
+  removePointer,
+  resetGesture,
+  updateGestureOnPointerDown,
+  updateMultiTouchGesture,
+} from "./pan-gesture";
 import {
   handleSelectionPointerDown,
   handleSelectionPointerMove,
@@ -86,6 +110,7 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         (pointerdown)="handleCanvasPointerDown($event)"
         (pointermove)="handleCanvasPointerMove($event)"
         (pointerup)="handleCanvasPointerUp($event)"
+        (wheel)="handleWheel($event)"
       ></canvas>
     </div>
   `,
@@ -133,20 +158,62 @@ export class CaliburnEditorComponent
   readonly viewport = new AppViewport(this as any, {
     getContainer: () => this.containerRef()?.nativeElement ?? null,
     getStylesPanelMode: () => "full",
-    isGestureActive: () => false,
+    isGestureActive,
   });
 
-  readonly actionManager = {
-    executeAction: (_action: unknown): void => {
-      throw new Error("actionManager is not ported yet");
-    },
+  readonly props = {
+    UIOptions: DEFAULT_UI_OPTIONS,
   };
+
+  isInteractionEnabled() {
+    return true;
+  }
+
+  isNavigationEnabled() {
+    return true;
+  }
+
+  syncActionResult = (actionResult: ActionResult) => {
+    if (this.unmounted || actionResult === false) {
+      return;
+    }
+
+    this.store.scheduleAction(actionResult.captureUpdate);
+
+    let didUpdate = false;
+
+    if (actionResult.elements) {
+      this.scene.replaceAllElements(actionResult.elements);
+      didUpdate = true;
+    }
+
+    if (actionResult.appState || this.state.contextMenu) {
+      this.setState((prevAppState) => ({
+        ...prevAppState,
+        ...(actionResult.appState || {}),
+        contextMenu: null,
+      }));
+      didUpdate = true;
+    }
+
+    if (!didUpdate) {
+      this.scene.triggerUpdate();
+    }
+  };
+
+  readonly actionManager = new ActionManager(
+    this.syncActionResult,
+    () => this.state,
+    () => this.scene.getElementsIncludingDeleted(),
+    this,
+  );
 
   private readonly cdr = inject(ChangeDetectorRef);
   private removeSceneUpdateListener: (() => void) | null = null;
   private pointerDownState: PointerDownState | null = null;
 
   constructor() {
+    this.actionManager.registerAll(canvasActions);
     const hook = createTestHook();
     Object.defineProperties(hook, {
       state: {
@@ -197,6 +264,7 @@ export class CaliburnEditorComponent
 
   ngOnDestroy() {
     this.unmounted = true;
+    resetGesture();
     document.removeEventListener("keydown", this.onKeyDown);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
@@ -268,8 +336,100 @@ export class CaliburnEditorComponent
     if (this.maybeHandlePageScrollKeyDown(event)) {
       // the editor consumes the input — the page must not scroll along
       event.preventDefault();
+      return;
     }
+    this.actionManager.handleKeyDown(event);
   };
+
+  handleWheel = (event: WheelEvent) => {
+    // NOTE no preventDefault so the page can scroll over the editor
+    if (!this.isNavigationEnabled()) {
+      return;
+    }
+    if (
+      !(
+        event.target instanceof HTMLCanvasElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLIFrameElement
+      )
+    ) {
+      // prevent zooming the browser (but allow scrolling DOM)
+      if (event[KEYS.CTRL_OR_CMD]) {
+        event.preventDefault();
+      }
+
+      return;
+    }
+
+    event.preventDefault();
+
+    const { deltaX, deltaY } = event;
+    // note that event.ctrlKey is necessary to handle pinch zooming
+    if (event.metaKey || event.ctrlKey) {
+      const sign = Math.sign(deltaY);
+      const MAX_STEP = ZOOM_STEP * 100;
+      const absDelta = Math.abs(deltaY);
+      let delta = deltaY;
+      if (absDelta > MAX_STEP) {
+        delta = MAX_STEP * sign;
+      }
+
+      let newZoom = this.state.zoom.value - delta / 100;
+      // increase zoom steps the more zoomed-in we are (applies to >100% only)
+      newZoom +=
+        Math.log10(Math.max(1, this.state.zoom.value)) *
+        -sign *
+        // reduced amplification for small deltas (small movements on a trackpad)
+        Math.min(1, absDelta / 20);
+
+      const minZoom = this.state.scrollConstraints?.lockZoom
+        ? this.state.scrollConstraints.zoom
+        : MIN_ZOOM;
+      newZoom = Math.max(newZoom, minZoom);
+
+      const didTranslate = this.viewport.translate(
+        (state) => ({
+          ...getViewportForZoomWithScrollConstraints(
+            {
+              viewportX: this.viewport.lastPosition.x,
+              viewportY: this.viewport.lastPosition.y,
+              nextZoom: getNormalizedZoom(newZoom),
+            },
+            state,
+          ),
+          shouldCacheIgnoreZoom: true,
+        }),
+        {
+          zoomPreConstrained: true,
+          preserveScrollConstraintsSnapBack: true,
+        },
+      );
+      if (didTranslate) {
+        this.resetShouldCacheIgnoreZoomDebounced();
+      }
+      return;
+    }
+
+    // scroll horizontally when shift pressed
+    if (event.shiftKey) {
+      this.viewport.translate(({ zoom, scrollX }) => ({
+        // on Mac, shift+wheel tends to result in deltaX
+        scrollX: scrollX - (deltaY || deltaX) / zoom.value,
+      }));
+      return;
+    }
+
+    this.viewport.translate(({ zoom, scrollX, scrollY }) => ({
+      scrollX: scrollX - deltaX / zoom.value,
+      scrollY: scrollY - deltaY / zoom.value,
+    }));
+  };
+
+  private resetShouldCacheIgnoreZoomDebounced = debounce(() => {
+    if (!this.unmounted) {
+      this.setState({ shouldCacheIgnoreZoom: false });
+    }
+  }, 300);
 
   /**
    * PageUp/PageDown scroll the canvas by a page — vertically, or
@@ -408,18 +568,51 @@ export class CaliburnEditorComponent
   };
 
   handleCanvasPointerDown(event: PointerEvent) {
+    if (handleCanvasPanUsingWheelOrSpaceDrag(this, event)) {
+      return;
+    }
+
+    updateGestureOnPointerDown(this, event);
+
+    // only handle left mouse button or touch
+    if (
+      event.button !== POINTER_BUTTON.MAIN &&
+      event.button !== POINTER_BUTTON.TOUCH
+    ) {
+      return;
+    }
+
+    // don't select while panning
+    if (gesture.pointers.size > 1) {
+      if (this.state.selectionElement) {
+        this.setState({ selectionElement: null });
+      }
+      this.pointerDownState = null;
+      return;
+    }
+
     if (this.state.activeTool.type === "selection") {
       this.pointerDownState = handleSelectionPointerDown(this, event);
     }
   }
 
   handleCanvasPointerMove(event: PointerEvent) {
+    this.viewport.lastPosition.x = event.clientX;
+    this.viewport.lastPosition.y = event.clientY;
+
+    updateMultiTouchGesture(this, event);
+
+    if (gesture.pointers.size >= 2) {
+      return;
+    }
+
     if (this.pointerDownState) {
       handleSelectionPointerMove(this, this.pointerDownState, event);
     }
   }
 
-  handleCanvasPointerUp(_event: PointerEvent) {
+  handleCanvasPointerUp(event: PointerEvent) {
+    removePointer(this, event);
     if (this.pointerDownState) {
       handleSelectionPointerUp(this, this.pointerDownState);
       this.pointerDownState = null;
