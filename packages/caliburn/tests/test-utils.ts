@@ -67,6 +67,31 @@ export const act = <T>(cb: () => T): T => {
   return result;
 };
 
+/**
+ * Test bodies sometimes wrap <Excalidraw> in extra host markup — resolve the
+ * editor element's props wherever it sits in the JSX tree.
+ */
+const findEditorProps = (ui: unknown): Record<string, unknown> | null => {
+  if (ui == null || typeof ui !== "object") {
+    return null;
+  }
+  const element = ui as {
+    type?: unknown;
+    props?: Record<string, unknown> & { children?: unknown };
+  };
+  if (typeof element.type === "function") {
+    return element.props ?? null;
+  }
+  const children = element.props?.children;
+  for (const child of Array.isArray(children) ? children : [children]) {
+    const found = findEditorProps(child);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
 export const unmountComponent = () => {
   if (GlobalTestState.fixture) {
     GlobalTestState.fixture.destroy();
@@ -91,7 +116,7 @@ const render = async (
   const fixture = TestBed.createComponent(CaliburnEditorComponent);
   GlobalTestState.fixture = fixture;
 
-  const props: Record<string, unknown> = (ui as any)?.props ?? {};
+  const props: Record<string, unknown> = findEditorProps(ui) ?? {};
   for (const [key, value] of Object.entries(props)) {
     if (key === "children") {
       continue;

@@ -4,6 +4,7 @@ import {
   Component,
   inject,
   input,
+  viewChild,
 } from "@angular/core";
 
 import { TOOL_TYPE, updateActiveTool } from "@excalidraw/common";
@@ -16,9 +17,15 @@ import {
   syncInvalidIndices,
 } from "@excalidraw/element";
 
-import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
-import { History } from "@excalidraw/excalidraw/history";
+import { KEYS } from "@excalidraw/common";
 
+import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
+import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
+import { History } from "@excalidraw/excalidraw/history";
+import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
+
+import type { ElementRef } from "@angular/core";
+import type { EditorInterface } from "@excalidraw/common";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { Mutable } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
@@ -27,6 +34,7 @@ import type {
   SceneData,
   ToolType,
 } from "@excalidraw/excalidraw/types";
+import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 
 import { createTestHook } from "./test-hook";
 import {
@@ -37,7 +45,7 @@ import {
 
 import type { PointerDownState } from "./selection-interaction";
 
-import type { OnDestroy, OnInit } from "@angular/core";
+import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
 
 type SetStateArg =
   | Partial<AppState>
@@ -55,7 +63,7 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="excalidraw excalidraw-container">
+    <div #container class="excalidraw excalidraw-container">
       <div class="App-toolbar">
         @for (tool of toolbarTools; track tool) {
         <button
@@ -82,12 +90,20 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
     </div>
   `,
 })
-export class CaliburnEditorComponent implements OnInit, OnDestroy {
+export class CaliburnEditorComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   readonly handleKeyboardGlobally = input(false);
   readonly initialData = input<{
     elements?: readonly ExcalidrawElement[];
     appState?: Partial<AppState>;
+    scrollToContent?: boolean;
   } | null>(null);
+  readonly initialState = input<{
+    viewport?: Omit<SetViewportOptions, "animation">;
+  } | null>(null);
+
+  readonly containerRef = viewChild<ElementRef<HTMLDivElement>>("container");
 
   readonly toolbarTools = TOOLBAR_TOOLS;
 
@@ -102,6 +118,23 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
   readonly scene = new Scene();
   readonly store = new Store(this as any);
   readonly history = new History(this.store);
+
+  readonly editorInterface: EditorInterface = {
+    formFactor: "desktop",
+    desktopUIMode: "full",
+    userAgent: { isMobileDevice: false, platform: "other" },
+    isTouchScreen: false,
+    canFitSidebar: true,
+    isLandscape: true,
+  };
+
+  unmounted = false;
+
+  readonly viewport = new AppViewport(this as any, {
+    getContainer: () => this.containerRef()?.nativeElement ?? null,
+    getStylesPanelMode: () => "full",
+    isGestureActive: () => false,
+  });
 
   readonly actionManager = {
     executeAction: (_action: unknown): void => {
@@ -150,20 +183,21 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     });
 
-    const initialData = this.initialData();
-    if (initialData) {
-      if (initialData.appState) {
-        this.state = { ...this.state, ...initialData.appState };
-      }
-      if (initialData.elements) {
-        this.scene.replaceAllElements(syncInvalidIndices(initialData.elements));
-      }
+    if (this.handleKeyboardGlobally()) {
+      document.addEventListener("keydown", this.onKeyDown);
     }
 
     this.commit();
   }
 
+  ngAfterViewInit() {
+    this.updateDOMRect();
+    this.initializeScene();
+  }
+
   ngOnDestroy() {
+    this.unmounted = true;
+    document.removeEventListener("keydown", this.onKeyDown);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
     this.store.onStoreIncrementEmitter.clear();
@@ -171,6 +205,98 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
     this.store.clear();
     this.scene.destroy();
   }
+
+  private initializeScene() {
+    const initialData = this.initialData();
+    if (initialData?.appState) {
+      this.setState(initialData.appState);
+    }
+    if (initialData?.elements) {
+      this.scene.replaceAllElements(syncInvalidIndices(initialData.elements));
+    }
+
+    const initialViewport = this.initialState()?.viewport;
+    if (initialViewport) {
+      const initialViewportState = this.viewport.resolveInitialViewport(
+        initialViewport,
+        this.scene.getNonDeletedElementsMap(),
+        this.state,
+      );
+      if (initialViewportState) {
+        this.setState({ ...initialViewportState });
+      }
+    } else if (initialData?.scrollToContent) {
+      this.setState(
+        getScrollToContentState(this.scene.getNonDeletedElements(), this.state),
+      );
+    }
+  }
+
+  private updateDOMRect() {
+    const container = this.containerRef()?.nativeElement;
+    if (!container) {
+      return;
+    }
+    const {
+      width,
+      height,
+      left: offsetLeft,
+      top: offsetTop,
+    } = container.getBoundingClientRect();
+    const {
+      width: currentWidth,
+      height: currentHeight,
+      offsetTop: currentOffsetTop,
+      offsetLeft: currentOffsetLeft,
+    } = this.state;
+
+    if (
+      width === currentWidth &&
+      height === currentHeight &&
+      offsetLeft === currentOffsetLeft &&
+      offsetTop === currentOffsetTop
+    ) {
+      return;
+    }
+
+    this.setState({ width, height, offsetLeft, offsetTop });
+    // a smaller viewport may push the min zoom up / shrink the pan range
+    this.viewport.constrain();
+  }
+
+  private onKeyDown = (event: KeyboardEvent) => {
+    if (this.maybeHandlePageScrollKeyDown(event)) {
+      // the editor consumes the input — the page must not scroll along
+      event.preventDefault();
+    }
+  };
+
+  /**
+   * PageUp/PageDown scroll the canvas by a page — vertically, or
+   * horizontally with shift. Respects `appState.scrollConstraints`
+   * (via `viewport.translate`).
+   */
+  private maybeHandlePageScrollKeyDown = (event: KeyboardEvent): boolean => {
+    if (event.key !== KEYS.PAGE_UP && event.key !== KEYS.PAGE_DOWN) {
+      return false;
+    }
+    let offset =
+      (event.shiftKey ? this.state.width : this.state.height) /
+      this.state.zoom.value;
+    if (event.key === KEYS.PAGE_DOWN) {
+      offset = -offset;
+    }
+    if (event.shiftKey) {
+      this.viewport.translate((state) => ({
+        scrollX: state.scrollX + offset,
+      }));
+    } else {
+      this.viewport.translate((state) => ({
+        scrollY: state.scrollY + offset,
+      }));
+    }
+    return true;
+  };
 
   setState(state: SetStateArg, callback?: () => void) {
     const partial = typeof state === "function" ? state(this.state) : state;
@@ -299,6 +425,8 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
       this.pointerDownState = null;
     }
   }
+
+  requestUnfollow() {}
 
   refreshEditorInterface() {}
 
