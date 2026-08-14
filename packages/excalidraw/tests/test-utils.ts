@@ -17,16 +17,12 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import type { AllPossibleKeys } from "@excalidraw/common/utility-types";
 
-import { STORAGE_KEYS } from "../../../excalidraw-app/app_constants";
-
 import { Pointer, UI } from "./helpers/ui";
 import * as toolQueries from "./queries/toolQueries";
 
 import type { History } from "../history";
 
 import type { RenderResult, RenderOptions } from "@testing-library/react";
-
-import type { ImportedDataState } from "../data/types";
 
 export { cleanup as unmountComponent };
 
@@ -37,21 +33,13 @@ const customQueries = {
 
 type TestRenderFn = (
   ui: React.ReactElement,
-  options?: Omit<
-    RenderOptions & { localStorageData?: ImportedDataState },
-    "queries"
-  >,
+  options?: Omit<RenderOptions, "queries">,
 ) => Promise<RenderResult<typeof customQueries>>;
 
 const renderApp: TestRenderFn = async (ui, options) => {
   // when tests reuse Pointer instances let's reset the last
   // pointer poisitions so there's no leak between tests
   Pointer.resetAll();
-
-  if (options?.localStorageData) {
-    initLocalStorage(options.localStorageData);
-    delete options.localStorageData;
-  }
 
   const renderResult = render(ui, {
     queries: customQueries,
@@ -130,21 +118,6 @@ export class GlobalTestState {
     return null!;
   }
 }
-
-const initLocalStorage = (data: ImportedDataState) => {
-  if (data.elements) {
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_ELEMENTS,
-      JSON.stringify(data.elements),
-    );
-  }
-  if (data.appState) {
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_APP_STATE,
-      JSON.stringify(data.appState),
-    );
-  }
-};
 
 const originalGetBoundingClientRect =
   global.window.HTMLDivElement.prototype.getBoundingClientRect;
