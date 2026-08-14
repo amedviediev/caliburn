@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "strictPropertyInitialization": false
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
+  "include": ["src", "tests"]
+}
