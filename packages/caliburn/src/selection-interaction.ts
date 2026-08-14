@@ -20,15 +20,35 @@ import { pointFrom } from "@excalidraw/math";
 
 import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
+import { originInGridFromEvent } from "./create-interaction";
+
 import type { CaliburnEditorComponent } from "./editor.component";
 
 export interface PointerDownState {
   origin: { x: number; y: number };
+  originInGrid: { x: number; y: number };
   lastCoords: { x: number; y: number };
   hit: { element: NonDeleted<ExcalidrawElement> | null };
   boxSelection: { hasOccurred: boolean };
+  drag: { hasOccurred: boolean };
   withCmdOrCtrl: boolean;
 }
+
+export const initialPointerDownState = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+): PointerDownState => {
+  const origin = viewportCoordsToSceneCoords(event, editor.state);
+  return {
+    origin,
+    originInGrid: originInGridFromEvent(editor, event),
+    lastCoords: { ...origin },
+    hit: { element: null },
+    boxSelection: { hasOccurred: false },
+    drag: { hasOccurred: false },
+    withCmdOrCtrl: event.metaKey || event.ctrlKey,
+  };
+};
 
 const getElementHitThreshold = (
   editor: CaliburnEditorComponent,
@@ -69,16 +89,10 @@ export const handleSelectionPointerDown = (
   editor: CaliburnEditorComponent,
   event: PointerEvent,
 ): PointerDownState => {
-  const origin = viewportCoordsToSceneCoords(event, editor.state);
+  const pointerDownState = initialPointerDownState(editor, event);
+  const { origin } = pointerDownState;
   const hitElement = getElementAtPosition(editor, origin.x, origin.y);
-
-  const pointerDownState: PointerDownState = {
-    origin,
-    lastCoords: { ...origin },
-    hit: { element: hitElement },
-    boxSelection: { hasOccurred: false },
-    withCmdOrCtrl: event.metaKey || event.ctrlKey,
-  };
+  pointerDownState.hit.element = hitElement;
 
   const someHitElementIsSelected =
     hitElement != null && !!editor.state.selectedElementIds[hitElement.id];

@@ -14,7 +14,9 @@ import {
   TOOL_TYPE,
   ZOOM_STEP,
   debounce,
+  getStrokeWidthByKey,
   updateActiveTool,
+  viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
 import {
   Scene,
@@ -53,6 +55,11 @@ import { ActionManager } from "./actions/manager";
 
 import { createTestHook } from "./test-hook";
 import {
+  createGenericElementOnPointerDown,
+  finalizeNewElementOnPointerUp,
+  maybeDragNewElement,
+} from "./create-interaction";
+import {
   gesture,
   handleCanvasPanUsingWheelOrSpaceDrag,
   isGestureActive,
@@ -65,6 +72,7 @@ import {
   handleSelectionPointerDown,
   handleSelectionPointerMove,
   handleSelectionPointerUp,
+  initialPointerDownState,
 } from "./selection-interaction";
 
 import type { ElementRef } from "@angular/core";
@@ -593,8 +601,21 @@ export class CaliburnEditorComponent
       return;
     }
 
-    if (this.state.activeTool.type === "selection") {
+    const activeToolType = this.state.activeTool.type;
+    if (activeToolType === "selection") {
       this.pointerDownState = handleSelectionPointerDown(this, event);
+    } else if (
+      activeToolType === "rectangle" ||
+      activeToolType === "diamond" ||
+      activeToolType === "ellipse" ||
+      activeToolType === "embeddable"
+    ) {
+      this.pointerDownState = initialPointerDownState(this, event);
+      createGenericElementOnPointerDown(
+        this,
+        activeToolType,
+        this.pointerDownState,
+      );
     }
   }
 
@@ -609,16 +630,42 @@ export class CaliburnEditorComponent
     }
 
     if (this.pointerDownState) {
-      handleSelectionPointerMove(this, this.pointerDownState, event);
+      if (this.state.newElement) {
+        const coords = viewportCoordsToSceneCoords(event, this.state);
+        this.pointerDownState.lastCoords = coords;
+        this.pointerDownState.drag.hasOccurred = true;
+        maybeDragNewElement(this, this.pointerDownState, event);
+      } else {
+        handleSelectionPointerMove(this, this.pointerDownState, event);
+      }
     }
   }
 
   handleCanvasPointerUp(event: PointerEvent) {
     removePointer(this, event);
     if (this.pointerDownState) {
-      handleSelectionPointerUp(this, this.pointerDownState);
+      if (this.state.newElement) {
+        finalizeNewElementOnPointerUp(this, this.pointerDownState);
+      } else {
+        handleSelectionPointerUp(this, this.pointerDownState);
+      }
       this.pointerDownState = null;
     }
+  }
+
+  insertNewElement(element: ExcalidrawElement) {
+    this.scene.insertElementsAtIndex([element], null);
+  }
+
+  isToolLocked(): boolean {
+    return this.state.activeTool.locked;
+  }
+
+  getCurrentItemStrokeWidth(elementType: ExcalidrawElement["type"]) {
+    return getStrokeWidthByKey(
+      elementType,
+      this.state.currentItemStrokeWidthKey,
+    );
   }
 
   requestUnfollow() {}
