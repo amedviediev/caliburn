@@ -14,12 +14,7 @@ import type {
 } from "../types";
 import type React from "react";
 
-export type ActionSource =
-  | "ui"
-  | "keyboard"
-  | "contextMenu"
-  | "api"
-  | "commandPalette";
+export type ActionSource = "ui" | "keyboard" | "contextMenu" | "api";
 
 /** if false, the action should be prevented */
 export type ActionResult =
@@ -132,7 +127,6 @@ export type ActionName =
   | "updateFrameRendering"
   | "createContainerFromText"
   | "wrapTextInContainer"
-  | "commandPalette"
   | "autoResize"
   | "elementStats"
   | "searchMenu"
