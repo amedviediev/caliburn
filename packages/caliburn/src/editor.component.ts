@@ -7,7 +7,14 @@ import {
 } from "@angular/core";
 
 import { TOOL_TYPE, updateActiveTool } from "@excalidraw/common";
-import { Scene, Store, getObservedAppState } from "@excalidraw/element";
+import {
+  Scene,
+  Store,
+  getObservedAppState,
+  isElementInGroup,
+  makeNextSelectedElementIds,
+  syncInvalidIndices,
+} from "@excalidraw/element";
 
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { History } from "@excalidraw/excalidraw/history";
@@ -22,6 +29,13 @@ import type {
 } from "@excalidraw/excalidraw/types";
 
 import { createTestHook } from "./test-hook";
+import {
+  handleSelectionPointerDown,
+  handleSelectionPointerMove,
+  handleSelectionPointerUp,
+} from "./selection-interaction";
+
+import type { PointerDownState } from "./selection-interaction";
 
 import type { OnDestroy, OnInit } from "@angular/core";
 
@@ -59,12 +73,21 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         ></button>
       </div>
       <canvas class="excalidraw__canvas static"></canvas>
-      <canvas class="excalidraw__canvas interactive"></canvas>
+      <canvas
+        class="excalidraw__canvas interactive"
+        (pointerdown)="handleCanvasPointerDown($event)"
+        (pointermove)="handleCanvasPointerMove($event)"
+        (pointerup)="handleCanvasPointerUp($event)"
+      ></canvas>
     </div>
   `,
 })
 export class CaliburnEditorComponent implements OnInit, OnDestroy {
   readonly handleKeyboardGlobally = input(false);
+  readonly initialData = input<{
+    elements?: readonly ExcalidrawElement[];
+    appState?: Partial<AppState>;
+  } | null>(null);
 
   readonly toolbarTools = TOOLBAR_TOOLS;
 
@@ -88,6 +111,7 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
 
   private readonly cdr = inject(ChangeDetectorRef);
   private removeSceneUpdateListener: (() => void) | null = null;
+  private pointerDownState: PointerDownState | null = null;
 
   constructor() {
     const hook = createTestHook();
@@ -125,6 +149,17 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
       this.commit();
       this.cdr.detectChanges();
     });
+
+    const initialData = this.initialData();
+    if (initialData) {
+      if (initialData.appState) {
+        this.state = { ...this.state, ...initialData.appState };
+      }
+      if (initialData.elements) {
+        this.scene.replaceAllElements(syncInvalidIndices(initialData.elements));
+      }
+    }
+
     this.commit();
   }
 
@@ -176,12 +211,25 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  clearSelection(_hitElement?: ExcalidrawElement | null) {
-    this.setState({
-      selectedElementIds: {},
-      selectedGroupIds: {},
-      editingGroupId: null,
+  clearSelection(hitElement?: ExcalidrawElement | null) {
+    this.setState((prevState) => ({
+      selectedElementIds: makeNextSelectedElementIds({}, prevState),
       activeEmbeddable: null,
+      selectedGroupIds: {},
+      // Continue editing the same group if the user selected a different
+      // element from it
+      editingGroupId:
+        prevState.editingGroupId &&
+        hitElement != null &&
+        isElementInGroup(hitElement, prevState.editingGroupId)
+          ? prevState.editingGroupId
+          : null,
+    }));
+    this.setState({
+      selectedElementIds: makeNextSelectedElementIds({}, this.state),
+      activeEmbeddable: null,
+      previousSelectedElementIds: this.state.selectedElementIds,
+      selectedLinearElement: null,
     });
   }
 
@@ -232,6 +280,25 @@ export class CaliburnEditorComponent implements OnInit, OnDestroy {
       this.setState({ collaborators });
     }
   };
+
+  handleCanvasPointerDown(event: PointerEvent) {
+    if (this.state.activeTool.type === "selection") {
+      this.pointerDownState = handleSelectionPointerDown(this, event);
+    }
+  }
+
+  handleCanvasPointerMove(event: PointerEvent) {
+    if (this.pointerDownState) {
+      handleSelectionPointerMove(this, this.pointerDownState, event);
+    }
+  }
+
+  handleCanvasPointerUp(_event: PointerEvent) {
+    if (this.pointerDownState) {
+      handleSelectionPointerUp(this, this.pointerDownState);
+      this.pointerDownState = null;
+    }
+  }
 
   refreshEditorInterface() {}
 
