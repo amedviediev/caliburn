@@ -77,6 +77,11 @@ import {
   maybeSuggestBindingOnHover,
 } from "./linear-interaction";
 import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
+import {
+  finalizeFreeDrawOnPointerUp,
+  handleFreeDrawElementOnPointerDown,
+  maybeDragFreeDrawElement,
+} from "./freedraw-interaction";
 import { getEffectiveGridSize } from "./create-interaction";
 import {
   gesture,
@@ -717,6 +722,14 @@ export class CaliburnEditorComponent
         activeToolType,
         this.pointerDownState,
       );
+    } else if (activeToolType === "freedraw") {
+      this.pointerDownState = initialPointerDownState(this, event);
+      handleFreeDrawElementOnPointerDown(
+        this,
+        event,
+        activeToolType,
+        this.pointerDownState,
+      );
     }
   }
 
@@ -733,6 +746,9 @@ export class CaliburnEditorComponent
     if (this.pointerDownState) {
       const coords = viewportCoordsToSceneCoords(event, this.state);
       this.pointerDownState.lastCoords = coords;
+      if (maybeDragFreeDrawElement(this, this.pointerDownState, event)) {
+        return;
+      }
       if (maybeDragLinearPoint(this, this.pointerDownState, event)) {
         return;
       }
@@ -752,7 +768,9 @@ export class CaliburnEditorComponent
   handleCanvasPointerUp(event: PointerEvent) {
     removePointer(this, event);
     if (this.pointerDownState) {
-      if (isLinearElement(this.state.newElement)) {
+      if (this.state.newElement?.type === "freedraw") {
+        finalizeFreeDrawOnPointerUp(this, event);
+      } else if (isLinearElement(this.state.newElement)) {
         finalizeLinearOnPointerUp(this, this.pointerDownState, event);
       } else if (this.state.newElement) {
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
