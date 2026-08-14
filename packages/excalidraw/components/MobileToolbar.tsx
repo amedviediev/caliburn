@@ -5,8 +5,6 @@ import { KEYS, capitalizeString } from "@excalidraw/common";
 
 import { t } from "../i18n";
 
-import { useTunnels } from "../context/tunnels";
-
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import { ToolPopover } from "./ToolPopover";
 import {
@@ -31,7 +29,6 @@ import {
   laserPointerToolIcon,
   drawShapeToolIcon,
   bucketFillIcon,
-  mermaidLogoIcon,
   MagicIcon,
 } from "./icons";
 
@@ -78,8 +75,6 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
   const laserToolSelected = activeTool.type === "laser";
   const embeddableToolSelected = activeTool.type === "embeddable";
   const bucketFillToolSelected = activeTool.type === "bucketfill";
-
-  const { TTDDialogTriggerTunnel } = useTunnels();
 
   const SHAPE_TOOLS = (["rectangle", "diamond", "ellipse"] as const).map(
     (type) => ({
@@ -332,14 +327,6 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
           <div style={{ margin: "6px 0", fontSize: 14, fontWeight: 600 }}>
             Generate
           </div>
-          {app.props.aiEnabled !== false && <TTDDialogTriggerTunnel.Out />}
-          <DropdownMenu.Item
-            onSelect={() => app.setOpenDialog({ name: "ttd", tab: "mermaid" })}
-            icon={mermaidLogoIcon}
-            data-testid="toolbar-embeddable"
-          >
-            {t("toolBar.mermaidToExcalidraw")}
-          </DropdownMenu.Item>
           {app.props.aiEnabled !== false && app.plugins.diagramToCode && (
             <>
               <DropdownMenu.Item
