@@ -4,6 +4,8 @@ import { KEYS } from "@excalidraw/common";
 
 import { Excalidraw } from "../src/index";
 
+import { h } from "../src/test-hook";
+
 import { API } from "./helpers/api";
 import { Keyboard } from "./helpers/ui";
 import {
@@ -12,8 +14,6 @@ import {
   restoreOriginalGetBoundingClientRect,
   waitFor,
 } from "./test-utils";
-
-import { h } from "../src/test-hook";
 
 describe("appState", () => {
   it("scroll-to-content on init works with non-zero offsets", async () => {

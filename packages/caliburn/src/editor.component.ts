@@ -35,10 +35,7 @@ import {
   getViewportForZoomWithScrollConstraints,
 } from "@excalidraw/excalidraw/viewport";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
-import { ActionManager } from "./actions/manager";
-import { canvasActions } from "./actions/actionCanvas";
 
-import type { ElementRef } from "@angular/core";
 import type { EditorInterface } from "@excalidraw/common";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { Mutable } from "@excalidraw/common/utility-types";
@@ -50,6 +47,9 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 import type { ActionResult } from "@excalidraw/excalidraw/actions/types";
+
+import { canvasActions } from "./actions/actionCanvas";
+import { ActionManager } from "./actions/manager";
 
 import { createTestHook } from "./test-hook";
 import {
@@ -66,6 +66,8 @@ import {
   handleSelectionPointerMove,
   handleSelectionPointerUp,
 } from "./selection-interaction";
+
+import type { ElementRef } from "@angular/core";
 
 import type { PointerDownState } from "./selection-interaction";
 

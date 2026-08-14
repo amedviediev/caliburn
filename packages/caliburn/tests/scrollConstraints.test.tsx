@@ -3,14 +3,6 @@ import { vi } from "vitest";
 
 import { KEYS, MAX_ZOOM } from "@excalidraw/common";
 
-import { Excalidraw } from "../src/index";
-import {
-  actionResetZoom,
-  actionZoomIn,
-  actionZoomOut,
-  actionZoomToFit,
-  actionZoomToFitSelection,
-} from "../src/actions/actionCanvas";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import {
   snapBackToConstraints,
@@ -24,8 +16,19 @@ import {
 } from "@excalidraw/excalidraw/viewport";
 import { AnimationController } from "@excalidraw/excalidraw/renderer/animation";
 
-import { API } from "./helpers/api";
-import { Keyboard, Pointer } from "./helpers/ui";
+import type { AppState, ScrollConstraints } from "@excalidraw/excalidraw/types";
+
+import {
+  actionResetZoom,
+  actionZoomIn,
+  actionZoomOut,
+  actionZoomToFit,
+  actionZoomToFitSelection,
+} from "../src/actions/actionCanvas";
+import { Excalidraw } from "../src/index";
+
+import { h } from "../src/test-hook";
+
 import {
   fireEvent,
   GlobalTestState,
@@ -34,10 +37,8 @@ import {
   restoreOriginalGetBoundingClientRect,
   waitFor,
 } from "./test-utils";
-
-import type { AppState, ScrollConstraints } from "@excalidraw/excalidraw/types";
-
-import { h } from "../src/test-hook";
+import { Keyboard, Pointer } from "./helpers/ui";
+import { API } from "./helpers/api";
 
 // `mockBoundingClientRect()` makes the viewport 200 x 100
 const VIEWPORT = { width: 200, height: 100 };
