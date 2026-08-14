@@ -9,6 +9,8 @@ import {
 
 import {
   DEFAULT_UI_OPTIONS,
+  ELEMENT_SHIFT_TRANSLATE_AMOUNT,
+  ELEMENT_TRANSLATE_AMOUNT,
   MIN_ZOOM,
   POINTER_BUTTON,
   TOOL_TYPE,
@@ -23,11 +25,14 @@ import {
   Store,
   getObservedAppState,
   isElementInGroup,
+  isBindingElement,
+  isLinearElement,
   makeNextSelectedElementIds,
   syncInvalidIndices,
+  updateBoundElements,
 } from "@excalidraw/element";
 
-import { KEYS } from "@excalidraw/common";
+import { KEYS, isArrowKey } from "@excalidraw/common";
 
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
@@ -39,7 +44,11 @@ import {
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 
 import type { EditorInterface } from "@excalidraw/common";
-import type { ExcalidrawElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawArrowElement,
+  ExcalidrawElement,
+  NonDeleted,
+} from "@excalidraw/element/types";
 import type { Mutable } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
 import type {
@@ -51,6 +60,7 @@ import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 import type { ActionResult } from "@excalidraw/excalidraw/actions/types";
 
 import { canvasActions } from "./actions/actionCanvas";
+import { actionFinalize } from "./actions/actionFinalize";
 import { ActionManager } from "./actions/manager";
 
 import { createTestHook } from "./test-hook";
@@ -59,7 +69,15 @@ import {
   finalizeNewElementOnPointerUp,
   maybeDragNewElement,
 } from "./create-interaction";
+import {
+  finalizeLinearOnPointerUp,
+  handleLinearElementOnPointerDown,
+  handleMultiElementPointerMove,
+  maybeDragLinearPoint,
+  maybeSuggestBindingOnHover,
+} from "./linear-interaction";
 import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
+import { getEffectiveGridSize } from "./create-interaction";
 import {
   gesture,
   handleCanvasPanUsingWheelOrSpaceDrag,
@@ -224,7 +242,7 @@ export class CaliburnEditorComponent
   private pointerDownState: PointerDownState | null = null;
 
   constructor() {
-    this.actionManager.registerAll(canvasActions);
+    this.actionManager.registerAll([...canvasActions, actionFinalize]);
     const hook = createTestHook();
     Object.defineProperties(hook, {
       state: {
@@ -261,9 +279,7 @@ export class CaliburnEditorComponent
       this.cdr.detectChanges();
     });
 
-    if (this.handleKeyboardGlobally()) {
-      document.addEventListener("keydown", this.onKeyDown);
-    }
+    document.addEventListener("keydown", this.onKeyDown);
 
     this.commit();
   }
@@ -349,7 +365,83 @@ export class CaliburnEditorComponent
       event.preventDefault();
       return;
     }
-    this.actionManager.handleKeyDown(event);
+    if (this.actionManager.handleKeyDown(event)) {
+      return;
+    }
+
+    if (isArrowKey(event.key)) {
+      let selectedElements = this.scene.getSelectedElements({
+        selectedElementIds: this.state.selectedElementIds,
+        includeBoundTextElement: true,
+        includeElementsInFrames: true,
+      });
+
+      const arrowIdsToRemove = new Set<string>();
+
+      selectedElements
+        .filter((el): el is NonDeleted<ExcalidrawArrowElement> =>
+          isBindingElement(el),
+        )
+        .filter((arrow) => {
+          const startElementNotInSelection =
+            arrow.startBinding &&
+            !selectedElements.some(
+              (el) => el.id === arrow.startBinding?.elementId,
+            );
+          const endElementNotInSelection =
+            arrow.endBinding &&
+            !selectedElements.some(
+              (el) => el.id === arrow.endBinding?.elementId,
+            );
+          return startElementNotInSelection || endElementNotInSelection;
+        })
+        .forEach((arrow) => arrowIdsToRemove.add(arrow.id));
+
+      selectedElements = selectedElements.filter(
+        (el) => !arrowIdsToRemove.has(el.id),
+      );
+
+      const step =
+        (this.getEffectiveGridSize() &&
+          (event.shiftKey
+            ? ELEMENT_TRANSLATE_AMOUNT
+            : this.getEffectiveGridSize())) ||
+        (event.shiftKey
+          ? ELEMENT_SHIFT_TRANSLATE_AMOUNT
+          : ELEMENT_TRANSLATE_AMOUNT);
+
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (event.key === KEYS.ARROW_LEFT) {
+        offsetX = -step;
+      } else if (event.key === KEYS.ARROW_RIGHT) {
+        offsetX = step;
+      } else if (event.key === KEYS.ARROW_UP) {
+        offsetY = -step;
+      } else if (event.key === KEYS.ARROW_DOWN) {
+        offsetY = step;
+      }
+
+      selectedElements.forEach((element) => {
+        this.scene.mutateElement(
+          element,
+          {
+            x: element.x + offsetX,
+            y: element.y + offsetY,
+          },
+          { informMutation: false, isDragging: false },
+        );
+
+        updateBoundElements(element, this.scene, {
+          simultaneouslyUpdated: selectedElements,
+        });
+      });
+
+      this.scene.triggerUpdate();
+
+      event.preventDefault();
+    }
   };
 
   handleWheel = (event: WheelEvent) => {
@@ -617,6 +709,14 @@ export class CaliburnEditorComponent
         activeToolType,
         this.pointerDownState,
       );
+    } else if (activeToolType === "arrow" || activeToolType === "line") {
+      this.pointerDownState = initialPointerDownState(this, event);
+      handleLinearElementOnPointerDown(
+        this,
+        event,
+        activeToolType,
+        this.pointerDownState,
+      );
     }
   }
 
@@ -631,21 +731,30 @@ export class CaliburnEditorComponent
     }
 
     if (this.pointerDownState) {
+      const coords = viewportCoordsToSceneCoords(event, this.state);
+      this.pointerDownState.lastCoords = coords;
+      if (maybeDragLinearPoint(this, this.pointerDownState, event)) {
+        return;
+      }
       if (this.state.newElement) {
-        const coords = viewportCoordsToSceneCoords(event, this.state);
-        this.pointerDownState.lastCoords = coords;
         this.pointerDownState.drag.hasOccurred = true;
         maybeDragNewElement(this, this.pointerDownState, event);
       } else {
         handleSelectionPointerMove(this, this.pointerDownState, event);
       }
+      return;
     }
+
+    handleMultiElementPointerMove(this, event);
+    maybeSuggestBindingOnHover(this, event);
   }
 
   handleCanvasPointerUp(event: PointerEvent) {
     removePointer(this, event);
     if (this.pointerDownState) {
-      if (this.state.newElement) {
+      if (isLinearElement(this.state.newElement)) {
+        finalizeLinearOnPointerUp(this, this.pointerDownState, event);
+      } else if (this.state.newElement) {
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleSelectionPointerUp(this, this.pointerDownState);
@@ -653,6 +762,12 @@ export class CaliburnEditorComponent
       }
       this.pointerDownState = null;
     }
+  }
+
+  focusContainer() {}
+
+  getEffectiveGridSize() {
+    return getEffectiveGridSize(this);
   }
 
   insertNewElement(element: ExcalidrawElement) {
