@@ -357,7 +357,7 @@ import { exportCanvas, loadFromBlob } from "../data";
 import { restoreAppState, restoreElements } from "../data/restore";
 import { getCenter, getDistance } from "../gesture";
 import { History } from "../history";
-import { defaultLang, getLanguage, languages, setLanguage, t } from "../i18n";
+import { t } from "../i18n";
 
 import {
   getScrollToContentState,
@@ -2413,7 +2413,6 @@ class App extends React.Component<AppProps, AppState> {
                             elements={this.scene.getNonDeletedElements()}
                             onLockToggle={this.toggleLock}
                             onPenModeToggle={this.togglePenMode}
-                            langCode={getLanguage().code}
                             renderTopLeftUI={renderTopLeftUI}
                             renderTopRightUI={renderTopRightUI}
                             renderCustomStats={renderCustomStats}
@@ -4137,9 +4136,6 @@ class App extends React.Component<AppProps, AppState> {
       this.state.showHyperlinkPopup
     ) {
       this.setState({ showHyperlinkPopup: false });
-    }
-    if (prevProps.langCode !== this.props.langCode) {
-      this.updateLanguage();
     }
 
     if (isEraserActive(prevState) && !isEraserActive(this.state)) {
@@ -13771,14 +13767,6 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   watchState = () => {};
-
-  private async updateLanguage() {
-    const currentLang =
-      languages.find((lang) => lang.code === this.props.langCode) ||
-      defaultLang;
-    await setLanguage(currentLang);
-    this.setAppState({});
-  }
 }
 
 // -----------------------------------------------------------------------------
