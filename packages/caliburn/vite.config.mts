@@ -18,12 +18,17 @@ export default defineConfig({
   resolve: {
     alias: workspaceAliases,
   },
+  // the angular plugin turns vite's esbuild transform off for the whole
+  // project; JSX-compat test files still need it
+  esbuild: {
+    include: [/\.tsx$/],
+  },
   //@ts-ignore
   test: {
     name: "caliburn",
     globals: true,
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
   },
 });
