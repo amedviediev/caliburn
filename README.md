@@ -33,7 +33,7 @@ git remote add upstream https://github.com/excalidraw/excalidraw.git
 
 MIT — see [LICENSE](LICENSE). The license retains Excalidraw's copyright notice: this repository holds Excalidraw source verbatim, Excalidraw source translated, and new code, all under the one license. `packages/laser-pointer/LICENSE` is that package's own MIT notice and stays with it.
 
-Fonts bundled in the repository are separate works and are not covered by the code's MIT license. Their licensing is being audited; kept fonts will carry their license texts alongside the font assets.
+Fonts bundled in the repository are separate works and are not covered by the code's MIT license. Every bundled family is SIL OFL 1.1 or MIT, and each carries its license text alongside its font files — see [packages/excalidraw/fonts](packages/excalidraw/fonts/README.md).
 
 ## Trademark
 
