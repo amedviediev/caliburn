@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 
 import { KEYS, queryFocusableElements } from "@excalidraw/common";
 
-import { useSetAtom } from "../editor-jotai";
 import { useCallbackRefState } from "../hooks/useCallbackRefState";
 import { t } from "../i18n";
 
@@ -13,7 +12,6 @@ import {
   useExcalidrawSetAppState,
 } from "./App";
 import { Island } from "./Island";
-import { isLibraryMenuOpenAtom } from "./LibraryMenu";
 import { Modal } from "./Modal";
 import { CloseIcon } from "./icons";
 
@@ -94,11 +92,9 @@ export const Dialog = (props: DialogProps) => {
   }, [islandNode, props.autofocus]);
 
   const setAppState = useExcalidrawSetAppState();
-  const setIsLibraryMenuOpen = useSetAtom(isLibraryMenuOpenAtom);
 
   const onClose = () => {
     setAppState({ openMenu: null });
-    setIsLibraryMenuOpen(false);
     (lastActiveElement as HTMLElement).focus();
     props.onCloseRequest();
   };

@@ -294,7 +294,6 @@ import type { ArrowEndpoint } from "@excalidraw/element";
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 
 import {
-  actionAddToLibrary,
   actionBringForward,
   actionBringToFront,
   actionCopy,
@@ -355,7 +354,6 @@ import {
 } from "../clipboard";
 
 import { exportCanvas, loadFromBlob } from "../data";
-import Library, { distributeLibraryItemsOnSquareGrid } from "../data/library";
 import { restoreAppState, restoreElements } from "../data/restore";
 import { getCenter, getDistance } from "../gesture";
 import { History } from "../history";
@@ -379,7 +377,6 @@ import {
   isSupportedImageFile,
   loadSceneOrLibraryFromBlob,
   normalizeFile,
-  parseLibraryJSON,
   resizeImageFile,
   SVGStringToFile,
 } from "../data/blob";
@@ -455,8 +452,6 @@ import { findShapeByKey, TOGGLE_TOOLS } from "./Tools";
 
 import UnlockPopup from "./UnlockPopup";
 
-import type { ExcalidrawLibraryIds } from "../data/types";
-
 import type {
   RenderInteractiveSceneCallback,
   ScrollBars,
@@ -475,7 +470,6 @@ import type {
   BinaryFiles,
   Gesture,
   GestureEvent,
-  LibraryItems,
   PointerDownState,
   SceneData,
   FrameNameBoundsCache,
@@ -636,8 +630,6 @@ class App extends React.Component<AppProps, AppState> {
    * in-progress `newElement` and the edited text element) */
   private hasRenderableElements: boolean = false;
   private resizeObserver: ResizeObserver | undefined;
-  public library: AppClassProperties["library"];
-  public libraryItemsFromStorage: LibraryItems | undefined;
   public id: string;
   private store: Store;
   private history: History;
@@ -757,7 +749,6 @@ class App extends React.Component<AppProps, AppState> {
       updateScene: this.updateScene,
       applyDeltas: this.applyDeltas,
       mutateElement: this.mutateElement,
-      updateLibrary: this.library.updateLibrary,
       addFiles: this.addFiles,
       resetScene: this.resetScene,
       getSceneElementsIncludingDeleted: this.getSceneElementsIncludingDeleted,
@@ -847,7 +838,6 @@ class App extends React.Component<AppProps, AppState> {
     this.stylesPanelMode = deriveStylesPanelMode(this.editorInterface);
 
     this.id = nanoid();
-    this.library = new Library(this);
     this.actionManager = new ActionManager(
       this.syncActionResult,
       () => this.state,
@@ -3476,16 +3466,6 @@ class App extends React.Component<AppProps, AppState> {
       } else {
         initialData = (await this.props.initialData) || null;
       }
-      if (initialData?.libraryItems) {
-        this.library
-          .updateLibrary({
-            libraryItems: initialData.libraryItems,
-            merge: true,
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-      }
     } catch (error: any) {
       console.error(error);
       initialData = {
@@ -3804,7 +3784,6 @@ class App extends React.Component<AppProps, AppState> {
     this.unmounted = true;
     this.viewport.destroy();
     this.removeEventListeners();
-    this.library.destroy();
     this.laserTrails.stop();
     this.drawShape.stop();
     this.eraserTrail.stop();
@@ -12925,50 +12904,6 @@ class App extends React.Component<AppProps, AppState> {
     if (imageFiles.length > 0 && this.isToolSupported("image")) {
       return this.insertImages(imageFiles, sceneX, sceneY);
     }
-    const excalidrawLibrary_ids = dataTransferList.getData(
-      MIME_TYPES.excalidrawlibIds,
-    );
-    const excalidrawLibrary_data = dataTransferList.getData(
-      MIME_TYPES.excalidrawlib,
-    );
-    if (excalidrawLibrary_ids || excalidrawLibrary_data) {
-      try {
-        let libraryItems: LibraryItems | null = null;
-        if (excalidrawLibrary_ids) {
-          const { itemIds } = JSON.parse(
-            excalidrawLibrary_ids,
-          ) as ExcalidrawLibraryIds;
-          const allLibraryItems = await this.library.getLatestLibrary();
-          libraryItems = allLibraryItems.filter((item) =>
-            itemIds.includes(item.id),
-          );
-          // legacy library dataTransfer format
-        } else if (excalidrawLibrary_data) {
-          libraryItems = parseLibraryJSON(excalidrawLibrary_data);
-        }
-        if (libraryItems?.length) {
-          libraryItems = libraryItems.map((item) => ({
-            ...item,
-            // #6465
-            elements: duplicateElements({
-              type: "everything",
-              elements: item.elements,
-              randomizeSeed: true,
-              preserveFrameChildrenOrder: true,
-            }).duplicatedElements,
-          }));
-
-          this.addElementsFromPasteOrLibrary({
-            elements: distributeLibraryItemsOnSquareGrid(libraryItems),
-            position: event,
-            files: null,
-          });
-        }
-      } catch (error: any) {
-        this.setState({ errorMessage: error.message });
-      }
-      return;
-    }
 
     if (fileItems.length > 0) {
       const { file, fileHandle } = fileItems[0];
@@ -13063,17 +12998,6 @@ class App extends React.Component<AppProps, AppState> {
           replaceFiles: true,
           captureUpdate: CaptureUpdateAction.IMMEDIATELY,
         });
-      } else if (ret.type === MIME_TYPES.excalidrawlib) {
-        await this.library
-          .updateLibrary({
-            libraryItems: file,
-            merge: true,
-            openLibraryMenu: true,
-          })
-          .catch((error) => {
-            console.error(error);
-            this.setState({ errorMessage: t("errors.importLibraryError") });
-          });
       }
     } catch (error: any) {
       this.setState({ isLoading: false, errorMessage: error.message });
@@ -13596,7 +13520,6 @@ class App extends React.Component<AppProps, AppState> {
       actionWrapTextInContainer,
       actionUngroup,
       CONTEXT_MENU_SEPARATOR,
-      actionAddToLibrary,
       ...zIndexActions,
       CONTEXT_MENU_SEPARATOR,
       actionFlipHorizontal,

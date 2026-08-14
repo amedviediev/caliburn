@@ -2,6 +2,7 @@ import clsx from "clsx";
 import React from "react";
 
 import {
+  CANVAS_SEARCH_TAB,
   CLASSES,
   DEFAULT_SIDEBAR,
   TOOL_TYPE,
@@ -475,7 +476,7 @@ const LayerUI = ({
           <DefaultSidebar.Trigger
             __fallback
             icon={sidebarRightIcon}
-            title={capitalizeString(t("toolBar.library"))}
+            title={capitalizeString(t("search.title"))}
             onToggle={(open) => {
               if (open) {
                 trackEvent(
@@ -489,7 +490,7 @@ const LayerUI = ({
                 );
               }
             }}
-            tab={DEFAULT_SIDEBAR.defaultTab}
+            tab={CANVAS_SEARCH_TAB}
           />
         </>
       )}
