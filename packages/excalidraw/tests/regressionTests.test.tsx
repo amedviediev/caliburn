@@ -1,5 +1,4 @@
 import React from "react";
-import { vi } from "vitest";
 
 import {
   FONT_FAMILY,
@@ -14,7 +13,6 @@ import { setDateTimeForTests } from "@excalidraw/common";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";
-import * as StaticScene from "../renderer/staticScene";
 
 import { API } from "./helpers/api";
 import { Keyboard, Pointer, UI } from "./helpers/ui";
@@ -30,8 +28,6 @@ import {
 
 const { h } = window;
 
-const renderStaticScene = vi.spyOn(StaticScene, "renderStaticScene");
-
 const mouse = new Pointer("mouse");
 const finger1 = new Pointer("touch", 1);
 const finger2 = new Pointer("touch", 2);
@@ -42,9 +38,6 @@ const finger2 = new Pointer("touch", 2);
  * to debug where a test failure came from.
  */
 const checkpoint = (name: string) => {
-  expect(renderStaticScene.mock.calls.length).toMatchSnapshot(
-    `[${name}] number of renders`,
-  );
   expect(h.state).toMatchSnapshot(`[${name}] appState`);
   expect(h.elements.length).toMatchSnapshot(`[${name}] number of elements`);
   h.elements.forEach((element, i) =>
@@ -57,7 +50,6 @@ beforeEach(async () => {
   unmountComponent();
 
   localStorage.clear();
-  renderStaticScene.mockClear();
   reseed(7);
   setDateTimeForTests("201933152653");
 

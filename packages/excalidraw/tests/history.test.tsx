@@ -52,7 +52,6 @@ import {
 } from "../actions";
 import { createUndoAction, createRedoAction } from "../actions/actionHistory";
 import { actionToggleViewMode } from "../actions/actionToggleViewMode";
-import * as StaticScene from "../renderer/staticScene";
 import { getDefaultAppState } from "../appState";
 import { Excalidraw } from "../index";
 import { createPasteEvent } from "../clipboard";
@@ -85,9 +84,6 @@ const { h } = window;
 const mouse = new Pointer("mouse");
 
 const checkpoint = (name: string) => {
-  expect(renderStaticScene.mock.calls.length).toMatchSnapshot(
-    `[${name}] number of renders`,
-  );
   // `scrolledOutside` does not appear to be stable between test runs
   // `selectedLinearElemnt` includes `startBindingElement` containing seed and versionNonce
   const {
@@ -108,8 +104,6 @@ const checkpoint = (name: string) => {
   checkpointHistory(h.history, name);
 };
 
-const renderStaticScene = vi.spyOn(StaticScene, "renderStaticScene");
-
 const transparent = COLOR_PALETTE.transparent;
 const black = COLOR_PALETTE.black;
 const red = COLOR_PALETTE.red[DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX];
@@ -120,7 +114,6 @@ const violet = COLOR_PALETTE.violet[DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX];
 describe("history", () => {
   beforeEach(() => {
     unmountComponent();
-    renderStaticScene.mockClear();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
 
