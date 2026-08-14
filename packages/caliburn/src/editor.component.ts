@@ -59,6 +59,7 @@ import {
   finalizeNewElementOnPointerUp,
   maybeDragNewElement,
 } from "./create-interaction";
+import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
 import {
   gesture,
   handleCanvasPanUsingWheelOrSpaceDrag,
@@ -648,6 +649,7 @@ export class CaliburnEditorComponent
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleSelectionPointerUp(this, this.pointerDownState);
+        cleanupAfterDragOnPointerUp(this, this.pointerDownState);
       }
       this.pointerDownState = null;
     }

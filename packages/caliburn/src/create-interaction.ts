@@ -28,14 +28,14 @@ import {
   snapNewElement,
 } from "@excalidraw/excalidraw/snapping";
 
+import { updateActiveTool } from "@excalidraw/common";
+
 import type { ExcalidrawGenericElement } from "@excalidraw/element/types";
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 import type {
   KeyboardModifiersObject,
   NullableGridSize,
 } from "@excalidraw/excalidraw/types";
-
-import { updateActiveTool } from "@excalidraw/common";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 import type { PointerDownState } from "./selection-interaction";

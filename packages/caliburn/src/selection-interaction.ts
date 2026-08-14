@@ -1,5 +1,6 @@
 import {
   DEFAULT_COLLISION_THRESHOLD,
+  DEFAULT_TRANSFORM_HANDLE_SPACING,
   distance,
   getStrokeWidthByKey,
   shouldMaintainAspectRatio,
@@ -7,7 +8,9 @@ import {
 } from "@excalidraw/common";
 import {
   LinearElementEditor,
+  deepCopyElement,
   dragNewElement,
+  getCommonBounds,
   getElementsWithinSelection,
   hitElementItself,
   isLinearElement,
@@ -21,6 +24,7 @@ import { pointFrom } from "@excalidraw/math";
 import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
 import { originInGridFromEvent } from "./create-interaction";
+import { maybeDragSelectedElements } from "./drag-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 
@@ -28,24 +32,84 @@ export interface PointerDownState {
   origin: { x: number; y: number };
   originInGrid: { x: number; y: number };
   lastCoords: { x: number; y: number };
-  hit: { element: NonDeleted<ExcalidrawElement> | null };
+  originalElements: Map<string, NonDeleted<ExcalidrawElement>>;
+  hit: {
+    element: NonDeleted<ExcalidrawElement> | null;
+    allHitElements: NonDeleted<ExcalidrawElement>[];
+    wasAddedToSelection: boolean;
+    hasBeenDuplicated: boolean;
+    hasHitCommonBoundingBoxOfSelectedElements: boolean;
+  };
   boxSelection: { hasOccurred: boolean };
-  drag: { hasOccurred: boolean };
+  drag: {
+    hasOccurred: boolean;
+    offset: { x: number; y: number } | null;
+    origin: { x: number; y: number };
+    blockDragging: boolean;
+  };
   withCmdOrCtrl: boolean;
 }
+
+export const isHittingCommonBoundingBoxOfSelectedElements = (
+  editor: CaliburnEditorComponent,
+  point: Readonly<{ x: number; y: number }>,
+  selectedElements: readonly ExcalidrawElement[],
+): boolean => {
+  if (selectedElements.length < 2) {
+    return false;
+  }
+
+  // How many pixels off the shape boundary we still consider a hit
+  const threshold = Math.max(
+    DEFAULT_COLLISION_THRESHOLD / editor.state.zoom.value,
+    1,
+  );
+  const boundsPadding =
+    (DEFAULT_TRANSFORM_HANDLE_SPACING * 2) / editor.state.zoom.value;
+  const [x1, y1, x2, y2] = getCommonBounds(selectedElements);
+  return (
+    point.x > x1 - boundsPadding - threshold &&
+    point.x < x2 + boundsPadding + threshold &&
+    point.y > y1 - boundsPadding - threshold &&
+    point.y < y2 + boundsPadding + threshold
+  );
+};
 
 export const initialPointerDownState = (
   editor: CaliburnEditorComponent,
   event: PointerEvent,
 ): PointerDownState => {
   const origin = viewportCoordsToSceneCoords(event, editor.state);
+  const selectedElements = editor.scene.getSelectedElements(editor.state);
   return {
     origin,
     originInGrid: originInGridFromEvent(editor, event),
     lastCoords: { ...origin },
-    hit: { element: null },
+    originalElements: editor.scene
+      .getNonDeletedElements()
+      .reduce((acc, element) => {
+        acc.set(element.id, deepCopyElement(element));
+        return acc;
+      }, new Map<string, NonDeleted<ExcalidrawElement>>()),
+    hit: {
+      element: null,
+      allHitElements: [],
+      wasAddedToSelection: false,
+      hasBeenDuplicated: false,
+      hasHitCommonBoundingBoxOfSelectedElements:
+        isHittingCommonBoundingBoxOfSelectedElements(
+          editor,
+          origin,
+          selectedElements,
+        ),
+    },
     boxSelection: { hasOccurred: false },
-    drag: { hasOccurred: false },
+    drag: {
+      hasOccurred: false,
+      offset: null,
+      origin: { ...origin },
+      blockDragging: false,
+    },
     withCmdOrCtrl: event.metaKey || event.ctrlKey,
   };
 };
@@ -60,13 +124,13 @@ const getElementHitThreshold = (
   );
 };
 
-export const getElementAtPosition = (
+export const getElementsAtPosition = (
   editor: CaliburnEditorComponent,
   x: number,
   y: number,
-): NonDeleted<ExcalidrawElement> | null => {
+): NonDeleted<ExcalidrawElement>[] => {
   const elementsMap = editor.scene.getNonDeletedElementsMap();
-  const candidates = editor.scene
+  return editor.scene
     .getNonDeletedElements()
     .filter(
       (element) =>
@@ -80,6 +144,14 @@ export const getElementAtPosition = (
         elementsMap,
       }),
     );
+};
+
+export const getElementAtPosition = (
+  editor: CaliburnEditorComponent,
+  x: number,
+  y: number,
+): NonDeleted<ExcalidrawElement> | null => {
+  const candidates = getElementsAtPosition(editor, x, y);
 
   // topmost element wins
   return candidates.length ? candidates[candidates.length - 1] : null;
@@ -91,18 +163,32 @@ export const handleSelectionPointerDown = (
 ): PointerDownState => {
   const pointerDownState = initialPointerDownState(editor, event);
   const { origin } = pointerDownState;
-  const hitElement = getElementAtPosition(editor, origin.x, origin.y);
+  const allHitElements = getElementsAtPosition(editor, origin.x, origin.y);
+  const hitElement = allHitElements.length
+    ? allHitElements[allHitElements.length - 1]
+    : null;
   pointerDownState.hit.element = hitElement;
+  pointerDownState.hit.allHitElements = allHitElements;
 
-  const someHitElementIsSelected =
-    hitElement != null && !!editor.state.selectedElementIds[hitElement.id];
+  const someHitElementIsSelected = allHitElements.some(
+    (element) => !!editor.state.selectedElementIds[element.id],
+  );
 
-  if ((hitElement === null || !someHitElementIsSelected) && !event.shiftKey) {
+  if (
+    (hitElement === null || !someHitElementIsSelected) &&
+    !event.shiftKey &&
+    !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
+  ) {
     editor.clearSelection(hitElement);
   }
 
   if (hitElement != null) {
-    if (!editor.state.selectedElementIds[hitElement.id]) {
+    if (
+      !editor.state.selectedElementIds[hitElement.id] &&
+      !someHitElementIsSelected &&
+      !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
+    ) {
+      pointerDownState.hit.wasAddedToSelection = true;
       editor.setState((prevState) => ({
         ...selectGroupsForSelectedElements(
           {
@@ -118,7 +204,7 @@ export const handleSelectionPointerDown = (
         ),
       }));
     }
-  } else {
+  } else if (!pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements) {
     createSelectionElementOnPointerDown(editor, pointerDownState);
   }
 
@@ -163,6 +249,8 @@ export const handleSelectionPointerMove = (
     pointerDownState.boxSelection.hasOccurred = true;
     maybeDragNewGenericElement(editor, pointerDownState, event);
     updateBoxSelection(editor, pointerDownState, event);
+  } else {
+    maybeDragSelectedElements(editor, pointerDownState, event);
   }
 };
 
