@@ -10,7 +10,7 @@ The port is at its beginning. What is in this repository today is Excalidraw's s
 
 - [x] Repository setup: README, license, brand assets, font licenses
 - [x] Delete the React code that will never be used; measure what remains — after the cut, the editor package holds 44,408 lines of `.tsx` and 30,462 lines of `.ts` outside tests, and 1,733 upstream tests still pass
-- [ ] Port the test harness so the upstream test suite drives the port
+- [x] Port the test harness so the upstream test suite drives the port — `render()` mounts the Angular editor (Angular 22, zoneless, AOT under vitest) and `window.h` exposes its state through the real element engine
 - [ ] Port the editor in slices: selection and viewport; rectangle, ellipse, diamond; arrows and binding; text; freehand; images, frames and groups
 
 ## Why a port
