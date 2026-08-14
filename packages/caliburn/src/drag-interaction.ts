@@ -59,7 +59,7 @@ const maybeCacheVisibleGaps = (
   }
 };
 
-const maybeCacheReferenceSnapPoints = (
+export const maybeCacheReferenceSnapPoints = (
   editor: CaliburnEditorComponent,
   event: KeyboardModifiersObject,
   selectedElements: readonly NonDeletedExcalidrawElement[],

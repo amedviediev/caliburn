@@ -25,6 +25,13 @@ import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
 import { originInGridFromEvent } from "./create-interaction";
 import { maybeDragSelectedElements } from "./drag-interaction";
+import {
+  initialResizeState,
+  maybeArmResizeOnPointerDown,
+  maybeHandleResize,
+} from "./resize-interaction";
+
+import type { ResizePointerDownState } from "./resize-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 
@@ -41,6 +48,7 @@ export interface PointerDownState {
     hasHitCommonBoundingBoxOfSelectedElements: boolean;
   };
   boxSelection: { hasOccurred: boolean };
+  resize: ResizePointerDownState;
   drag: {
     hasOccurred: boolean;
     offset: { x: number; y: number } | null;
@@ -104,6 +112,7 @@ export const initialPointerDownState = (
         ),
     },
     boxSelection: { hasOccurred: false },
+    resize: initialResizeState(editor),
     drag: {
       hasOccurred: false,
       offset: null,
@@ -163,6 +172,11 @@ export const handleSelectionPointerDown = (
 ): PointerDownState => {
   const pointerDownState = initialPointerDownState(editor, event);
   const { origin } = pointerDownState;
+
+  if (maybeArmResizeOnPointerDown(editor, pointerDownState, event)) {
+    return pointerDownState;
+  }
+
   const allHitElements = getElementsAtPosition(editor, origin.x, origin.y);
   const hitElement = allHitElements.length
     ? allHitElements[allHitElements.length - 1]
@@ -244,6 +258,12 @@ export const handleSelectionPointerMove = (
 ) => {
   const coords = viewportCoordsToSceneCoords(event, editor.state);
   pointerDownState.lastCoords = coords;
+
+  if (pointerDownState.resize.isResizing) {
+    if (maybeHandleResize(editor, pointerDownState, event)) {
+      return;
+    }
+  }
 
   if (editor.state.selectionElement) {
     pointerDownState.boxSelection.hasOccurred = true;
