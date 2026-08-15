@@ -209,6 +209,8 @@ import {
   actionChangeVerticalAlign,
 } from "./actions/actionProperties";
 import { ActionManager } from "./actions/manager";
+import { CaliburnCursorHintComponent } from "./components/cursor-hint.component";
+import { CursorHints } from "./components/cursor-hints";
 import { provideCaliburnIcons } from "./components/icons";
 import { CaliburnFrameNameComponent } from "./components/frame-name.component";
 import { CaliburnLayerUIComponent } from "./components/layer-ui.component";
@@ -274,6 +276,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 
 import type { ElementRef } from "@angular/core";
 
+import type { CursorHintView } from "./components/cursor-hints";
 import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
 import type { PointerDownState } from "./selection-interaction";
 
@@ -335,6 +338,7 @@ type SetStateArg =
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CaliburnContextMenuComponent,
+    CaliburnCursorHintComponent,
     CaliburnFrameNameComponent,
     CaliburnLayerUIComponent,
   ],
@@ -441,6 +445,10 @@ export class CaliburnEditorComponent
   readonly undoAction = createUndoAction(this.history);
   readonly redoAction = createRedoAction(this.history);
   readonly lassoTrail = new LassoTrail(this as any);
+  readonly cursorHints = new CursorHints(this);
+
+  /** the mounted `<caliburn-cursor-hint>`, if any (see `CursorHints`) */
+  cursorHintView: CursorHintView | null = null;
 
   visibleElements: readonly NonDeletedExcalidrawElement[] = [];
 
@@ -1189,15 +1197,22 @@ export class CaliburnEditorComponent
               ? ARROW_TYPE.elbow
               : ARROW_TYPE.sharp;
           this.setState({ currentItemArrowType: nextArrowType });
-        } else if (
-          shape === "lasso" &&
-          this.state.activeTool.type === "laser"
-        ) {
-          this.setActiveTool({
-            type: this.state.preferredSelectionTool.type,
-          });
+          this.cursorHints.onArrowTypeCycled(nextArrowType);
         } else {
-          this.setActiveTool({ type: shape }, { toggle: true });
+          if (shape === "arrow" || shape === "line") {
+            this.cursorHints.onToolShortcut(
+              shape,
+              /^\d$/.test(event.key) ? "digit" : "letter",
+            );
+          }
+
+          if (shape === "lasso" && this.state.activeTool.type === "laser") {
+            this.setActiveTool({
+              type: this.state.preferredSelectionTool.type,
+            });
+          } else {
+            this.setActiveTool({ type: shape }, { toggle: true });
+          }
         }
 
         event.stopPropagation();

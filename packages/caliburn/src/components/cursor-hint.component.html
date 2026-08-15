@@ -1,0 +1,9 @@
+@if (hint(); as hint) {
+<div
+  class="CursorHint"
+  [class.CursorHint--fade-out]="isFadingOut()"
+  data-testid="cursor-hint"
+>
+  <ng-icon [name]="hint.icon" />
+</div>
+}
