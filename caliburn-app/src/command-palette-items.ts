@@ -2,6 +2,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { DEFAULT_CATEGORIES } from "../../packages/caliburn/src/index";
 
+import { shareDialogState } from "./app-state";
+
 import type { CollabService } from "./collab/collab.service";
 import type { ShareDialogType } from "./app-state";
 import type { CommandPaletteItem } from "../../packages/caliburn/src/index";
@@ -43,6 +45,9 @@ export const buildCommandPaletteItems = (opts: {
       perform: () => {
         if (collab) {
           collab.stopCollaboration();
+          if (!collab.isCollaborating()) {
+            shareDialogState.set({ isOpen: false });
+          }
         }
       },
     },

@@ -1,8 +1,7 @@
 // Near-verbatim port of upstream `excalidraw-app/collab/Portal.tsx`: only the
 // `CaptureUpdateAction` import path (its own package rather than the React
-// entry point) and the collab class's type differ.
+// entry point), the collab class's type and the dropped telemetry differ.
 import { CaptureUpdateAction } from "@excalidraw/element";
-import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { encryptData } from "@excalidraw/excalidraw/data/encryption";
 import { newElementWith } from "@excalidraw/element";
 import throttle from "lodash.throttle";
@@ -46,7 +45,6 @@ class Portal {
     this.socket.on("init-room", () => {
       if (this.socket) {
         this.socket.emit("join-room", this.roomId);
-        trackEvent("share", "room joined");
       }
     });
     this.socket.on("new-user", async (_socketId: string) => {

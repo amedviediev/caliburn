@@ -8,9 +8,8 @@ import {
   signal,
 } from "@angular/core";
 
-import { KEYS, getFrame } from "@excalidraw/common";
+import { KEYS } from "@excalidraw/common";
 
-import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { copyTextToSystemClipboard } from "@excalidraw/excalidraw/clipboard";
 import { t } from "@excalidraw/excalidraw/i18n";
 
@@ -163,12 +162,10 @@ export class CaliburnAppShareDialogComponent implements OnDestroy {
   };
 
   protected readonly startCollaboration = () => {
-    trackEvent("share", "room creation", `ui (${getFrame()})`);
     this.collab.startCollaboration(null);
   };
 
   protected readonly stopCollaboration = () => {
-    trackEvent("share", "room closed");
     this.collab.stopCollaboration();
     if (!this.collab.isCollaborating()) {
       this.handleClose();
