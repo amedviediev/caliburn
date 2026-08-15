@@ -137,15 +137,25 @@ describe("caliburn-section", () => {
     selector: "section-host",
     imports: [CaliburnSectionComponent],
     template: `
-      <caliburn-section
+      <section
+        caliburn-section
         heading="selectedShapeActions"
         class="selected-shape-actions"
       >
         <span>body</span>
-      </caliburn-section>
+      </section>
     `,
   })
   class SectionHost {}
+
+  it("is a wrapper-less attribute-selector component: no <caliburn-section> tag", async () => {
+    const fixture = createComponent(SectionHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector("caliburn-section")).toBeNull();
+    expect(fixture.nativeElement.children[0].tagName).toBe("SECTION");
+  });
 
   it("labels the <section> via aria-labelledby matching the hidden <h2>'s id", async () => {
     const fixture = createComponent(SectionHost);
@@ -167,8 +177,9 @@ describe("caliburn-icon-button", () => {
     selector: "toggle-host",
     imports: [CaliburnIconButtonComponent],
     template: `
-      <caliburn-icon-button
-        type="toggle"
+      <button
+        caliburn-icon-button
+        [mode]="'toggle'"
         class="fillable"
         [icon]="'selectionIcon'"
         ariaLabel="Selection"
@@ -176,7 +187,7 @@ describe("caliburn-icon-button", () => {
         [checked]="checked()"
         [testId]="'toolbar-selection'"
         (select)="onSelect($event)"
-      />
+      ></button>
     `,
   })
   class ToggleHost {
@@ -188,6 +199,17 @@ describe("caliburn-icon-button", () => {
     }
   }
 
+  it("is a wrapper-less attribute-selector component: the real <button> is the direct child, no <caliburn-icon-button> tag", async () => {
+    const fixture = createComponent(ToggleHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(
+      fixture.nativeElement.querySelector("caliburn-icon-button"),
+    ).toBeNull();
+    expect(fixture.nativeElement.children[0].tagName).toBe("BUTTON");
+  });
+
   it("renders tool-button radio semantics: aria-pressed + ToolIcon--checked toggle on select", async () => {
     const fixture = createComponent(ToggleHost);
     fixture.detectChanges();
@@ -198,6 +220,7 @@ describe("caliburn-icon-button", () => {
     expect(button.classList.contains("ToolIcon")).toBe(true);
     expect(button.classList.contains("ToolIcon_type_toggle")).toBe(true);
     expect(button.classList.contains("fillable")).toBe(true);
+    expect(button.getAttribute("type")).toBe("button");
     expect(button.getAttribute("aria-label")).toBe("Selection");
     expect(button.getAttribute("data-testid")).toBe("toolbar-selection");
     expect(button.getAttribute("aria-pressed")).toBe("false");
@@ -222,14 +245,15 @@ describe("caliburn-icon-button", () => {
     selector: "button-host",
     imports: [CaliburnIconButtonComponent],
     template: `
-      <caliburn-icon-button
-        type="button"
+      <button
+        caliburn-icon-button
+        [mode]="'button'"
         [icon]="'trashIcon'"
         ariaLabel="Delete"
         [testId]="'delete-btn'"
         [onClick]="clickHandler"
         [showAriaLabel]="true"
-      />
+      ></button>
     `,
   })
   class ButtonHost {
@@ -240,7 +264,7 @@ describe("caliburn-icon-button", () => {
       });
   }
 
-  it("type button/icon: async onClick disables the button and shows the label-row spinner until resolved", async () => {
+  it("mode button/icon: async onClick disables the button and shows the label-row spinner until resolved", async () => {
     const fixture = createComponent(ButtonHost);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -273,7 +297,13 @@ describe("caliburn-icon-button", () => {
     selector: "external-loading-host",
     imports: [CaliburnIconButtonComponent],
     template: `
-      <caliburn-icon-button type="icon" [icon]="'trashIcon'" ariaLabel="Delete" [isLoading]="true" />
+      <button
+        caliburn-icon-button
+        [mode]="'icon'"
+        [icon]="'trashIcon'"
+        ariaLabel="Delete"
+        [isLoading]="true"
+      ></button>
     `,
   })
   class ExternalLoadingHost {}
@@ -297,9 +327,15 @@ describe("caliburn-button", () => {
     selector: "excalidraw-button-host",
     imports: [CaliburnButtonComponent],
     template: `
-      <caliburn-button [selected]="selected()" (select)="onSelect()"
-        >Click me</caliburn-button
+      <button
+        caliburn-button
+        [selected]="selected()"
+        [testId]="'sidebar-dock'"
+        [ariaLabel]="'Pin sidebar'"
+        (select)="onSelect()"
       >
+        Click me
+      </button>
     `,
   })
   class ExcalidrawButtonHost {
@@ -310,7 +346,16 @@ describe("caliburn-button", () => {
     }
   }
 
-  it("renders .excalidraw-button, toggles .selected, fires (select) on click", async () => {
+  it("is a wrapper-less attribute-selector component: no <caliburn-button> tag", async () => {
+    const fixture = createComponent(ExcalidrawButtonHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector("caliburn-button")).toBeNull();
+    expect(fixture.nativeElement.children[0].tagName).toBe("BUTTON");
+  });
+
+  it("renders .excalidraw-button, toggles .selected, fires (select) on click, passes through data-testid/aria-label", async () => {
     const fixture = createComponent(ExcalidrawButtonHost);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -320,6 +365,11 @@ describe("caliburn-button", () => {
     expect(button.classList.contains("excalidraw-button")).toBe(true);
     expect(button.classList.contains("selected")).toBe(false);
     expect(button.textContent?.trim()).toBe("Click me");
+    // upstream Sidebar consumers depend on these landing on the real button
+    // (SidebarHeader.tsx passes data-testid="sidebar-dock"/"sidebar-close"
+    // + aria-label via {...rest} prop spreading)
+    expect(button.getAttribute("data-testid")).toBe("sidebar-dock");
+    expect(button.getAttribute("aria-label")).toBe("Pin sidebar");
 
     button.click();
     expect(fixture.componentInstance.selectCount).toBe(1);
@@ -336,13 +386,14 @@ describe("caliburn-filled-button", () => {
     selector: "filled-button-host",
     imports: [CaliburnFilledButtonComponent],
     template: `
-      <caliburn-filled-button
+      <button
+        caliburn-filled-button
         label="Save"
         color="primary"
         [onClick]="clickHandler"
       >
         Save
-      </caliburn-filled-button>
+      </button>
     `,
   })
   class FilledButtonHost {
@@ -352,6 +403,17 @@ describe("caliburn-filled-button", () => {
         this.resolveClick = resolve;
       });
   }
+
+  it("is a wrapper-less attribute-selector component: no <caliburn-filled-button> tag", async () => {
+    const fixture = createComponent(FilledButtonHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(
+      fixture.nativeElement.querySelector("caliburn-filled-button"),
+    ).toBeNull();
+    expect(fixture.nativeElement.children[0].tagName).toBe("BUTTON");
+  });
 
   it("renders ExcButton classes and shows a spinner while onClick's promise is pending", async () => {
     const fixture = createComponent(FilledButtonHost);
@@ -528,6 +590,38 @@ describe("caliburn-modal", () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.open()).toBe(false);
   });
+
+  @Component({
+    selector: "modal-default-inputs-host",
+    imports: [CaliburnModalComponent],
+    template: `
+      @if (open()) {
+      <caliburn-modal
+        [maxWidth]="800"
+        labelledBy="dialog-title"
+        (closeRequest)="open.set(false)"
+      >
+        content
+      </caliburn-modal>
+      }
+    `,
+  })
+  class ModalDefaultInputsHost {
+    readonly open = signal(true);
+  }
+
+  it("closes on background click with no closeOnClickOutside binding at all (defaults true)", async () => {
+    const fixture = createComponent(ModalDefaultInputsHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const background: HTMLElement =
+      fixture.nativeElement.querySelector(".Modal__background");
+    background.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.open()).toBe(false);
+  });
 });
 
 describe("caliburn-dialog", () => {
@@ -609,6 +703,42 @@ describe("caliburn-dialog", () => {
     );
     expect(document.activeElement).toBe(buttons[1]);
   });
+
+  it("closes on backdrop click with no closeOnClickOutside binding at all (defaults true, matching Modal's own default)", async () => {
+    const fixture = createComponent(DialogHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const background: HTMLElement =
+      fixture.nativeElement.querySelector(".Modal__background");
+    background.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.open()).toBe(false);
+  });
+
+  @Component({
+    selector: "dialog-class-host",
+    imports: [CaliburnDialogComponent],
+    template: `
+      <caliburn-dialog title="Confirm" class="ConfirmDialog">
+        body
+      </caliburn-dialog>
+    `,
+  })
+  class DialogClassHost {}
+
+  it("routes a class input onto the .Modal root (ConfirmDialog.tsx/HelpDialog.tsx depend on this)", async () => {
+    const fixture = createComponent(DialogClassHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const modal: HTMLElement =
+      fixture.nativeElement.querySelector("caliburn-modal");
+    expect(modal.classList.contains("Modal")).toBe(true);
+    expect(modal.classList.contains("Dialog")).toBe(true);
+    expect(modal.classList.contains("ConfirmDialog")).toBe(true);
+  });
 });
 
 describe("caliburn-tooltip", () => {
@@ -667,25 +797,33 @@ describe("caliburn-dropdown-menu family", () => {
     ],
     template: `
       <caliburn-dropdown-menu [open]="open()">
-        <caliburn-dropdown-menu-trigger (toggle)="open.set(!open())">
+        <button caliburn-dropdown-menu-trigger (toggle)="open.set(!open())">
           Extra tools
-        </caliburn-dropdown-menu-trigger>
+        </button>
         <caliburn-dropdown-menu-content
           class="App-toolbar__extra-tools-dropdown"
           (closeOutside)="open.set(false)"
           (itemSelected)="open.set(false)"
         >
           <caliburn-dropdown-menu-group title="Shapes">
-            <caliburn-dropdown-menu-item
+            <button
+              caliburn-dropdown-menu-item
               [testId]="'toolbar-frame'"
               [hasBadge]="true"
-              (select)="selected.set('frame')"
+              (select)="onFrameSelect($event)"
             >
               Frame
               <caliburn-dropdown-menu-item-badge dropdown-menu-item-badge-slot>
                 AI
               </caliburn-dropdown-menu-item-badge>
-            </caliburn-dropdown-menu-item>
+            </button>
+            <button
+              caliburn-dropdown-menu-item
+              [testId]="'toolbar-theme'"
+              (select)="onThemeSelect($event)"
+            >
+              Theme
+            </button>
             <caliburn-dropdown-menu-separator />
             <caliburn-dropdown-menu-item-custom [selected]="true">
               Custom row
@@ -699,7 +837,51 @@ describe("caliburn-dropdown-menu family", () => {
   class DropdownMenuHost {
     readonly open = signal(false);
     readonly selected = signal<string | null>(null);
+    /** preventDefault()s, like upstream's theme toggle
+     * (main-menu/DefaultItems.tsx) — must keep the menu open. */
+    themeToggleCount = 0;
+
+    onFrameSelect() {
+      this.selected.set("frame");
+    }
+
+    onThemeSelect(event: Event) {
+      event.preventDefault();
+      this.themeToggleCount++;
+    }
   }
+
+  it("is a wrapper-less attribute-selector for trigger/item: no <caliburn-dropdown-menu-trigger>/<caliburn-dropdown-menu-item> tags", async () => {
+    const fixture = createComponent(DropdownMenuHost);
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(
+      fixture.nativeElement.querySelector("caliburn-dropdown-menu-trigger"),
+    ).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector("caliburn-dropdown-menu-item"),
+    ).toBeNull();
+    const trigger = fixture.nativeElement.querySelector(
+      "[data-testid='dropdown-menu-button']",
+    );
+    expect(trigger.tagName).toBe("BUTTON");
+    // direct child of the display:contents wrapper, i.e. of
+    // caliburn-dropdown-menu itself — no intervening node
+    expect(trigger.parentElement.tagName).toBe("CALIBURN-DROPDOWN-MENU");
+    const item = fixture.nativeElement.querySelector(
+      "[data-testid='toolbar-frame']",
+    );
+    expect(item.tagName).toBe("BUTTON");
+    // direct child of the group (host-bound `.dropdown-menu-group`, itself
+    // a direct child of the Island `.dropdown-menu-container`) — matching
+    // DropdownMenu.scss's `.dropdown-menu-item-base { display: flex; }`
+    // needing `.dropdown-menu-item` as a direct flex child of whichever
+    // flex container it's actually nested in
+    expect(item.parentElement.tagName).toBe("CALIBURN-DROPDOWN-MENU-GROUP");
+    expect(item.parentElement.parentElement.tagName).toBe("CALIBURN-ISLAND");
+  });
 
   it("toggles open via the trigger and renders the wrapper/button/content DOM contract", async () => {
     const fixture = createComponent(DropdownMenuHost);
@@ -812,15 +994,147 @@ describe("caliburn-dropdown-menu family", () => {
     expect(fixture.componentInstance.open()).toBe(false);
   });
 
-  it("closes on Escape while open", async () => {
+  it("closes on Escape while open, and does NOT swallow a global Escape while closed", async () => {
+    const fixture = createComponent(DropdownMenuHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // closed: this component instance exists (created once by the host,
+    // regardless of `open`) — its document keydown listener must not
+    // intercept/preventDefault an Escape meant for something else.
+    const closedEvent = new KeyboardEvent("keydown", {
+      key: "Escape",
+      cancelable: true,
+    });
+    document.dispatchEvent(closedEvent);
+    expect(closedEvent.defaultPrevented).toBe(false);
+
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const openEvent = new KeyboardEvent("keydown", {
+      key: "Escape",
+      cancelable: true,
+    });
+    document.dispatchEvent(openEvent);
+    expect(openEvent.defaultPrevented).toBe(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.open()).toBe(false);
+  });
+
+  it("keeps the menu open when an item's select handler calls preventDefault()", async () => {
     const fixture = createComponent(DropdownMenuHost);
     fixture.componentInstance.open.set(true);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    const themeItem: HTMLButtonElement = fixture.nativeElement.querySelector(
+      "[data-testid='toolbar-theme']",
+    );
+    themeItem.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(fixture.componentInstance.open()).toBe(false);
+
+    expect(fixture.componentInstance.themeToggleCount).toBe(1);
+    expect(fixture.componentInstance.open()).toBe(true);
+  });
+
+  it("positions the content fixed, below and end-aligned to the trigger", async () => {
+    const fixture = createComponent(DropdownMenuHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const trigger: HTMLButtonElement = fixture.nativeElement.querySelector(
+      "[data-testid='dropdown-menu-button']",
+    );
+    vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue({
+      top: 40,
+      bottom: 60,
+      left: 100,
+      right: 150,
+      width: 50,
+      height: 20,
+      x: 100,
+      y: 40,
+      toJSON() {},
+    });
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1000);
+
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const content: HTMLElement = fixture.nativeElement.querySelector(
+      "[data-testid='dropdown-menu']",
+    );
+    expect(content.style.position).toBe("fixed");
+    // sideOffset(8) below the trigger's bottom edge
+    expect(content.style.top).toBe("68px");
+    // end-aligned: distance from the viewport's right edge to the
+    // trigger's right edge
+    expect(content.style.right).toBe("850px");
+  });
+});
+
+describe("host-bound custom elements get an explicit display (packages/caliburn/src/styles.scss)", () => {
+  // custom elements default to `display: inline` unless styled — inject the
+  // exact rule `styles.scss` adds and assert the *computed* display, rather
+  // than just trusting the rule exists.
+  let styleEl: HTMLStyleElement;
+  beforeAll(() => {
+    styleEl = document.createElement("style");
+    styleEl.textContent = `
+      caliburn-island,
+      .dropdown-menu-group,
+      caliburn-button-separator,
+      caliburn-dropdown-menu-separator {
+        display: block;
+      }
+    `;
+    document.head.appendChild(styleEl);
+  });
+  afterAll(() => {
+    styleEl.remove();
+  });
+
+  @Component({
+    selector: "display-host",
+    imports: [
+      CaliburnIslandComponent,
+      CaliburnButtonSeparatorComponent,
+      CaliburnDropdownMenuSeparatorComponent,
+      CaliburnDropdownMenuGroupComponent,
+    ],
+    template: `
+      <caliburn-island>x</caliburn-island>
+      <caliburn-button-separator />
+      <caliburn-dropdown-menu-separator />
+      <caliburn-dropdown-menu-group>y</caliburn-dropdown-menu-group>
+    `,
+  })
+  class DisplayHost {}
+
+  it("caliburn-island / .dropdown-menu-group / caliburn-button-separator / caliburn-dropdown-menu-separator compute display: block", async () => {
+    const fixture = createComponent(DisplayHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const island = fixture.nativeElement.querySelector("caliburn-island");
+    const group = fixture.nativeElement.querySelector(
+      "caliburn-dropdown-menu-group",
+    );
+    const buttonSeparator = fixture.nativeElement.querySelector(
+      "caliburn-button-separator",
+    );
+    const menuSeparator = fixture.nativeElement.querySelector(
+      "caliburn-dropdown-menu-separator",
+    );
+
+    expect(getComputedStyle(island).display).toBe("block");
+    expect(getComputedStyle(group).display).toBe("block");
+    expect(getComputedStyle(buttonSeparator).display).toBe("block");
+    expect(getComputedStyle(menuSeparator).display).toBe("block");
   });
 });
