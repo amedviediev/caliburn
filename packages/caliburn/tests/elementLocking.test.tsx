@@ -137,8 +137,7 @@ describe("element locking", () => {
     expect(h.state.activeLockedId).toBe(lockedRectangle.id);
   });
 
-  // requires the properties panel / context menu UI — a later slice's gate
-  it.skip("right-clicking on a locked element should select it & open its contextMenu", () => {
+  it("right-clicking on a locked element should select it & open its contextMenu", () => {
     const rectangle = API.createElement({
       type: "rectangle",
       width: 100,
@@ -168,8 +167,7 @@ describe("element locking", () => {
     ).toHaveTextContent(t("labels.elementLock.unlock"));
   });
 
-  // requires the properties panel / context menu UI — a later slice's gate
-  it.skip("right-clicking on element covered by locked element should ignore the locked element", () => {
+  it("right-clicking on element covered by locked element should ignore the locked element", () => {
     const rectangle = API.createElement({
       type: "rectangle",
       width: 100,

@@ -142,7 +142,10 @@ import {
   actionChangeVerticalAlign,
 } from "./actions/actionProperties";
 import { ActionManager } from "./actions/manager";
+import { CaliburnContextMenuComponent } from "./panel/context-menu.component";
 import { CaliburnShapeActionsComponent } from "./panel/shape-actions.component";
+import { handleCanvasContextMenu } from "./context-menu-interaction";
+import { actionCopy, actionCut, actionPaste } from "./actions/actionClipboard";
 
 import { createTestHook } from "./test-hook";
 import {
@@ -214,7 +217,7 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
 @Component({
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnShapeActionsComponent],
+  imports: [CaliburnContextMenuComponent, CaliburnShapeActionsComponent],
   template: `
     <div
       #container
@@ -256,10 +259,12 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         (pointermove)="handleCanvasPointerMove($event)"
         (pointerup)="handleCanvasPointerUp($event)"
         (dblclick)="handleCanvasDoubleClick($event)"
+        (contextmenu)="handleCanvasContextMenu($event)"
         (wheel)="handleWheel($event)"
       ></canvas>
       <div class="excalidraw-textEditorContainer"></div>
       <caliburn-shape-actions />
+      <caliburn-context-menu />
     </div>
   `,
 })
@@ -482,6 +487,9 @@ export class CaliburnEditorComponent
       actionChangeTextAlign,
       actionChangeVerticalAlign,
       actionChangeRoundness,
+      actionCopy,
+      actionCut,
+      actionPaste,
       createUndoAction(this.history),
       createRedoAction(this.history),
     ]);
@@ -533,6 +541,8 @@ export class CaliburnEditorComponent
 
     document.addEventListener("keydown", this.onKeyDown);
     document.addEventListener("paste", this.pasteFromClipboard);
+    document.addEventListener("copy", this.onCopy);
+    document.addEventListener("cut", this.onCut);
     window.addEventListener("resize", this.onWindowResize);
 
     this.commit();
@@ -560,6 +570,8 @@ export class CaliburnEditorComponent
     resetGesture();
     document.removeEventListener("keydown", this.onKeyDown);
     document.removeEventListener("paste", this.pasteFromClipboard);
+    document.removeEventListener("copy", this.onCopy);
+    document.removeEventListener("cut", this.onCut);
     window.removeEventListener("resize", this.onWindowResize);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
@@ -1114,8 +1126,50 @@ export class CaliburnEditorComponent
     handleCanvasDoubleClick(this, event);
   }
 
+  handleCanvasContextMenu(event: MouseEvent) {
+    handleCanvasContextMenu(this, event);
+  }
+
+  private onCut = (event: ClipboardEvent) => {
+    if (!this.isInteractionEnabled()) {
+      return;
+    }
+    const isExcalidrawActive = this.containerRef()?.nativeElement?.contains(
+      document.activeElement,
+    );
+    if (!isExcalidrawActive || isWritableElement(event.target)) {
+      return;
+    }
+    this.actionManager.executeAction(actionCut, "keyboard", event);
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  private onCopy = (event: ClipboardEvent) => {
+    if (!this.isInteractionEnabled()) {
+      return;
+    }
+    const isExcalidrawActive = this.containerRef()?.nativeElement?.contains(
+      document.activeElement,
+    );
+    if (!isExcalidrawActive || isWritableElement(event.target)) {
+      return;
+    }
+    this.actionManager.executeAction(actionCopy, "keyboard", event);
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   handleCanvasPointerDown(event: PointerEvent) {
     this.lastPointerDownEvent = event;
+
+    // since contextMenu options are potentially evaluated on each render,
+    // and an contextMenu action may depend on selection state, we must
+    // close the contextMenu before we update the selection on pointerDown
+    // (e.g. resetting selection)
+    if (this.state.contextMenu) {
+      this.setState({ contextMenu: null });
+    }
 
     if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;

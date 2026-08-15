@@ -1041,8 +1041,7 @@ describe("textWysiwyg", () => {
       expect(rectangle.boundElements).toBe(null);
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should bind text to container when triggered via context menu", async () => {
+    it("should bind text to container when triggered via context menu", async () => {
       expect(h.elements.length).toBe(1);
       expect(h.elements[0].id).toBe(rectangle.id);
 
@@ -1170,8 +1169,7 @@ describe("textWysiwyg", () => {
       expect(text.x).toBe(30);
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should unbind bound text when unbind action from context menu is triggered", async () => {
+    it("should unbind bound text when unbind action from context menu is triggered", async () => {
       expect(h.elements.length).toBe(1);
       expect(h.elements[0].id).toBe(rectangle.id);
 
@@ -1454,8 +1452,7 @@ describe("textWysiwyg", () => {
       },
     );
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should restore original container height and clear cache once text is unbind", async () => {
+    it("should restore original container height and clear cache once text is unbind", async () => {
       const container = API.createElement({
         type: "rectangle",
         height: 75,
@@ -1697,8 +1694,7 @@ describe("textWysiwyg", () => {
       });
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should wrap text in a container when wrap text in container triggered from context menu", async () => {
+    it("should wrap text in a container when wrap text in container triggered from context menu", async () => {
       UI.clickTool("text");
       mouse.clickAt(20, 30);
       const editor = await getTextEditor();
