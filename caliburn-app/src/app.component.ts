@@ -2,6 +2,7 @@ import { NgTemplateOutlet } from "@angular/common";
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   signal,
@@ -29,7 +30,7 @@ import {
   restoreAppState,
   restoreElements,
 } from "@excalidraw/excalidraw/data/restore";
-import { languages, setLanguage, t } from "@excalidraw/excalidraw/i18n";
+import { t } from "@excalidraw/excalidraw/i18n";
 import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
 import { parseLibraryTokensFromUrl } from "@excalidraw/excalidraw/data/library";
 
@@ -58,7 +59,12 @@ import {
   openConfirmModal,
 } from "../../packages/caliburn/src/index";
 
-import { appLangCode, setAppLangCode } from "./app-language/language-state";
+import {
+  appLangCode,
+  loadLanguage,
+  loadedLangCode,
+  setAppLangCode,
+} from "./app-language/language-state";
 import { getPreferredLanguage } from "./app-language/language-detector";
 import {
   isCollaborating,
@@ -99,14 +105,17 @@ import { handleLibrary, persistLibraryItems } from "./library";
 import type { CollabService as Collab } from "./collab/collab.service";
 
 import type { CaliburnImperativeAPI } from "../../packages/caliburn/src/index";
-import type { AfterViewInit, OnDestroy } from "@angular/core";
+import type { OnDestroy } from "@angular/core";
 
-const shareableLinkConfirmDialog = {
-  title: t("overwriteConfirm.modal.shareableLink.title"),
-  descriptionKey: "overwriteConfirm.modal.shareableLink.description",
-  actionLabel: t("overwriteConfirm.modal.shareableLink.button"),
-  color: "danger",
-} as const;
+/** upstream keeps this as a module constant; here it is resolved per call,
+ * since the locale is loaded after this module is imported */
+const shareableLinkConfirmDialog = () =>
+  ({
+    title: t("overwriteConfirm.modal.shareableLink.title"),
+    descriptionKey: "overwriteConfirm.modal.shareableLink.description",
+    actionLabel: t("overwriteConfirm.modal.shareableLink.button"),
+    color: "danger",
+  } as const);
 
 type InitializedScene = {
   scene: ExcalidrawInitialDataState | null;
@@ -118,12 +127,13 @@ type InitializedScene = {
 /**
  * Port of upstream `excalidraw-app/App.tsx`'s `initializeScene`. The confirm
  * modal is the editor's own (which takes the editor instead of a module-level
- * atom), so the caller hands it in.
+ * atom), so the caller hands in a way to reach it — resolved at the point of
+ * use, since the editor may be rebuilt between calls.
  */
 const initializeScene = async (opts: {
   collab: Collab | null;
   excalidrawAPI: CaliburnImperativeAPI;
-  editor: CaliburnEditorComponent;
+  getEditor: () => CaliburnEditorComponent;
 }): Promise<InitializedScene> => {
   const searchParams = new URLSearchParams(window.location.search);
   const id = searchParams.get("id");
@@ -158,7 +168,7 @@ const initializeScene = async (opts: {
       // don't prompt for collab scenes because we don't override local storage
       roomLinkData ||
       // otherwise, prompt whether user wants to override current scene
-      (await openConfirmModal(opts.editor, shareableLinkConfirmDialog))
+      (await openConfirmModal(opts.getEditor(), shareableLinkConfirmDialog()))
     ) {
       if (jsonBackendMatch) {
         const imported = await importFromBackend(
@@ -212,7 +222,7 @@ const initializeScene = async (opts: {
       const data = await loadFromBlob(await request.blob(), null, null);
       if (
         !scene.elements.length ||
-        (await openConfirmModal(opts.editor, shareableLinkConfirmDialog))
+        (await openConfirmModal(opts.getEditor(), shareableLinkConfirmDialog()))
       ) {
         return { scene: data, isExternalScene: false };
       }
@@ -307,7 +317,7 @@ const initializeScene = async (opts: {
   ],
   templateUrl: "./app.component.html",
 })
-export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
+export class CaliburnAppComponent implements OnDestroy {
   private readonly appThemeService = inject(AppThemeService);
   protected readonly collab = inject(CollabService);
 
@@ -334,25 +344,52 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
   protected readonly appTheme = this.appThemeService.appTheme;
   protected readonly editorTheme = this.appThemeService.editorTheme;
   protected readonly setAppTheme = this.appThemeService.setAppTheme;
-  protected readonly menuHintLabel = t("welcomeScreen.app.menuHint");
-  protected readonly collabOfflineWarning = t("alerts.collabOfflineWarning");
-  protected readonly localStorageQuotaExceededWarning = t(
-    "alerts.localStorageQuotaExceeded",
-  );
+  /** the app's own labels live outside the rebuilt editor subtree, so they
+   * are resolved per render against the loaded language */
+  protected readonly menuHintLabel = computed(() => {
+    loadedLangCode();
+    return t("welcomeScreen.app.menuHint");
+  });
+  protected readonly collabOfflineWarning = computed(() => {
+    loadedLangCode();
+    return t("alerts.collabOfflineWarning");
+  });
+  protected readonly localStorageQuotaExceededWarning = computed(() => {
+    loadedLangCode();
+    return t("alerts.localStorageQuotaExceeded");
+  });
+
+  /**
+   * Upstream's `<InitializeApp langCode>` gate: the editor is held back until
+   * the detected language is loaded, because caliburn's chrome resolves its
+   * labels when each component is constructed. Upstream shows a
+   * `LoadingMessage` meanwhile; caliburn has no port of it, so nothing is
+   * rendered for the (usually sub-frame) duration of the locale fetch.
+   */
+  protected readonly languageLoaded = signal(false);
 
   protected readonly latestShareableLink = signal<string | null>(null);
   protected readonly errorMessage = signal<string>("");
 
-  protected readonly commandPaletteItems = buildCommandPaletteItems({
-    collab: this.isCollabDisabled ? null : this.collab,
-    openShareDialog: (type) => shareDialogState.set({ isOpen: true, type }),
+  protected readonly commandPaletteItems = computed(() => {
+    loadedLangCode();
+    return buildCommandPaletteItems({
+      collab: this.isCollabDisabled ? null : this.collab,
+      openShareDialog: (type) => shareDialogState.set({ isOpen: true, type }),
+    });
   });
 
   private excalidrawAPI: CaliburnImperativeAPI | null = null;
-  private loadedLangCode = appLangCode();
   private pendingFiles: BinaryFiles | null = null;
   private collabStarted = false;
+  private initialized = false;
   private detachHandlers: (() => void) | null = null;
+
+  constructor() {
+    loadLanguage(appLangCode()).finally(() => {
+      this.languageLoaded.set(true);
+    });
+  }
 
   /** upstream's `onExcalidrawAPI` callback, re-run on every editor remount */
   protected readonly onExcalidrawAPI = (api: CaliburnImperativeAPI) => {
@@ -381,18 +418,16 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
     });
 
     handleLibrary(api);
+
+    if (!this.initialized) {
+      this.initialized = true;
+      this.initialize(api);
+    }
   };
 
   protected readonly onLibraryChange = (libraryItems: LibraryItems) => {
     persistLibraryItems(this.excalidrawAPI, libraryItems);
   };
-
-  ngAfterViewInit() {
-    const excalidrawAPI = this.excalidrawAPI;
-    if (excalidrawAPI) {
-      this.initialize(excalidrawAPI);
-    }
-  }
 
   ngOnDestroy() {
     this.detachHandlers?.();
@@ -402,16 +437,22 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
   /**
    * The language select (and the browser-tab sync) only write `appLangCode`;
    * loading the locale and rebuilding the editor around the current scene
-   * happens here, as upstream's `langCode` prop does on the React side.
+   * happens here, as upstream's `langCode` prop does on the React side. The
+   * startup load is the constructor's, so this only fires on a change.
    */
   private readonly applyLanguage = effect(() => {
     const langCode = appLangCode();
-    if (langCode === this.loadedLangCode) {
+    if (
+      !this.languageLoaded() ||
+      langCode === loadedLangCode() ||
+      langCode === this.loadingLangCode
+    ) {
       return;
     }
-    this.loadedLangCode = langCode;
     this.reloadLanguage(langCode);
   });
+
+  private loadingLangCode: string | null = null;
 
   /** upstream's initial-load effect */
   private initialize(excalidrawAPI: CaliburnImperativeAPI) {
@@ -421,7 +462,7 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
     initializeScene({
       collab,
       excalidrawAPI,
-      editor: this.editorRef()!,
+      getEditor: () => this.editorRef()!,
     }).then((data) => {
       this.loadImages(data, /* isInitialLoad */ true);
       this.applyScene(data.scene, /* isInitialLoad */ true);
@@ -443,7 +484,7 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
         initializeScene({
           collab,
           excalidrawAPI: api,
-          editor: this.editorRef()!,
+          getEditor: () => this.editorRef()!,
         }).then((data) => {
           this.loadImages(data);
           this.applyScene(data.scene);
@@ -819,26 +860,23 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
   }
 
   private async reloadLanguage(langCode: string) {
-    const lang = languages.find((language) => language.code === langCode);
-    if (!lang) {
+    this.loadingLangCode = langCode;
+    await loadLanguage(langCode);
+    this.loadingLangCode = null;
+
+    const excalidrawAPI = this.excalidrawAPI;
+    if (!excalidrawAPI) {
+      // nothing to rebuild before the editor has mounted once
       return;
     }
 
-    const excalidrawAPI = this.excalidrawAPI;
-    if (excalidrawAPI) {
-      this.initialData.set({
-        elements:
-          excalidrawAPI.getSceneElementsIncludingDeleted() as readonly OrderedExcalidrawElement[],
-        appState: excalidrawAPI.getAppState(),
-      });
-      this.pendingFiles = excalidrawAPI.getFiles();
-    }
+    this.initialData.set({
+      elements:
+        excalidrawAPI.getSceneElementsIncludingDeleted() as readonly OrderedExcalidrawElement[],
+      appState: excalidrawAPI.getAppState(),
+    });
+    this.pendingFiles = excalidrawAPI.getFiles();
 
-    await setLanguage(lang);
-
-    if (this.excalidrawAPI) {
-      // nothing to rebuild before the editor has mounted once
-      this.editorGeneration.update((generation) => generation + 1);
-    }
+    this.editorGeneration.update((generation) => generation + 1);
   }
 }

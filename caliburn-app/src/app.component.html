@@ -3,12 +3,16 @@
   style="height: 100%"
   [class.is-collaborating]="isCollaborating()"
 >
-  <!-- the two branches render the same template: flipping between them is
-       how a language change rebuilds the editor (see `editorGeneration`) -->
-  @if (editorGeneration() % 2 === 0) {
-    <ng-container *ngTemplateOutlet="editor" />
-  } @else {
-    <ng-container *ngTemplateOutlet="editor" />
+  <!-- held back until the detected language is loaded (upstream's
+       `<InitializeApp langCode>`); the two branches then render the same
+       template, and flipping between them is how a language change rebuilds
+       the editor (see `editorGeneration`) -->
+  @if (languageLoaded()) {
+    @if (editorGeneration() % 2 === 0) {
+      <ng-container *ngTemplateOutlet="editor" />
+    } @else {
+      <ng-container *ngTemplateOutlet="editor" />
+    }
   }
 </div>
 
@@ -19,7 +23,7 @@
     [onThemeChange]="setAppTheme"
     [onExcalidrawAPI]="onExcalidrawAPI"
     [onLibraryChange]="onLibraryChange"
-    [customCommandPaletteItems]="commandPaletteItems"
+    [customCommandPaletteItems]="commandPaletteItems()"
     [handleKeyboardGlobally]="true"
     [autoFocus]="true"
     [mainMenu]="mainMenuSlot"
@@ -43,7 +47,7 @@
       />
     </ng-template>
     <ng-template #welcomeScreenMenuHintSlot>
-      <caliburn-welcome-screen-menu-hint [label]="menuHintLabel" />
+      <caliburn-welcome-screen-menu-hint [label]="menuHintLabel()" />
     </ng-template>
     <ng-template #footerSlot>
       <caliburn-app-footer />
@@ -61,11 +65,11 @@
     </ng-template>
 
     @if (isCollaborating() && isOffline()) {
-      <div class="alert alert--warning">{{ collabOfflineWarning }}</div>
+      <div class="alert alert--warning">{{ collabOfflineWarning() }}</div>
     }
     @if (localStorageQuotaExceeded()) {
       <div class="alert alert--danger">
-        {{ localStorageQuotaExceededWarning }}
+        {{ localStorageQuotaExceededWarning() }}
       </div>
     }
     @if (latestShareableLink(); as link) {
