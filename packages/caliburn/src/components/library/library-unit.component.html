@@ -1,0 +1,18 @@
+<div
+  #dragger
+  class="library-unit__dragger"
+  [class.library-unit__pulse]="isPending()"
+  [attr.draggable]="!!elements()"
+  (click)="onDraggerClick($event)"
+  (dragstart)="onDragStart($event)"
+></div>
+@if (isPending()) {
+  <div class="library-unit__adder"><ng-icon name="plusIcon" /></div>
+}
+@if (showCheckbox()) {
+  <caliburn-checkbox-item
+    class="library-unit__checkbox"
+    [checked]="selected()"
+    (checkedChange)="itemToggle.emit({ id: id()!, event: $event.event })"
+  />
+}

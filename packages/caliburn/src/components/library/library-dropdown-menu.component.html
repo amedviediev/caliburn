@@ -1,0 +1,55 @@
+<caliburn-dropdown-menu [open]="isLibraryMenuOpen()">
+  <button
+    caliburn-dropdown-menu-trigger
+    (toggle)="setMenuOpen(!isLibraryMenuOpen())"
+  >
+    <ng-icon name="dotsIcon" />
+  </button>
+  <caliburn-dropdown-menu-content
+    class="library-menu"
+    (closeOutside)="setMenuOpen(false)"
+    (itemSelected)="setMenuOpen(false)"
+  >
+    @if (!itemsSelected()) {
+      <button
+        caliburn-dropdown-menu-item
+        icon="loadIcon"
+        testId="lib-dropdown--load"
+        (select)="onLibraryImport()"
+      >
+        {{ loadLabel }}
+      </button>
+    }
+    @if (items().length) {
+      <button
+        caliburn-dropdown-menu-item
+        icon="exportIcon"
+        testId="lib-dropdown--export"
+        (select)="onLibraryExport()"
+      >
+        {{ exportLabel }}
+      </button>
+    }
+    @if (items().length) {
+      <button
+        caliburn-dropdown-menu-item
+        icon="trashIcon"
+        (select)="showRemoveLibAlert.set(true)"
+      >
+        {{ resetLabel() }}
+      </button>
+    }
+  </caliburn-dropdown-menu-content>
+</caliburn-dropdown-menu>
+@if (selectedItems().length > 0) {
+  <div class="library-actions-counter">{{ selectedItems().length }}</div>
+}
+@if (showRemoveLibAlert()) {
+  <caliburn-confirm-dialog
+    [title]="alertTitle()"
+    (confirm)="onConfirmRemove()"
+    (cancel)="showRemoveLibAlert.set(false)"
+  >
+    <p>{{ alertContent() }}</p>
+  </caliburn-confirm-dialog>
+}

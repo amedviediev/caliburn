@@ -1,0 +1,15 @@
+@for (item of items(); track item.id ?? $index; let i = $index) {
+  @if (i < index()) {
+    <caliburn-library-unit
+      [id]="item.id"
+      [elements]="item.elements"
+      [isPending]="!item.id && !!item.elements"
+      [selected]="isItemSelected()(item.id)"
+      (itemClick)="itemClick.emit($event)"
+      (itemToggle)="itemSelectToggle.emit($event)"
+      (itemDrag)="itemDrag.emit($event)"
+    />
+  } @else {
+    <caliburn-empty-library-unit />
+  }
+}

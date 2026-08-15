@@ -15,7 +15,12 @@
 }
 <caliburn-json-export-dialog />
 <caliburn-command-palette />
-<div class="layer-ui__wrapper">
+<div
+  class="layer-ui__wrapper"
+  [style.width]="
+    isSidebarDockedAndFits() ? 'calc(100% - var(--right-sidebar-width))' : null
+  "
+>
   <caliburn-fixed-side-container side="top">
     <div class="App-menu App-menu_top">
       <caliburn-stack-col [gap]="6" class="App-menu_top__left">
@@ -43,7 +48,22 @@
           </div>
         </section>
       }
-      <div class="layer-ui__wrapper__top-right zen-mode-transition"></div>
+      <div
+        class="layer-ui__wrapper__top-right zen-mode-transition"
+        [class.transition-right]="state().zenModeEnabled"
+      >
+        @if (showSidebarTrigger()) {
+          <button
+            caliburn-sidebar-trigger
+            triggerClass="default-sidebar-trigger"
+            icon="sidebarRightIcon"
+            [name]="defaultSidebarName"
+            [tab]="defaultSidebarTab"
+            [title]="libraryTitle"
+            (toggle)="onSidebarToggle($event)"
+          ></button>
+        }
+      </div>
     </div>
   </caliburn-fixed-side-container>
   <caliburn-footer />
@@ -58,12 +78,4 @@
     </div>
   }
 </div>
-@if (isSearchSidebarOpen()) {
-  <caliburn-island
-    class="sidebar sidebar--docked default-sidebar"
-    viewportUi="side"
-    viewportUiName="sidebar"
-  >
-    <caliburn-search-menu />
-  </caliburn-island>
-}
+<caliburn-default-sidebar />

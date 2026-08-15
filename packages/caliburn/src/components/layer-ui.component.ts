@@ -1,11 +1,15 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
 } from "@angular/core";
 
-import { CANVAS_SEARCH_TAB, DEFAULT_SIDEBAR } from "@excalidraw/common";
+import { DEFAULT_SIDEBAR, capitalizeString } from "@excalidraw/common";
+
+import { trackEvent } from "@excalidraw/excalidraw/analytics";
+import { t } from "@excalidraw/excalidraw/i18n";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
@@ -17,10 +21,11 @@ import { CaliburnFixedSideContainerComponent } from "./fixed-side-container.comp
 import { CaliburnFooterComponent } from "./footer.component";
 import { CaliburnHelpDialogComponent } from "./help-dialog.component";
 import { CaliburnImageExportDialogComponent } from "./image-export-dialog.component";
-import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.component";
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
-import { CaliburnSearchMenuComponent } from "./search-menu.component";
+import { isSidebarDocked } from "./sidebar/common";
+import { CaliburnDefaultSidebarComponent } from "./sidebar/default-sidebar.component";
+import { CaliburnSidebarTriggerComponent } from "./sidebar/sidebar-trigger.component";
 import {
   CaliburnStackColComponent,
   CaliburnStackRowComponent,
@@ -38,24 +43,20 @@ let nextLayerUIId = 0;
 /**
  * Angular port of upstream `LayerUI.tsx`'s desktop layout: the dialogs, the
  * top fixed side container (canvas actions / shape actions column, the shapes
- * toolbar, the top-right column) and the footer. Surfaces owned by later
- * slices — the welcome screen, sidebars, stats, toasts and the host-render
- * props — are left as their (empty) upstream containers rather than stubbed.
- *
- * Upstream mounts the search menu in the default sidebar's
- * `CANVAS_SEARCH_TAB` (`DefaultSidebar.tsx`), rendered from LayerUI's
- * `renderSidebars()` right after the `.layer-ui__wrapper`. The `Sidebar`
- * family is a later slice, so the menu is hosted here in a plain island
- * carrying the sidebar's own classes (`.sidebar.sidebar--docked
- * .default-sidebar` — the search tab force-docks upstream) in that same
- * position, with the menu's own DOM untouched. The sidebar's header, tab
- * triggers and close/dock buttons are not stubbed.
+ * toolbar, the top-right column with the sidebar trigger), the footer and the
+ * sidebars. Surfaces owned by later slices — the welcome screen, stats and
+ * the host-render props — are left as their (empty) upstream containers
+ * rather than stubbed.
  *
  * Upstream nests the shapes `<Section>`'s heading inside the toolbar island
  * via `Section`'s render-function form; the caliburn `Section` primitive
  * only ports the plain-children form, so the `<section>` element is written
  * out here and the heading is rendered by `caliburn-toolbar`, keeping the
  * upstream DOM (`aria-labelledby` → the island's `<h2>`).
+ *
+ * Upstream tunnels the default sidebar's trigger from `DefaultSidebar.tsx`
+ * into `.layer-ui__wrapper__top-right`; caliburn has no host-app sidebar API,
+ * so the trigger is written where the tunnel outlet is.
  */
 @Component({
   selector: "caliburn-layer-ui",
@@ -64,15 +65,15 @@ let nextLayerUIId = 0;
     CaliburnActiveConfirmDialogComponent,
     CaliburnCommandPaletteComponent,
     CaliburnDefaultMainMenuComponent,
+    CaliburnDefaultSidebarComponent,
     CaliburnErrorDialogComponent,
     CaliburnFixedSideContainerComponent,
     CaliburnFooterComponent,
     CaliburnHelpDialogComponent,
     CaliburnImageExportDialogComponent,
-    CaliburnIslandComponent,
     CaliburnJSONExportDialogComponent,
-    CaliburnSearchMenuComponent,
     CaliburnShapeActionsComponent,
+    CaliburnSidebarTriggerComponent,
     CaliburnStackColComponent,
     CaliburnStackRowComponent,
     CaliburnToastComponent,
@@ -88,18 +89,44 @@ export class CaliburnLayerUIComponent {
   protected readonly headingId = `caliburn-layer-ui-${nextLayerUIId++}-shapes-title`;
   protected readonly uiOptions = this.editor.props.UIOptions;
   protected readonly defaultToastDuration = DEFAULT_TOAST_TIMEOUT;
+  protected readonly defaultSidebarName = DEFAULT_SIDEBAR.name;
+  protected readonly defaultSidebarTab = DEFAULT_SIDEBAR.defaultTab;
+  protected readonly libraryTitle = capitalizeString(t("toolBar.library"));
 
   protected state() {
     this.editor.changeGeneration();
     return this.editor.state;
   }
 
-  protected isSearchSidebarOpen() {
-    const openSidebar = this.state().openSidebar;
+  protected readonly isSidebarDockedAndFits = computed(
+    () =>
+      !!this.state().openSidebar &&
+      isSidebarDocked() &&
+      this.editor.editorInterface.canFitSidebar,
+  );
+
+  protected readonly showSidebarTrigger = computed(() => {
+    const state = this.state();
     return (
-      openSidebar?.name === DEFAULT_SIDEBAR.name &&
-      openSidebar.tab === CANVAS_SEARCH_TAB
+      !state.viewModeEnabled &&
+      state.openDialog?.name !== "elementLinkSelector" &&
+      // hide button when sidebar docked
+      (!isSidebarDocked() || state.openSidebar?.name !== DEFAULT_SIDEBAR.name)
     );
+  });
+
+  protected onSidebarToggle(open: boolean) {
+    if (open) {
+      trackEvent(
+        "sidebar",
+        `${DEFAULT_SIDEBAR.name} (open)`,
+        `button (${
+          this.editor.editorInterface.formFactor === "phone"
+            ? "mobile"
+            : "desktop"
+        })`,
+      );
+    }
   }
 
   protected clearErrorMessage() {

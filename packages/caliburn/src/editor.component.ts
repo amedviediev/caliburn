@@ -59,6 +59,8 @@ import {
   isImageFileHandle,
 } from "@excalidraw/excalidraw/data/blob";
 import { restoreElements } from "@excalidraw/excalidraw/data/restore";
+import Library, { libraryItemsAtom } from "@excalidraw/excalidraw/data/library";
+import { editorJotaiStore } from "@excalidraw/excalidraw/editor-jotai";
 import { exportCanvas } from "@excalidraw/excalidraw/data";
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
@@ -103,7 +105,11 @@ import type {
   BinaryFileData,
   BinaryFiles,
   InteractionConfig,
+  LibraryItems,
+  LibraryItemsSource,
   SceneData,
+  SidebarName,
+  SidebarTabName,
   ToolType,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
@@ -145,11 +151,13 @@ import { actionToggleSearchMenu } from "./actions/actionToggleSearchMenu";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
 import {
+  addElementsFromPasteOrLibrary,
   handleAppOnDrop,
   pasteFromClipboard as pasteFromClipboardIntoEditor,
   resetPlainPasteTracking,
   trackPlainPasteKeyDown,
 } from "./clipboard-interaction";
+import { clearLibraryItemSvgCache } from "./components/library/library-item-svg";
 import {
   addNewImagesToImageCache,
   createScheduleImageRefresh,
@@ -253,6 +261,8 @@ import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
 export interface CaliburnImperativeAPI {
   updateScene: CaliburnEditorComponent["updateScene"];
   mutateElement: CaliburnEditorComponent["mutateElement"];
+  updateLibrary: CaliburnEditorComponent["library"]["updateLibrary"];
+  toggleSidebar: CaliburnEditorComponent["toggleSidebar"];
   addFiles: (files: BinaryFileData[]) => void;
   getSceneElementsIncludingDeleted: () => readonly ExcalidrawElement[];
   getSceneElementsMapIncludingDeleted: () => ReturnType<
@@ -286,6 +296,8 @@ export interface CaliburnImperativeAPI {
 type InteractionProps = {
   interaction?: boolean | InteractionConfig | null;
 };
+
+let nextEditorId = 0;
 
 type SetStateArg =
   | Partial<AppState>
@@ -346,8 +358,13 @@ export class CaliburnEditorComponent
   readonly initialData = input<{
     elements?: readonly ExcalidrawElement[];
     appState?: Partial<AppState>;
+    libraryItems?: LibraryItemsSource;
     scrollToContent?: boolean;
   } | null>(null);
+  readonly libraryReturnUrl = input<string | undefined>(undefined);
+  readonly onLibraryChange = input<
+    ((libraryItems: LibraryItems) => void) | null
+  >(null);
   readonly initialState = input<{
     viewport?: Omit<SetViewportOptions, "animation">;
   } | null>(null);
@@ -433,8 +450,41 @@ export class CaliburnEditorComponent
     onThemeChange: undefined as
       | ((theme: AppState["theme"]) => void)
       | undefined,
+    onLibraryChange: undefined as
+      | ((libraryItems: LibraryItems) => void)
+      | undefined,
+    libraryReturnUrl: undefined as string | undefined,
     imageOptions: { ...DEFAULT_IMAGE_OPTIONS },
   };
+
+  /**
+   * Upstream's `App.id` (a `nanoid()`), used as the libraries.excalidraw.com
+   * browse token. A per-instance counter stands in: `nanoid` is a
+   * `packages/excalidraw` dependency caliburn doesn't carry, and
+   * `randomId()` draws from the same test-env sequence the element ids do.
+   */
+  readonly id = `caliburn-editor-${nextEditorId++}`;
+
+  /**
+   * The library state class is vendored (`data/library.ts`) and takes the app
+   * instance: it reads `props.onLibraryChange` and calls `setState` /
+   * `focusContainer` on it.
+   */
+  readonly library = new Library(this as any);
+
+  /**
+   * Upstream's `libraryItemsAtom` (`data/library.ts`), which the vendored
+   * `Library` writes to through its own jotai store — mirrored into a signal
+   * so the Angular library UI re-renders on it.
+   */
+  readonly libraryItemsData = signal(editorJotaiStore.get(libraryItemsAtom));
+
+  private readonly unsubLibraryItems = editorJotaiStore.sub(
+    libraryItemsAtom,
+    () => {
+      this.libraryItemsData.set(editorJotaiStore.get(libraryItemsAtom));
+    },
+  );
 
   /** the theme the *next* image export renders with, when the user overrode
    * it in the image-export dialog (upstream `App.sessionExportThemeOverride`) */
@@ -786,6 +836,9 @@ export class CaliburnEditorComponent
         DEFAULT_IMAGE_OPTIONS.maxFileSizeBytes,
     };
 
+    this.props.libraryReturnUrl = this.libraryReturnUrl();
+    this.props.onLibraryChange = this.onLibraryChange() ?? undefined;
+
     const viewModeEnabled = this.viewModeEnabled();
     if (!this.isInteractionEnabled()) {
       // non-interactive editor implies view mode so that all edit-mode
@@ -867,6 +920,9 @@ export class CaliburnEditorComponent
     window.removeEventListener("resize", this.onWindowResize);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
+    this.library.destroy();
+    this.unsubLibraryItems();
+    clearLibraryItemSvgCache();
     this.store.onStoreIncrementEmitter.clear();
     this.history.clear();
     this.store.clear();
@@ -876,6 +932,17 @@ export class CaliburnEditorComponent
   private initializeScene() {
     this.sceneInitialized = true;
     const initialData = this.initialData();
+
+    if (initialData?.libraryItems) {
+      this.library
+        .updateLibrary({
+          libraryItems: initialData.libraryItems,
+          merge: true,
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
 
     const restoredElements = restoreElements(initialData?.elements, null, {
       repairBindings: true,
@@ -1910,6 +1977,8 @@ export class CaliburnEditorComponent
     return {
       updateScene: this.updateScene,
       mutateElement: this.mutateElement,
+      updateLibrary: this.library.updateLibrary,
+      toggleSidebar: this.toggleSidebar,
       addFiles: (files: BinaryFileData[]) => {
         this.addMissingFiles(files);
         addNewImagesToImageCache(this);
@@ -1942,6 +2011,48 @@ export class CaliburnEditorComponent
 
   focusContainer = () => {
     this.containerRef()?.nativeElement?.focus();
+  };
+
+  /** upstream `App.toggleSidebar` */
+  toggleSidebar = ({
+    name,
+    tab,
+    force,
+  }: {
+    name: SidebarName | null;
+    tab?: SidebarTabName;
+    force?: boolean;
+  }): boolean => {
+    let nextName;
+    if (force === undefined) {
+      nextName =
+        this.state.openSidebar?.name === name &&
+        this.state.openSidebar?.tab === tab
+          ? null
+          : name;
+    } else {
+      nextName = force ? name : null;
+    }
+
+    const nextState: AppState["openSidebar"] = nextName
+      ? { name: nextName }
+      : null;
+    if (nextState && tab) {
+      nextState.tab = tab;
+    }
+
+    this.batchCommits(() => this.setState({ openSidebar: nextState }));
+
+    return !!nextName;
+  };
+
+  /** upstream `App.onInsertElements` */
+  onInsertElements = (elements: readonly ExcalidrawElement[]) => {
+    addElementsFromPasteOrLibrary(this, {
+      elements,
+      position: "center",
+      files: null,
+    });
   };
 
   get excalidrawContainerValue(): { container: HTMLDivElement | null } {

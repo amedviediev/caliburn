@@ -1,0 +1,29 @@
+@if (isInitializing()) {
+  <div class="layer-ui__library-message">
+    <div>
+      <caliburn-spinner size="2em" />
+      <span>{{ loadingMessage }}</span>
+    </div>
+  </div>
+} @else {
+  <caliburn-library-menu-items
+    [isLoading]="isLoading()"
+    [libraryItems]="libraryItems()"
+    [pendingElements]="pendingElements()"
+    [id]="id"
+    [libraryReturnUrl]="libraryReturnUrl"
+    [theme]="theme()"
+    [(selectedItems)]="selectedItems"
+    (addToLibrary)="onAddToLibrary($event)"
+    (insertLibraryItems)="onInsertLibraryItems($event)"
+  />
+  @if (showControlButtons()) {
+    <caliburn-library-menu-control-buttons
+      class="library-menu-control-buttons--at-bottom"
+      style="padding: 16px 12px 0 12px"
+      [id]="id"
+      [libraryReturnUrl]="libraryReturnUrl"
+      [theme]="theme()"
+    />
+  }
+}

@@ -1,0 +1,8 @@
+<div [class]="innerClass()">
+  @if (icon(); as iconName) {
+    <div><ng-icon [name]="iconName" /></div>
+  }
+  @if (label(); as text) {
+    <div class="sidebar-trigger__label">{{ text }}</div>
+  }
+</div>

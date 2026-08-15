@@ -1,0 +1,138 @@
+<div class="library-menu-items-header">
+  @if (!isLibraryEmpty()) {
+    <caliburn-text-field
+      class="library-menu-items-container__search"
+      [class.hideCancelButton]="!isPhone"
+      type="search"
+      [placeholder]="searchPlaceholder"
+      [value]="searchInputValue()"
+      (valueChange)="searchInputValue.set($event)"
+    />
+  }
+  <caliburn-library-dropdown-menu
+    class="library-menu-dropdown-container--in-heading"
+    [(selectedItems)]="selectedItems"
+  />
+</div>
+<caliburn-stack-col
+  #libraryContainer
+  class="library-menu-items-container__items"
+  align="start"
+  [gap]="1"
+  [style.flex]="publishedItems().length > 0 ? 1 : '0 1 auto'"
+  [style.margin]="isLibraryEmpty() ? 'auto' : 0"
+>
+  @if (isLoading()) {
+    <div
+      style="position: absolute; top: var(--container-padding-y); right: var(--container-padding-x); transform: translateY(50%)"
+    >
+      <caliburn-spinner />
+    </div>
+  }
+
+  @if (!isSearching()) {
+    @if (!isLibraryEmpty()) {
+      <div class="library-menu-items-container__header">
+        {{ personalLibLabel }}
+      </div>
+    }
+    @if (!pendingElements().length && !unpublishedItems().length) {
+      <div class="library-menu-items__no-items">
+        @if (!publishedItems().length) {
+          <div class="library-menu-items__no-items__label">
+            {{ noItemsLabel }}
+          </div>
+        }
+        <div class="library-menu-items__no-items__hint">
+          {{ publishedItems().length > 0 ? emptyPrivateHint : emptyLibraryHint }}
+        </div>
+      </div>
+    } @else {
+      <div class="library-menu-items-container__grid">
+        @if (pendingElements().length > 0) {
+          <caliburn-library-menu-section
+            [itemsRenderedPerBatch]="itemsRenderedPerBatch()"
+            [items]="pendingItems()"
+            [isItemSelected]="isItemSelected()"
+            (itemSelectToggle)="onItemSelectToggle($event)"
+            (itemDrag)="onItemDrag($event)"
+            (itemClick)="onAddToLibraryClick()"
+          />
+        }
+        <caliburn-library-menu-section
+          [itemsRenderedPerBatch]="itemsRenderedPerBatch()"
+          [items]="unpublishedItems()"
+          [isItemSelected]="isItemSelected()"
+          (itemSelectToggle)="onItemSelectToggle($event)"
+          (itemDrag)="onItemDrag($event)"
+          (itemClick)="onItemClick($event)"
+        />
+      </div>
+    }
+
+    @if (publishedItems().length > 0) {
+      <div class="library-menu-items-container__header" style="margin-top: 0.75rem">
+        {{ excalidrawLibLabel }}
+      </div>
+      <div class="library-menu-items-container__grid">
+        <caliburn-library-menu-section
+          [itemsRenderedPerBatch]="itemsRenderedPerBatch()"
+          [items]="publishedItems()"
+          [isItemSelected]="isItemSelected()"
+          (itemSelectToggle)="onItemSelectToggle($event)"
+          (itemDrag)="onItemDrag($event)"
+          (itemClick)="onItemClick($event)"
+        />
+      </div>
+    }
+  } @else {
+    <div class="library-menu-items-container__header">
+      {{ searchHeading }}
+      @if (!isLoading()) {
+        <div
+          class="library-menu-items-container__header__hint"
+          style="cursor: pointer"
+          (pointerdown)="preventDefault($event)"
+          (click)="clearSearch()"
+        >
+          <kbd>esc</kbd> to clear
+        </div>
+      }
+    </div>
+    @if (filteredItems().length > 0) {
+      <div class="library-menu-items-container__grid">
+        <caliburn-library-menu-section
+          [itemsRenderedPerBatch]="itemsRenderedPerBatch()"
+          [items]="filteredItems()"
+          [isItemSelected]="isItemSelected()"
+          (itemSelectToggle)="onItemSelectToggle($event)"
+          (itemDrag)="onItemDrag($event)"
+          (itemClick)="onItemClick($event)"
+        />
+      </div>
+    } @else {
+      <div class="library-menu-items__no-items">
+        <div class="library-menu-items__no-items__hint">
+          {{ searchNoResults }}
+        </div>
+        <button
+          caliburn-button
+          style="width: auto; margin-top: 1rem"
+          (pointerdown)="preventDefault($event)"
+          (select)="clearSearch()"
+        >
+          {{ searchClear }}
+        </button>
+      </div>
+    }
+  }
+
+  @if (isLibraryEmpty()) {
+    <caliburn-library-menu-control-buttons
+      style="padding: 16px 0; width: 100%"
+      [id]="id()"
+      [theme]="theme()"
+      [libraryReturnUrl]="libraryReturnUrl()"
+    />
+  }
+</caliburn-stack-col>

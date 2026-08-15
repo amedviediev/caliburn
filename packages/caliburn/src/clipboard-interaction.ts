@@ -39,7 +39,9 @@ import {
   isSupportedImageFile,
   loadSceneOrLibraryFromBlob,
   normalizeFile,
+  parseLibraryJSON,
 } from "@excalidraw/excalidraw/data/blob";
+import { distributeLibraryItemsOnSquareGrid } from "@excalidraw/excalidraw/data/library";
 import { restoreElements } from "@excalidraw/excalidraw/data/restore";
 import { ImageSceneDataError } from "@excalidraw/excalidraw/errors";
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -53,7 +55,8 @@ import type {
   ClipboardData,
   ParsedDataTransferFile,
 } from "@excalidraw/excalidraw/clipboard";
-import type { BinaryFiles } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawLibraryIds } from "@excalidraw/excalidraw/data/types";
+import type { BinaryFiles, LibraryItems } from "@excalidraw/excalidraw/types";
 
 import { addTextFromPaste } from "./text-paste";
 import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
@@ -477,8 +480,16 @@ export const loadFileToCanvas = async (
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       } as any);
     } else if (ret.type === MIME_TYPES.excalidrawlib) {
-      // libraries are not supported in the caliburn editor (the library UI
-      // was removed); ignore the file
+      await editor.library
+        .updateLibrary({
+          libraryItems: file,
+          merge: true,
+          openLibraryMenu: true,
+        })
+        .catch((error) => {
+          console.error(error);
+          editor.setState({ errorMessage: t("errors.importLibraryError") });
+        });
     }
   } catch (error: any) {
     editor.setState({ isLoading: false, errorMessage: error.message });
@@ -541,6 +552,51 @@ export const handleAppOnDrop = async (
 
   if (imageFiles.length > 0 && editor.isToolSupported("image")) {
     return insertImages(editor, imageFiles as File[], sceneX, sceneY);
+  }
+
+  const excalidrawLibrary_ids = dataTransferList.getData(
+    MIME_TYPES.excalidrawlibIds,
+  );
+  const excalidrawLibrary_data = dataTransferList.getData(
+    MIME_TYPES.excalidrawlib,
+  );
+  if (excalidrawLibrary_ids || excalidrawLibrary_data) {
+    try {
+      let libraryItems: LibraryItems | null = null;
+      if (excalidrawLibrary_ids) {
+        const { itemIds } = JSON.parse(
+          excalidrawLibrary_ids,
+        ) as ExcalidrawLibraryIds;
+        const allLibraryItems = await editor.library.getLatestLibrary();
+        libraryItems = allLibraryItems.filter((item) =>
+          itemIds.includes(item.id),
+        );
+        // legacy library dataTransfer format
+      } else if (excalidrawLibrary_data) {
+        libraryItems = parseLibraryJSON(excalidrawLibrary_data);
+      }
+      if (libraryItems?.length) {
+        libraryItems = libraryItems.map((item) => ({
+          ...item,
+          // #6465
+          elements: duplicateElements({
+            type: "everything",
+            elements: item.elements,
+            randomizeSeed: true,
+            preserveFrameChildrenOrder: true,
+          }).duplicatedElements,
+        }));
+
+        addElementsFromPasteOrLibrary(editor, {
+          elements: distributeLibraryItemsOnSquareGrid(libraryItems),
+          position: event,
+          files: null,
+        });
+      }
+    } catch (error: any) {
+      editor.setState({ errorMessage: error.message });
+    }
+    return;
   }
 
   if (fileItems.length > 0) {
