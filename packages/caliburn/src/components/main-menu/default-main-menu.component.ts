@@ -6,6 +6,7 @@ import {
 } from "@angular/core";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+import { CaliburnDropdownMenuGroupComponent } from "../dropdown-menu/dropdown-menu-group.component";
 import { CaliburnDropdownMenuSeparatorComponent } from "../dropdown-menu/dropdown-menu-separator.component";
 
 import {
@@ -18,6 +19,7 @@ import {
   CaliburnMenuSaveAsImageComponent,
   CaliburnMenuSaveToActiveFileComponent,
   CaliburnMenuSearchComponent,
+  CaliburnMenuSocialsComponent,
   CaliburnMenuToggleThemeComponent,
 } from "./default-items.component";
 import { CaliburnMainMenuComponent } from "./main-menu.component";
@@ -32,6 +34,7 @@ import type { CaliburnEditorComponent } from "../../editor.component";
   selector: "caliburn-default-main-menu",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CaliburnDropdownMenuGroupComponent,
     CaliburnDropdownMenuSeparatorComponent,
     CaliburnMainMenuComponent,
     CaliburnMenuChangeCanvasBackgroundComponent,
@@ -43,6 +46,7 @@ import type { CaliburnEditorComponent } from "../../editor.component";
     CaliburnMenuSaveAsImageComponent,
     CaliburnMenuSaveToActiveFileComponent,
     CaliburnMenuSearchComponent,
+    CaliburnMenuSocialsComponent,
     CaliburnMenuToggleThemeComponent,
   ],
   templateUrl: "./default-main-menu.component.html",
