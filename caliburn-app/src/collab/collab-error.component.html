@@ -1,0 +1,10 @@
+@if (collabError().message; as message) {
+  <caliburn-tooltip [label]="message" [long]="true">
+    <div
+      class="collab-errors-button"
+      [class.collab-errors-button-shake]="isAnimating()"
+    >
+      <ng-icon name="warning" />
+    </div>
+  </caliburn-tooltip>
+}

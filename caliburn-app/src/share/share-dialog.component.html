@@ -1,0 +1,112 @@
+@if (state().isOpen) {
+  <caliburn-dialog
+    size="small"
+    [title]="false"
+    (closeRequest)="handleClose()"
+  >
+    <div class="ShareDialog">
+      @if (isActiveRoom()) {
+        <h3 class="ShareDialog__active__header">
+          {{ labels.liveCollaboration }}
+        </h3>
+        <caliburn-text-field
+          label="Your name"
+          placeholder="Your name"
+          [value]="username()"
+          (valueChange)="setUsername($event)"
+          (keyDown)="onUsernameKeyDown($event)"
+        />
+        <div class="ShareDialog__active__linkRow">
+          <caliburn-text-field
+            label="Link"
+            [readonly]="true"
+            [fullWidth]="true"
+            [value]="activeRoomLink()!"
+          />
+          @if (isShareSupported) {
+            <button
+              caliburn-filled-button
+              class="ShareDialog__active__share"
+              size="large"
+              variant="icon"
+              label="Share"
+              [icon]="shareIconName"
+              [onClick]="shareRoomLink"
+            ></button>
+          }
+          <button
+            caliburn-filled-button
+            size="large"
+            icon="copyIcon"
+            [label]="labels.copyLink"
+            [status]="copyStatus()"
+            [onClick]="copyRoomLink"
+          ></button>
+        </div>
+        <caliburn-app-qrcode [value]="activeRoomLink()!" />
+        <div class="ShareDialog__active__description">
+          <p>
+            <span
+              role="img"
+              aria-hidden="true"
+              class="ShareDialog__active__description__emoji"
+              >🔒
+            </span>
+            {{ labels.descPrivacy }}
+          </p>
+          <p>{{ labels.descExitSession }}</p>
+        </div>
+        <div class="ShareDialog__active__actions">
+          <button
+            caliburn-filled-button
+            size="large"
+            variant="outlined"
+            color="danger"
+            icon="playerStopFilledIcon"
+            [label]="labels.stopSession"
+            [onClick]="stopCollaboration"
+          ></button>
+        </div>
+      } @else {
+        @if (collabEnabled()) {
+          <div class="ShareDialog__picker__header">
+            {{ labels.liveCollaboration }}
+          </div>
+          <div class="ShareDialog__picker__description">
+            <div style="margin-bottom: 1em">{{ labels.descIntro }}</div>
+            {{ labels.descPrivacy }}
+          </div>
+          <div class="ShareDialog__picker__button">
+            <button
+              caliburn-filled-button
+              size="large"
+              icon="playerPlayIcon"
+              [label]="labels.startSession"
+              [onClick]="startCollaboration"
+            ></button>
+          </div>
+          @if (state().isOpen && $any(state()).type === "share") {
+            <div class="ShareDialog__separator">
+              <span>{{ labels.or }}</span>
+            </div>
+          }
+        }
+        @if (state().isOpen && $any(state()).type === "share") {
+          <div class="ShareDialog__picker__header">{{ labels.linkTitle }}</div>
+          <div class="ShareDialog__picker__description">
+            {{ labels.linkDetails }}
+          </div>
+          <div class="ShareDialog__picker__button">
+            <button
+              caliburn-filled-button
+              size="large"
+              icon="linkIcon"
+              [label]="labels.linkButton"
+              [onClick]="exportToBackend"
+            ></button>
+          </div>
+        }
+      }
+    </div>
+  </caliburn-dialog>
+}

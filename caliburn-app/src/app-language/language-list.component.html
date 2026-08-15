@@ -1,0 +1,13 @@
+<select
+  class="dropdown-select dropdown-select__language"
+  style="width: 100%"
+  [value]="langCode()"
+  [attr.aria-label]="selectLanguageLabel"
+  (change)="onChange($event)"
+>
+  @for (lang of languages; track lang.code) {
+    <option [value]="lang.code" [selected]="lang.code === langCode()">
+      {{ lang.label }}
+    </option>
+  }
+</select>

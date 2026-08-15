@@ -1,0 +1,92 @@
+// Port of upstream `excalidraw-app/index.scss`, minus the `.plus-banner`
+// rules (the Excalidraw+ promo banner isn't ported). The two component
+// stylesheets the app owns are pulled in here, the way
+// `packages/caliburn/src/styles.scss` pulls in the editor's.
+@use "./collab/collab-error.scss";
+@use "./share/share-dialog.scss";
+
+.excalidraw {
+  --color-primary-contrast-offset: #625ee0; // to offset Chubb illusion
+
+  &.theme--dark {
+    --color-primary-contrast-offset: #726dff; // to offset Chubb illusion
+  }
+
+  .footer-center {
+    justify-content: flex-end;
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-inline-start: auto;
+  }
+
+  .encrypted-icon {
+    border-radius: var(--space-factor);
+    color: var(--color-primary);
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-inline-start: auto;
+    margin-inline-end: 0.6em;
+    z-index: var(--zIndex-layerUI);
+
+    svg {
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+
+  .dropdown-menu-container {
+    .dropdown-menu-item {
+      &.active-collab {
+        background-color: #ecfdf5;
+        color: #064e3c;
+      }
+      &.highlighted {
+        color: var(--color-promo);
+        font-weight: 700;
+        .dropdown-menu-item__icon g {
+          stroke-width: 2;
+        }
+      }
+    }
+  }
+
+  &.theme--dark {
+    .dropdown-menu-item {
+      &.active-collab {
+        background-color: #064e3c;
+        color: #ecfdf5;
+      }
+    }
+  }
+
+  .alert {
+    pointer-events: none;
+    position: absolute;
+    top: 6.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    text-align: center;
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    z-index: 6;
+    white-space: pre;
+
+    &--warning {
+      background-color: var(--color-warning);
+      color: var(--color-text-warning);
+    }
+
+    &--danger {
+      background-color: var(--color-danger-dark);
+      color: var(--color-danger-text);
+    }
+  }
+}
+
+.caliburn-app.is-collaborating {
+  [data-testid="clear-canvas-button"] {
+    display: none;
+  }
+}

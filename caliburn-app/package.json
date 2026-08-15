@@ -1,0 +1,21 @@
+{
+  "name": "caliburn-app",
+  "version": "1.0.0",
+  "private": true,
+  "homepage": ".",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@excalidraw/random-username": "1.0.0",
+    "firebase": "11.3.1",
+    "i18next-browser-languagedetector": "6.1.4",
+    "idb-keyval": "6.0.3",
+    "socket.io-client": "4.7.2",
+    "uqr": "0.1.2"
+  },
+  "prettier": "@excalidraw/prettier-config",
+  "scripts": {
+    "start": "vite --config vite.config.mts"
+  }
+}

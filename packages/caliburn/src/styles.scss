@@ -52,6 +52,7 @@
 @use "../../excalidraw/components/Stats/DragInput.scss";
 @use "../../excalidraw/components/footer/FooterCenter.scss";
 @use "../../excalidraw/components/live-collaboration/LiveCollaborationTrigger.scss";
+@use "../../excalidraw/components/ShareableLinkDialog.scss";
 @use "../../excalidraw/components/Toast.scss";
 @use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
 
@@ -200,6 +201,7 @@ caliburn-help-dialog,
 caliburn-image-export-dialog,
 caliburn-json-export-dialog,
 caliburn-overwrite-confirm,
+caliburn-shareable-link-dialog,
 caliburn-library-menu-section {
   display: contents;
 }

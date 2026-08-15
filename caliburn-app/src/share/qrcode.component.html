@@ -1,0 +1,16 @@
+@if (!failed()) {
+  @if (svg(); as svgData) {
+    <div
+      class="ShareDialog__active__qrcode"
+      role="img"
+      aria-label="QR code for collaboration link"
+      [innerHTML]="svgData"
+    ></div>
+  } @else {
+    <div
+      class="ShareDialog__active__qrcode ShareDialog__active__qrcode--loading"
+    >
+      <caliburn-spinner />
+    </div>
+  }
+}

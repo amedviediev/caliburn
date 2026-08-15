@@ -1,0 +1,24 @@
+<caliburn-main-menu>
+  <caliburn-menu-load-scene />
+  <caliburn-menu-save-to-active-file />
+  <caliburn-menu-export />
+  <caliburn-menu-save-as-image />
+  @if (isCollabEnabled()) {
+    <caliburn-menu-live-collaboration-trigger
+      [isCollaborating]="isCollaborating()"
+      (select)="collabDialogOpen.emit()"
+    />
+  }
+  <caliburn-menu-command-palette class="highlighted" />
+  <caliburn-menu-search />
+  <caliburn-menu-help />
+  <caliburn-menu-clear-canvas />
+  <caliburn-dropdown-menu-separator />
+  <caliburn-menu-socials />
+  <caliburn-dropdown-menu-separator />
+  <caliburn-menu-toggle-theme [allowSystemTheme]="true" [theme]="theme()" />
+  <caliburn-dropdown-menu-item-custom>
+    <caliburn-app-language-list />
+  </caliburn-dropdown-menu-item-custom>
+  <caliburn-menu-change-canvas-background />
+</caliburn-main-menu>

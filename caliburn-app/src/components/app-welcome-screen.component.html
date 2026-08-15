@@ -1,0 +1,20 @@
+<caliburn-welcome-screen-center>
+  <caliburn-welcome-screen-logo />
+  <caliburn-welcome-screen-heading>
+    @for (line of headingLines; track $index) {
+      @if (!$first) {
+        <br />
+      }
+      {{ line }}
+    }
+  </caliburn-welcome-screen-heading>
+  <caliburn-welcome-screen-menu>
+    <caliburn-welcome-screen-menu-item-load-scene />
+    <caliburn-welcome-screen-menu-item-help />
+    @if (isCollabEnabled()) {
+      <caliburn-welcome-screen-menu-item-live-collaboration-trigger
+        (select)="collabDialogOpen.emit()"
+      />
+    }
+  </caliburn-welcome-screen-menu>
+</caliburn-welcome-screen-center>

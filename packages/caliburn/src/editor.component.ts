@@ -97,6 +97,8 @@ import type {
   FileId,
   NonDeleted,
   NonDeletedExcalidrawElement,
+  Ordered,
+  OrderedExcalidrawElement,
   Theme,
 } from "@excalidraw/element/types";
 import type { ExportedElements } from "@excalidraw/excalidraw/data";
@@ -294,19 +296,22 @@ import type { PointerDownState } from "./selection-interaction";
 import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
 
 export interface CaliburnImperativeAPI {
+  /** upstream `App.id` — the token a library install is attributed to */
+  id: string;
   updateScene: CaliburnEditorComponent["updateScene"];
+  resetScene: CaliburnEditorComponent["resetScene"];
   mutateElement: CaliburnEditorComponent["mutateElement"];
   updateLibrary: CaliburnEditorComponent["library"]["updateLibrary"];
   toggleSidebar: CaliburnEditorComponent["toggleSidebar"];
   addFiles: (files: BinaryFileData[]) => void;
-  getSceneElementsIncludingDeleted: () => readonly ExcalidrawElement[];
+  getSceneElementsIncludingDeleted: () => readonly OrderedExcalidrawElement[];
   getSceneElementsMapIncludingDeleted: () => ReturnType<
     Scene["getElementsMapIncludingDeleted"]
   >;
   history: { clear: () => void };
   setViewport: AppViewport["setViewport"];
   getViewportOffsets: AppViewport["getOffsets"];
-  getSceneElements: () => readonly NonDeletedExcalidrawElement[];
+  getSceneElements: () => readonly Ordered<NonDeletedExcalidrawElement>[];
   getAppState: () => AppState;
   getFiles: () => BinaryFiles;
   registerAction: (action: Action) => void;
@@ -2271,9 +2276,23 @@ export class CaliburnEditorComponent
     }
   }
 
+  /** upstream `App.tsx`'s `resetScene` */
+  resetScene = (opts?: { resetLoadingState: boolean }) => {
+    this.scene.replaceAllElements([]);
+    this.setState((state) => ({
+      ...getDefaultAppState(),
+      isLoading: opts?.resetLoadingState ? false : state.isLoading,
+      theme: this.state.theme,
+    }));
+    this.store.clear();
+    this.history.clear();
+  };
+
   getApi(): CaliburnImperativeAPI {
     return {
+      id: this.id,
       updateScene: this.updateScene,
+      resetScene: this.resetScene,
       mutateElement: this.mutateElement,
       updateLibrary: this.library.updateLibrary,
       toggleSidebar: this.toggleSidebar,

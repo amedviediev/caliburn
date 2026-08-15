@@ -34,6 +34,6 @@
       "@excalidraw/utils/*": ["./packages/utils/src/*"]
     }
   },
-  "include": ["packages"],
+  "include": ["packages", "caliburn-app"],
   "exclude": ["examples", "dist", "types", "tests"]
 }

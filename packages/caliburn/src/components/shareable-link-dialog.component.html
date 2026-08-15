@@ -1,0 +1,29 @@
+<caliburn-dialog
+  size="small"
+  [title]="false"
+  (closeRequest)="closeRequest.emit()"
+>
+  <div class="ShareableLinkDialog">
+    <h3>Shareable link</h3>
+    <div class="ShareableLinkDialog__linkRow">
+      <caliburn-text-field
+        label="Link"
+        [readonly]="true"
+        [fullWidth]="true"
+        [selectOnRender]="true"
+        [value]="link()"
+      />
+      <button
+        caliburn-filled-button
+        size="large"
+        icon="copyIcon"
+        [label]="copyLinkLabel"
+        [status]="copyStatus()"
+        [onClick]="copyLink"
+      ></button>
+    </div>
+    <div class="ShareableLinkDialog__description">
+      🔒 {{ uploadedSecurelyLabel }}
+    </div>
+  </div>
+</caliburn-dialog>

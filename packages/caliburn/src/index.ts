@@ -10,6 +10,8 @@ export { CaliburnLiveCollaborationTriggerComponent } from "./components/live-col
 export { CaliburnDialogComponent } from "./components/dialog.component";
 export { CaliburnErrorDialogComponent } from "./components/error-dialog.component";
 export { CaliburnFilledButtonComponent } from "./components/filled-button.component";
+export { CaliburnShareableLinkDialogComponent } from "./components/shareable-link-dialog.component";
+export { CaliburnSpinnerComponent } from "./components/spinner.component";
 export { CaliburnTextFieldComponent } from "./components/text-field.component";
 export { CaliburnTooltipComponent } from "./components/tooltip.component";
 export { CaliburnDropdownMenuItemCustomComponent } from "./components/dropdown-menu/dropdown-menu-item-custom.component";
@@ -53,6 +55,7 @@ export { CaliburnWelcomeScreenMenuComponent } from "./components/welcome-screen/
 export { CaliburnWelcomeScreenToolbarHintComponent } from "./components/welcome-screen/toolbar-hint.component";
 export { openConfirmModal } from "./components/overwrite-confirm/overwrite-confirm-state";
 export { provideCaliburnIcons } from "./components/icons";
+export { DEFAULT_CATEGORIES } from "./components/command-palette/command-palette.component";
 export type { CommandPaletteItem } from "./components/command-palette/types";
 
 export interface ExcalidrawCompatProps {
