@@ -3,83 +3,91 @@
   style="height: 100%"
   [class.is-collaborating]="isCollaborating()"
 >
-  @for (generation of editorInstances(); track generation) {
-    <caliburn-editor
-      [initialData]="initialData()"
-      [theme]="editorTheme()"
-      [onThemeChange]="setAppTheme"
-      [onExcalidrawAPI]="onExcalidrawAPI"
-      [onLibraryChange]="onLibraryChange"
-      [customCommandPaletteItems]="commandPaletteItems"
-      [handleKeyboardGlobally]="true"
-      [autoFocus]="true"
-      [mainMenu]="mainMenuSlot"
-      [welcomeScreenCenter]="welcomeScreenCenterSlot"
-      [welcomeScreenMenuHint]="welcomeScreenMenuHintSlot"
-      [footerCenter]="footerSlot"
-      [topRightUI]="topRightSlot"
-    >
-      <ng-template #mainMenuSlot>
-        <caliburn-app-main-menu
-          [isCollaborating]="isCollaborating()"
-          [isCollabEnabled]="isCollabEnabled"
-          [theme]="appTheme()"
-          (collabDialogOpen)="openCollabDialog()"
-        />
-      </ng-template>
-      <ng-template #welcomeScreenCenterSlot>
-        <caliburn-app-welcome-screen
-          [isCollabEnabled]="isCollabEnabled"
-          (collabDialogOpen)="openCollabDialog()"
-        />
-      </ng-template>
-      <ng-template #welcomeScreenMenuHintSlot>
-        <caliburn-welcome-screen-menu-hint [label]="menuHintLabel" />
-      </ng-template>
-      <ng-template #footerSlot>
-        <caliburn-app-footer />
-      </ng-template>
-      <ng-template #topRightSlot>
-        @if (isCollabEnabled) {
-          <div class="excalidraw-ui-top-right">
-            <caliburn-app-collab-error />
-            <caliburn-live-collaboration-trigger
-              [isCollaborating]="isCollaborating()"
-              (select)="openShareDialog()"
-            />
-          </div>
-        }
-      </ng-template>
-
-      @if (isCollaborating() && isOffline()) {
-        <div class="alert alert--warning">{{ collabOfflineWarning }}</div>
-      }
-      @if (localStorageQuotaExceeded()) {
-        <div class="alert alert--danger">
-          {{ localStorageQuotaExceededWarning }}
-        </div>
-      }
-      @if (latestShareableLink(); as link) {
-        <caliburn-shareable-link-dialog
-          [link]="link"
-          (closeRequest)="closeShareableLinkDialog()"
-          (errorMessage)="errorMessage.set($event)"
-        />
-      }
-      <caliburn-app-share-dialog
-        [collabEnabled]="isCollabEnabled"
-        [onExportToBackend]="exportToBackendFromShareDialog"
-      />
-      @if (errorMessage()) {
-        <caliburn-error-dialog (close)="clearErrorMessage()">{{
-          errorMessage()
-        }}</caliburn-error-dialog>
-      }
-      @if (collab.errorMessage(); as message) {
-        <caliburn-error-dialog (close)="clearCollabError()">{{
-          message
-        }}</caliburn-error-dialog>
-      }
-    </caliburn-editor>
+  <!-- the two branches render the same template: flipping between them is
+       how a language change rebuilds the editor (see `editorGeneration`) -->
+  @if (editorGeneration() % 2 === 0) {
+    <ng-container *ngTemplateOutlet="editor" />
+  } @else {
+    <ng-container *ngTemplateOutlet="editor" />
   }
 </div>
+
+<ng-template #editor>
+  <caliburn-editor
+    [initialData]="initialData()"
+    [theme]="editorTheme()"
+    [onThemeChange]="setAppTheme"
+    [onExcalidrawAPI]="onExcalidrawAPI"
+    [onLibraryChange]="onLibraryChange"
+    [customCommandPaletteItems]="commandPaletteItems"
+    [handleKeyboardGlobally]="true"
+    [autoFocus]="true"
+    [mainMenu]="mainMenuSlot"
+    [welcomeScreenCenter]="welcomeScreenCenterSlot"
+    [welcomeScreenMenuHint]="welcomeScreenMenuHintSlot"
+    [footerCenter]="footerSlot"
+    [topRightUI]="topRightSlot"
+  >
+    <ng-template #mainMenuSlot>
+      <caliburn-app-main-menu
+        [isCollaborating]="isCollaborating()"
+        [isCollabEnabled]="isCollabEnabled"
+        [theme]="appTheme()"
+        (collabDialogOpen)="openCollabDialog()"
+      />
+    </ng-template>
+    <ng-template #welcomeScreenCenterSlot>
+      <caliburn-app-welcome-screen
+        [isCollabEnabled]="isCollabEnabled"
+        (collabDialogOpen)="openCollabDialog()"
+      />
+    </ng-template>
+    <ng-template #welcomeScreenMenuHintSlot>
+      <caliburn-welcome-screen-menu-hint [label]="menuHintLabel" />
+    </ng-template>
+    <ng-template #footerSlot>
+      <caliburn-app-footer />
+    </ng-template>
+    <ng-template #topRightSlot>
+      @if (isCollabEnabled) {
+        <div class="excalidraw-ui-top-right">
+          <caliburn-app-collab-error />
+          <caliburn-live-collaboration-trigger
+            [isCollaborating]="isCollaborating()"
+            (select)="openShareDialog()"
+          />
+        </div>
+      }
+    </ng-template>
+
+    @if (isCollaborating() && isOffline()) {
+      <div class="alert alert--warning">{{ collabOfflineWarning }}</div>
+    }
+    @if (localStorageQuotaExceeded()) {
+      <div class="alert alert--danger">
+        {{ localStorageQuotaExceededWarning }}
+      </div>
+    }
+    @if (latestShareableLink(); as link) {
+      <caliburn-shareable-link-dialog
+        [link]="link"
+        (closeRequest)="closeShareableLinkDialog()"
+        (errorMessage)="errorMessage.set($event)"
+      />
+    }
+    <caliburn-app-share-dialog
+      [collabEnabled]="isCollabEnabled"
+      [onExportToBackend]="exportToBackendFromShareDialog"
+    />
+    @if (errorMessage()) {
+      <caliburn-error-dialog (close)="clearErrorMessage()">{{
+        errorMessage()
+      }}</caliburn-error-dialog>
+    }
+    @if (collab.errorMessage(); as message) {
+      <caliburn-error-dialog (close)="clearCollabError()">{{
+        message
+      }}</caliburn-error-dialog>
+    }
+  </caliburn-editor>
+</ng-template>

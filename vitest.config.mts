@@ -75,7 +75,11 @@ export default defineConfig({
   //@ts-ignore
   test: {
     name: "editor",
-    exclude: ["**/node_modules/**", "packages/caliburn/**"],
+    exclude: [
+      "**/node_modules/**",
+      "packages/caliburn/**",
+      "caliburn-app/**",
+    ],
     // Since hooks are running in stack in v2, which means all hooks run serially whereas
     // we need to run them in parallel
     sequence: {

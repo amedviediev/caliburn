@@ -28,6 +28,7 @@ import { Pointer, UI } from "./helpers/ui";
 import * as toolQueries from "./queries/toolQueries";
 
 import type React from "react";
+import type { Type, ComponentRef } from "@angular/core";
 import type { ComponentFixture } from "@angular/core/testing";
 
 const customQueries = {
@@ -112,6 +113,74 @@ export const unmountComponent = () => {
     GlobalTestState.fixture = null!;
   }
   TestBed.resetTestingModule();
+};
+
+/**
+ * Mounts a host component that renders the editor itself — the Angular
+ * equivalent of upstream tests that wrap `<Excalidraw>` in their own
+ * component (e.g. the sidebar tests' host apps).
+ */
+export const renderHost = async <T>(
+  component: Type<T>,
+  inputs: Record<string, unknown> = {},
+): Promise<RenderResult & { componentRef: ComponentRef<T> }> => {
+  Pointer.resetAll();
+
+  unmountComponent();
+
+  TestBed.configureTestingModule({
+    providers: [provideZonelessChangeDetection()],
+  });
+  const fixture = TestBed.createComponent(component);
+  GlobalTestState.fixture = fixture as never;
+
+  for (const [key, value] of Object.entries(inputs)) {
+    fixture.componentRef.setInput(key, value);
+  }
+
+  fixture.detectChanges();
+  await fixture.whenStable();
+
+  const container = fixture.nativeElement as HTMLElement;
+
+  const renderResult = {
+    container,
+    baseElement: document.body,
+    ...(getQueriesForElement(container, customQueries) as BoundQueries),
+    debug: (el = container) => console.info(prettyDOM(el)),
+    unmount: unmountComponent,
+    rerender: () => {
+      throw new Error("renderHost() has no rerender — set inputs instead");
+    },
+    componentRef: fixture.componentRef,
+  };
+
+  GlobalTestState.renderResult = renderResult;
+
+  Object.defineProperty(GlobalTestState, "canvas", {
+    configurable: true,
+    get() {
+      return container.querySelector("canvas.static")!;
+    },
+  });
+
+  Object.defineProperty(GlobalTestState, "interactiveCanvas", {
+    configurable: true,
+    get() {
+      return container.querySelector("canvas.interactive")!;
+    },
+  });
+
+  await waitFor(() => {
+    if (!container.querySelector("canvas.static")) {
+      throw new Error("not initialized yet");
+    }
+    if (h.state.isLoading) {
+      throw new Error("still loading");
+    }
+  });
+
+  return renderResult;
 };
 
 const render = async (

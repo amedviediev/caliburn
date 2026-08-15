@@ -1,0 +1,40 @@
+<caliburn-editor [initialData]="initialData()" [sidebar]="sidebarSlot">
+  <ng-template #sidebarSlot>
+    <caliburn-sidebar
+      name="customSidebar"
+      [sidebarClass]="sidebarClass()"
+      [docked]="docked()"
+      [onDock]="onDock()"
+      (stateChange)="stateChange.emit($event)"
+    >
+      @switch (variant()) {
+        @case ("content") {
+          <div id="test-sidebar-content">42</div>
+        }
+        @case ("headerWithContent") {
+          <caliburn-sidebar-header>
+            <div id="test-sidebar-header-content">42</div>
+          </caliburn-sidebar-header>
+        }
+        @case ("header") {
+          <caliburn-sidebar-header />
+        }
+        @case ("text") {
+          hello
+        }
+        @case ("tabs") {
+          <caliburn-sidebar-tabs>
+            @if (tab() === "library") {
+              <caliburn-sidebar-tab tab="library">Library</caliburn-sidebar-tab>
+            }
+            @if (tab() === "comments") {
+              <caliburn-sidebar-tab tab="comments"
+                >Comments</caliburn-sidebar-tab
+              >
+            }
+          </caliburn-sidebar-tabs>
+        }
+      }
+    </caliburn-sidebar>
+  </ng-template>
+</caliburn-editor>

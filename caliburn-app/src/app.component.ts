@@ -1,7 +1,7 @@
+import { NgTemplateOutlet } from "@angular/common";
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
   effect,
   inject,
   signal,
@@ -293,6 +293,7 @@ const initializeScene = async (opts: {
   selector: "caliburn-app",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     CaliburnAppCollabErrorComponent,
     CaliburnAppFooterComponent,
     CaliburnAppMainMenuComponent,
@@ -313,15 +314,12 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
   private readonly editorRef = viewChild(CaliburnEditorComponent);
 
   /**
-   * Bumped to remount the editor on a language change: caliburn's chrome
+   * Bumped to rebuild the editor on a language change: caliburn's chrome
    * resolves its labels when each component is constructed (upstream resolves
    * them on every render), so a language switch only reaches the UI by
-   * rebuilding it. The scene travels across the remount as `initialData`.
+   * rebuilding it. The scene travels across the rebuild as `initialData`.
    */
-  private readonly editorGeneration = signal(0);
-  protected readonly editorInstances = computed(() => [
-    this.editorGeneration(),
-  ]);
+  protected readonly editorGeneration = signal(0);
 
   protected readonly initialData = signal<{
     elements?: readonly OrderedExcalidrawElement[];
@@ -426,7 +424,7 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
       editor: this.editorRef()!,
     }).then((data) => {
       this.loadImages(data, /* isInitialLoad */ true);
-      this.applyScene(data.scene);
+      this.applyScene(data.scene, /* isInitialLoad */ true);
     });
 
     const onHashChange = async (event: HashChangeEvent) => {
@@ -572,7 +570,10 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
    * `initialData` promise instead, which ends in the same `restore*` calls
    * (`App.initializeScene`).
    */
-  private applyScene(scene: ExcalidrawInitialDataState | null) {
+  private applyScene(
+    scene: ExcalidrawInitialDataState | null,
+    isInitialLoad = false,
+  ) {
     const excalidrawAPI = this.excalidrawAPI;
     if (!scene || !excalidrawAPI) {
       return;
@@ -595,8 +596,16 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
           : null),
         isLoading: false,
       },
-      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      captureUpdate: isInitialLoad
+        ? // the initial scene is what the editor would have restored from
+          // `initialData` — not an edit, and not undoable
+          CaptureUpdateAction.NEVER
+        : CaptureUpdateAction.IMMEDIATELY,
     });
+
+    if (isInitialLoad) {
+      excalidrawAPI.history.clear();
+    }
   }
 
   /** upstream's hoisted `loadImages` */

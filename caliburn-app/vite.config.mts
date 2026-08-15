@@ -32,4 +32,12 @@ export default defineConfig({
   server: {
     port: 3001,
   },
+  //@ts-ignore
+  test: {
+    name: "caliburn-app",
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
+  },
 });
