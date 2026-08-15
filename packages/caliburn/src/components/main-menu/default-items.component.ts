@@ -29,6 +29,7 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../e
 import { CaliburnColorPickerComponent } from "../color-picker/color-picker.component";
 import { CaliburnDropdownMenuItemLinkComponent } from "../dropdown-menu/dropdown-menu-item-link.component";
 import { CaliburnDropdownMenuItemComponent } from "../dropdown-menu/dropdown-menu-item.component";
+import { openConfirmModal } from "../overwrite-confirm/overwrite-confirm-state";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
 
@@ -63,8 +64,19 @@ export class CaliburnMenuLoadSceneComponent {
     return this.editor.actionManager.isActionEnabled(actionLoadScene);
   }
 
-  protected handleSelect() {
-    this.editor.actionManager.executeAction(actionLoadScene, "ui");
+  protected async handleSelect() {
+    const elements = this.editor.scene.getNonDeletedElements();
+    if (
+      !elements.length ||
+      (await openConfirmModal(this.editor, {
+        title: t("overwriteConfirm.modal.loadFromFile.title"),
+        actionLabel: t("overwriteConfirm.modal.loadFromFile.button"),
+        color: "warning",
+        descriptionKey: "overwriteConfirm.modal.loadFromFile.description",
+      }))
+    ) {
+      this.editor.actionManager.executeAction(actionLoadScene, "ui");
+    }
   }
 }
 

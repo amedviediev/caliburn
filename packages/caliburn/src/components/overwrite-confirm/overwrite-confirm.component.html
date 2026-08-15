@@ -1,0 +1,63 @@
+@if (state(); as state) { @if (state.active) {
+<caliburn-dialog [title]="false" [size]="916" (closeRequest)="handleClose()">
+  <div class="OverwriteConfirm">
+    <h3>{{ state.title }}</h3>
+    <div
+      class="OverwriteConfirm__Description OverwriteConfirm__Description--color-{{
+        state.color
+      }}"
+    >
+      <div class="OverwriteConfirm__Description__icon">
+        <ng-icon name="alertTriangleIcon" />
+      </div>
+      <div>
+        @for (line of descriptionLines(); track $index) { @if (!$first) {
+        <br />
+        } @for (run of line; track $index) { @if (run.bold) {
+        <strong>{{ run.text }}</strong>
+        } @else {{{ run.text }}} } }
+      </div>
+      <div class="OverwriteConfirm__Description__spacer"></div>
+      <button
+        caliburn-filled-button
+        [color]="state.color"
+        size="large"
+        [label]="state.actionLabel"
+        [onClick]="handleConfirm"
+      ></button>
+    </div>
+    <div class="OverwriteConfirm__Actions">
+      <div class="OverwriteConfirm__Actions__Action">
+        <h4>{{ labels.saveToDiskTitle }}</h4>
+        <div class="OverwriteConfirm__Actions__Action__content">
+          {{ labels.saveToDiskDescription }}
+        </div>
+        <button
+          caliburn-filled-button
+          variant="outlined"
+          color="muted"
+          size="large"
+          [fullWidth]="true"
+          [label]="labels.saveToDiskButton"
+          [onClick]="saveToDisk"
+        ></button>
+      </div>
+      <div class="OverwriteConfirm__Actions__Action">
+        <h4>{{ labels.exportToImageTitle }}</h4>
+        <div class="OverwriteConfirm__Actions__Action__content">
+          {{ labels.exportToImageDescription }}
+        </div>
+        <button
+          caliburn-filled-button
+          variant="outlined"
+          color="muted"
+          size="large"
+          [fullWidth]="true"
+          [label]="labels.exportToImageButton"
+          [onClick]="exportToImage"
+        ></button>
+      </div>
+    </div>
+  </div>
+</caliburn-dialog>
+} }

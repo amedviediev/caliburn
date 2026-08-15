@@ -23,6 +23,7 @@ import { CaliburnHelpDialogComponent } from "./help-dialog.component";
 import { CaliburnImageExportDialogComponent } from "./image-export-dialog.component";
 import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.component";
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
+import { CaliburnOverwriteConfirmComponent } from "./overwrite-confirm/overwrite-confirm.component";
 import { isSidebarDocked } from "./sidebar/common";
 import { CaliburnDefaultSidebarComponent } from "./sidebar/default-sidebar.component";
 import { CaliburnSidebarTriggerComponent } from "./sidebar/sidebar-trigger.component";
@@ -86,6 +87,7 @@ let nextLayerUIId = 0;
     CaliburnHelpDialogComponent,
     CaliburnImageExportDialogComponent,
     CaliburnJSONExportDialogComponent,
+    CaliburnOverwriteConfirmComponent,
     CaliburnShapeActionsComponent,
     CaliburnSidebarTriggerComponent,
     CaliburnStackColComponent,

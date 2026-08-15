@@ -25,6 +25,7 @@
 @use "../../excalidraw/components/ColorPicker/ColorPicker.scss";
 @use "../../excalidraw/components/main-menu/DefaultItems.scss";
 @use "../../excalidraw/components/ConfirmDialog.scss";
+@use "../../excalidraw/components/OverwriteConfirm/OverwriteConfirm.scss";
 @use "../../excalidraw/components/DialogActionButton.scss";
 @use "../../excalidraw/components/HelpDialog.scss";
 @use "../../excalidraw/components/Card.scss";
@@ -109,6 +110,14 @@ caliburn-text-field {
   }
 }
 
+// `.OverwriteConfirm__Description__icon svg` sizes the modal's warning icon;
+// the `<ng-icon>` host would clip it to `1em`.
+.excalidraw .OverwriteConfirm__Description__icon ng-icon {
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 // Angular components always render their own host element, where upstream
 // renders a React fragment / nothing at all — `display: contents` keeps
 // these transparent to layout so their children sit where upstream's do.
@@ -152,6 +161,7 @@ caliburn-error-dialog,
 caliburn-help-dialog,
 caliburn-image-export-dialog,
 caliburn-json-export-dialog,
+caliburn-overwrite-confirm,
 caliburn-library-menu-section {
   display: contents;
 }

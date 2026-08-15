@@ -254,6 +254,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 
 import type { ElementRef } from "@angular/core";
 
+import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
 import type { PointerDownState } from "./selection-interaction";
 
 import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
@@ -496,6 +497,13 @@ export class CaliburnEditorComponent
    * mirrored here as a per-instance signal.
    */
   readonly activeConfirmDialog = signal<"clearCanvas" | null>(null);
+
+  /**
+   * Upstream keeps the overwrite-confirmation modal in a module-level jotai
+   * atom (`OverwriteConfirm/OverwriteConfirmState.ts`) — mirrored here as a
+   * per-instance signal, as `activeConfirmDialog` above is.
+   */
+  readonly overwriteConfirm = signal<OverwriteConfirmState>({ active: false });
 
   /**
    * The search menu's two per-editor jotai atoms (`SearchMenu.tsx`'s

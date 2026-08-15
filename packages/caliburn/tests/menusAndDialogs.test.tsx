@@ -531,6 +531,18 @@ describe("save / load / export actions", () => {
       fireEvent.click(getByTestId(container, "load-button"));
     });
 
+    // the scene isn't empty, so the overwrite confirmation comes first
+    const confirmButton = await waitFor(() => {
+      const button = container.querySelector<HTMLButtonElement>(
+        ".OverwriteConfirm__Description .ExcButton",
+      );
+      expect(button).not.toBeNull();
+      return button!;
+    });
+    act(() => {
+      fireEvent.click(confirmButton);
+    });
+
     await waitFor(() => {
       expect(h.elements.map((element) => element.id)).toEqual(["loaded"]);
     });
