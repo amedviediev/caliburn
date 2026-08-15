@@ -5,6 +5,7 @@
     <h3 aria-hidden="true">{{ labels.stroke }}</h3>
     <caliburn-color-picker
       type="elementStroke"
+      customizableTopPicks="elementStroke"
       [label]="labels.stroke"
       [color]="currentStrokeColor()"
       [palette]="strokePalette"
@@ -19,6 +20,7 @@
     <h3 aria-hidden="true">{{ labels.background }}</h3>
     <caliburn-color-picker
       type="elementBackground"
+      customizableTopPicks="elementBackground"
       [label]="labels.background"
       [color]="currentBackgroundColor()"
       [palette]="backgroundPalette"

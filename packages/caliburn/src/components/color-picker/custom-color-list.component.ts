@@ -16,6 +16,7 @@ import { THEME, applyDarkModeFilter } from "@excalidraw/common";
 import type { Theme } from "@excalidraw/element/types";
 
 import { CaliburnColorPickerSection } from "./color-picker-section";
+import { CaliburnTopPicksDnD } from "./top-picks-dnd";
 import { CaliburnHotkeyLabelComponent } from "./hotkey-label.component";
 
 /**
@@ -32,6 +33,7 @@ import { CaliburnHotkeyLabelComponent } from "./hotkey-label.component";
 })
 export class CaliburnCustomColorListComponent {
   private readonly section = inject(CaliburnColorPickerSection);
+  private readonly dnd = inject(CaliburnTopPicksDnD);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly theme = input.required<Theme>();
@@ -73,5 +75,9 @@ export class CaliburnCustomColorListComponent {
   protected select(color: string) {
     this.colorChange.emit(color);
     this.section.set("custom");
+  }
+
+  protected startSwatchDrag(event: PointerEvent, color: string) {
+    this.dnd.startSwatchDrag(event, color);
   }
 }

@@ -1,4 +1,8 @@
-@for (pick of picks(); track pick.color) {
+@if (dragState()) {
+<svg class="color-picker__top-picks__dnd-outline" aria-hidden="true">
+  <rect />
+</svg>
+} @for (pick of picks(); track pick.color) {
 <button
   class="{{ pick.className }}"
   type="button"
@@ -6,8 +10,25 @@
   [attr.data-testid]="'color-top-pick-' + pick.color"
   [attr.data-top-pick-index]="pick.index"
   [style.--swatch-color]="pick.displayColor"
+  [style.transform]="pick.transform"
   (click)="colorChange.emit(pick.color)"
+  (pointerdown)="onPickPointerDown($event, pick.index, pick.color)"
 >
   <div class="color-picker__button-outline"></div>
 </button>
+} @if (contextMenuOpen()) {
+<div
+  class="color-picker__context-menu"
+  style="z-index: var(--zIndex-ui-styles-popup)"
+  [style.left.px]="contextMenuPosition().x"
+  [style.top.px]="contextMenuPosition().y"
+>
+  <div
+    class="color-picker__context-menu-item"
+    [attr.data-disabled]="isCustomized() ? null : ''"
+    (click)="onResetSelected()"
+  >
+    {{ resetLabel }}
+  </div>
+</div>
 }

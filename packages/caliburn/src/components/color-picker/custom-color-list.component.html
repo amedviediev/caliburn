@@ -7,6 +7,7 @@
   [attr.aria-label]="label()"
   [style.--swatch-color]="entry.displayColor"
   (click)="select(entry.color)"
+  (pointerdown)="startSwatchDrag($event, entry.color)"
 >
   <div class="color-picker__button-outline"></div>
   <div

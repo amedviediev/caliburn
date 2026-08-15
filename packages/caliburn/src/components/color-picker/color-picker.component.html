@@ -16,8 +16,11 @@
     [theme]="theme()"
     [activeColor]="color()"
     [type]="type()"
-    [topPicks]="topPicks()"
+    [topPicks]="stripTopPicks()"
+    [customizable]="isTopPicksCustomizable()"
+    [isCustomized]="!!customTopPicks()?.length"
     (colorChange)="onTopPickChange($event)"
+    (reset)="onTopPicksReset()"
   ></div>
   <caliburn-button-separator />
   <button
@@ -29,6 +32,7 @@
     [attr.data-openpopup]="type()"
     [style.--swatch-color]="displayColor()"
     (click)="onTriggerClick($event)"
+    (pointerdown)="onTriggerPointerDown($event)"
   >
     <div class="color-picker__button-outline">
       @if (!color()) {

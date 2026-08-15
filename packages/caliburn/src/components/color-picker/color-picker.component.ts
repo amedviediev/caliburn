@@ -18,6 +18,8 @@ import clsx from "clsx";
 import {
   COLOR_OUTLINE_CONTRAST_THRESHOLD,
   COLOR_PALETTE,
+  DEFAULT_ELEMENT_BACKGROUND_PICKS,
+  DEFAULT_ELEMENT_STROKE_PICKS,
   THEME,
   applyDarkModeFilter,
   isColorDark,
@@ -35,6 +37,7 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../e
 import { CaliburnButtonSeparatorComponent } from "../button-separator.component";
 
 import { CaliburnColorPickerSection } from "./color-picker-section";
+import { CaliburnTopPicksDnD } from "./top-picks-dnd";
 import { CaliburnColorInputComponent } from "./color-input.component";
 import { CaliburnPickerComponent } from "./picker.component";
 import { CaliburnPickerHeadingComponent } from "./picker-heading.component";
@@ -67,7 +70,7 @@ const isColorPickerPopup = (
 @Component({
   selector: "caliburn-color-picker",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [CaliburnColorPickerSection],
+  providers: [CaliburnColorPickerSection, CaliburnTopPicksDnD],
   imports: [
     CaliburnButtonSeparatorComponent,
     CaliburnColorInputComponent,
@@ -85,6 +88,7 @@ export class CaliburnColorPickerComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
   private readonly section = inject(CaliburnColorPickerSection);
+  private readonly dnd = inject(CaliburnTopPicksDnD);
 
   readonly type = input.required<ColorPickerType>();
   readonly color = input.required<string | null>();
@@ -92,6 +96,11 @@ export class CaliburnColorPickerComponent {
   readonly palette = input<ColorPaletteCustom | null>(COLOR_PALETTE);
   readonly topPicks = input<readonly string[] | undefined>(undefined);
   readonly excludedColors = input<readonly string[] | undefined>(undefined);
+  /** the `appState.colorTopPicks` slot this strip pins into, when the strip
+   * is user-customizable */
+  readonly customizableTopPicks = input<
+    keyof AppState["colorTopPicks"] | undefined
+  >(undefined);
   /** upstream's `updateData` — the action's own dispatcher, used both for the
    * color change and for driving `appState.openPopup` */
   readonly updateData = input.required<(formData?: any) => void>();
@@ -120,6 +129,75 @@ export class CaliburnColorPickerComponent {
   });
 
   protected readonly isOpen = computed(() => this.openPopup() === this.type());
+
+  // caliburn's styles panel is always upstream's `stylesPanelMode: "full"`,
+  // so the compact-mode half of upstream's gate is always false here
+  protected readonly isTopPicksCustomizable = computed(
+    () => !!this.customizableTopPicks(),
+  );
+
+  /** user-pinned picks trump the (host-provided or default) baseline */
+  protected readonly customTopPicks = computed(() => {
+    this.editor.changeGeneration();
+    const slot = this.customizableTopPicks();
+    return this.isTopPicksCustomizable() && slot
+      ? this.editor.state.colorTopPicks?.[slot]
+      : null;
+  });
+
+  protected readonly stripTopPicks = computed(() =>
+    this.customTopPicks()?.length ? this.customTopPicks()! : this.topPicks(),
+  );
+
+  /** fully-resolved picks currently displayed in the strip — the baseline
+   * the drag & drop customization starts from */
+  private readonly effectiveTopPicks = computed(
+    () =>
+      this.customTopPicks()?.length
+        ? this.customTopPicks()!
+        : this.topPicks() ??
+          (this.type() === "elementStroke"
+            ? DEFAULT_ELEMENT_STROKE_PICKS
+            : DEFAULT_ELEMENT_BACKGROUND_PICKS),
+  );
+
+  private readonly configureDnD = effect(() => {
+    this.dnd.configure({
+      enabled: this.isTopPicksCustomizable(),
+      picks: this.effectiveTopPicks(),
+      onPicksChange: (picks) => this.onPicksChange(picks),
+    });
+  });
+
+  private onPicksChange(picks: string[]) {
+    const slot = this.customizableTopPicks();
+    if (!slot) {
+      return;
+    }
+    this.updateData()({
+      colorTopPicks: {
+        ...this.editor.state.colorTopPicks,
+        [slot]: picks,
+      },
+    });
+  }
+
+  protected onTopPicksReset() {
+    const slot = this.customizableTopPicks();
+    if (!slot) {
+      return;
+    }
+    this.updateData()({
+      colorTopPicks: {
+        ...this.editor.state.colorTopPicks,
+        [slot]: null,
+      },
+    });
+  }
+
+  protected onTriggerPointerDown(event: PointerEvent) {
+    this.dnd.startSwatchDrag(event, this.color());
+  }
 
   protected readonly triggerRect = signal<DOMRect | null>(null);
 

@@ -24,6 +24,7 @@ import type { Theme } from "@excalidraw/element/types";
 import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
 
 import { CaliburnColorPickerSection } from "./color-picker-section";
+import { CaliburnTopPicksDnD } from "./top-picks-dnd";
 import { CaliburnHotkeyLabelComponent } from "./hotkey-label.component";
 
 interface PaletteEntry {
@@ -51,6 +52,7 @@ interface PaletteEntry {
 })
 export class CaliburnPickerColorListComponent {
   private readonly section = inject(CaliburnColorPickerSection);
+  private readonly dnd = inject(CaliburnTopPicksDnD);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly theme = input.required<Theme>();
@@ -123,5 +125,9 @@ export class CaliburnPickerColorListComponent {
   protected select(color: string) {
     this.colorChange.emit(color);
     this.section.set("baseColors");
+  }
+
+  protected startSwatchDrag(event: PointerEvent, color: string) {
+    this.dnd.startSwatchDrag(event, color);
   }
 }

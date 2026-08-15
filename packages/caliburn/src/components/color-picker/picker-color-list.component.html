@@ -14,6 +14,7 @@
   [style.--swatch-color]="entry.displayColor"
   [attr.data-testid]="'color-' + entry.key"
   (click)="select(entry.color)"
+  (pointerdown)="startSwatchDrag($event, entry.color)"
 >
   <div class="color-picker__button-outline"></div>
   @if (showHotKey()) {
