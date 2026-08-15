@@ -33,11 +33,14 @@ import {
 import {
   CaptureUpdateAction,
   Scene,
+  ShapeCache,
   Store,
+  embeddableURLValidator,
   getFrameChildrenInsertionIndex,
   getObservedAppState,
   isElementInGroup,
   isBindingElement,
+  isEmbeddableElement,
   isFrameLikeElement,
   isLinearElement,
   isTextElement,
@@ -746,6 +749,7 @@ export class CaliburnEditorComponent
   }
 
   private initializeScene() {
+    this.sceneInitialized = true;
     const initialData = this.initialData();
 
     const restoredElements = restoreElements(initialData?.elements, null, {
@@ -756,6 +760,14 @@ export class CaliburnEditorComponent
       ...this.state,
       ...(initialData?.appState || {}),
     };
+
+    if (!restoredAppState.preferredSelectionTool?.initialized) {
+      restoredAppState.preferredSelectionTool = {
+        type:
+          this.editorInterface.formFactor === "phone" ? "lasso" : "selection",
+        initialized: true,
+      };
+    }
 
     const viewportAppState = {
       ...this.state,
@@ -1416,6 +1428,10 @@ export class CaliburnEditorComponent
       this.setState({ contextMenu: null });
     }
 
+    if (this.state.openPopup) {
+      this.setState({ openPopup: null });
+    }
+
     if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;
     }
@@ -1501,6 +1517,14 @@ export class CaliburnEditorComponent
 
     if (gesture.pointers.size >= 2) {
       return;
+    }
+
+    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
+    if (!event.ctrlKey) {
+      const preferenceEnabled = this.state.bindingPreference === "enabled";
+      if (this.state.isBindingEnabled !== preferenceEnabled) {
+        this.setState({ isBindingEnabled: preferenceEnabled });
+      }
     }
 
     if (this.pointerDownState) {
@@ -1791,6 +1815,7 @@ export class CaliburnEditorComponent
 
   private batchDepth = 0;
   private commitPending = false;
+  private sceneInitialized = false;
 
   /**
    * Defers commits (store capture, onChange, rendering) until the callback
@@ -1834,12 +1859,42 @@ export class CaliburnEditorComponent
     }
   }
 
+  /**
+   * Validates newly added embeddables. Unlike upstream this needs no
+   * `scene.triggerUpdate()` afterwards — the commit renders after it, so the
+   * fresh statuses are already picked up by this very render pass.
+   */
+  private updateEmbeddables() {
+    for (const element of this.scene.getNonDeletedElements()) {
+      if (
+        isEmbeddableElement(element) &&
+        !this.embedsValidationStatus.has(element.id)
+      ) {
+        this.embedsValidationStatus.set(
+          element.id,
+          embeddableURLValidator(element.link, undefined),
+        );
+        ShapeCache.delete(element);
+      }
+    }
+  }
+
   private commit() {
     if (this.batchDepth > 0) {
       this.commitPending = true;
       return;
     }
     this.changeGeneration.update((generation) => generation + 1);
+    this.updateEmbeddables();
+    // assigned rather than `setState`d, which would re-enter this commit; the
+    // flag is not observed by the store, so the delta is unaffected either way
+    if (
+      this.sceneInitialized &&
+      !this.state.showWelcomeScreen &&
+      !this.scene.getElementsIncludingDeleted().length
+    ) {
+      this.state = { ...this.state, showWelcomeScreen: true };
+    }
     this.store.commit(this.scene.getElementsMapIncludingDeleted(), this.state);
     this.onChangeEmitter.trigger(
       this.scene.getElementsIncludingDeleted(),
