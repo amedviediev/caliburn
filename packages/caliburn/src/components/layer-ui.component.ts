@@ -5,6 +5,8 @@ import {
   inject,
 } from "@angular/core";
 
+import { CANVAS_SEARCH_TAB, DEFAULT_SIDEBAR } from "@excalidraw/common";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
 
@@ -14,8 +16,10 @@ import { CaliburnFixedSideContainerComponent } from "./fixed-side-container.comp
 import { CaliburnFooterComponent } from "./footer.component";
 import { CaliburnHelpDialogComponent } from "./help-dialog.component";
 import { CaliburnImageExportDialogComponent } from "./image-export-dialog.component";
+import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.component";
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
+import { CaliburnSearchMenuComponent } from "./search-menu.component";
 import {
   CaliburnStackColComponent,
   CaliburnStackRowComponent,
@@ -32,6 +36,15 @@ let nextLayerUIId = 0;
  * toolbar, the top-right column) and the footer. Surfaces owned by later
  * slices — the welcome screen, sidebars, stats, toasts and the host-render
  * props — are left as their (empty) upstream containers rather than stubbed.
+ *
+ * Upstream mounts the search menu in the default sidebar's
+ * `CANVAS_SEARCH_TAB` (`DefaultSidebar.tsx`), rendered from LayerUI's
+ * `renderSidebars()` right after the `.layer-ui__wrapper`. The `Sidebar`
+ * family is a later slice, so the menu is hosted here in a plain island
+ * carrying the sidebar's own classes (`.sidebar.sidebar--docked
+ * .default-sidebar` — the search tab force-docks upstream) in that same
+ * position, with the menu's own DOM untouched. The sidebar's header, tab
+ * triggers and close/dock buttons are not stubbed.
  *
  * Upstream nests the shapes `<Section>`'s heading inside the toolbar island
  * via `Section`'s render-function form; the caliburn `Section` primitive
@@ -50,7 +63,9 @@ let nextLayerUIId = 0;
     CaliburnFooterComponent,
     CaliburnHelpDialogComponent,
     CaliburnImageExportDialogComponent,
+    CaliburnIslandComponent,
     CaliburnJSONExportDialogComponent,
+    CaliburnSearchMenuComponent,
     CaliburnShapeActionsComponent,
     CaliburnStackColComponent,
     CaliburnStackRowComponent,
@@ -106,6 +121,15 @@ let nextLayerUIId = 0;
       </caliburn-fixed-side-container>
       <caliburn-footer />
     </div>
+    @if (isSearchSidebarOpen()) {
+      <caliburn-island
+        class="sidebar sidebar--docked default-sidebar"
+        viewportUi="side"
+        viewportUiName="sidebar"
+      >
+        <caliburn-search-menu />
+      </caliburn-island>
+    }
   `,
 })
 export class CaliburnLayerUIComponent {
@@ -119,6 +143,14 @@ export class CaliburnLayerUIComponent {
   protected state() {
     this.editor.changeGeneration();
     return this.editor.state;
+  }
+
+  protected isSearchSidebarOpen() {
+    const openSidebar = this.state().openSidebar;
+    return (
+      openSidebar?.name === DEFAULT_SIDEBAR.name &&
+      openSidebar.tab === CANVAS_SEARCH_TAB
+    );
   }
 
   protected clearErrorMessage() {

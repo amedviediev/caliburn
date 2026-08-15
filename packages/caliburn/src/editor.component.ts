@@ -140,6 +140,7 @@ import {
 } from "./actions/actionFontSize";
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
 import { actionTextAutoResize } from "./actions/actionTextAutoResize";
+import { actionToggleSearchMenu } from "./actions/actionToggleSearchMenu";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
 import {
@@ -491,6 +492,14 @@ export class CaliburnEditorComponent
    */
   readonly activeConfirmDialog = signal<"clearCanvas" | null>(null);
 
+  /**
+   * The search menu's two per-editor jotai atoms (`SearchMenu.tsx`'s
+   * `searchQueryAtom` / `searchItemInFocusAtom`) as per-instance signals —
+   * they outlive the menu, which is mounted and unmounted with its sidebar.
+   */
+  readonly searchQuery = signal("");
+  readonly searchItemInFocus = signal<number | null>(null);
+
   imageCache: Map<
     FileId,
     {
@@ -772,6 +781,7 @@ export class CaliburnEditorComponent
       actionCut,
       actionPaste,
       actionShortcuts,
+      actionToggleSearchMenu,
       actionLoadScene,
       actionSaveToActiveFile,
       actionSaveFileToDisk,
@@ -1668,6 +1678,21 @@ export class CaliburnEditorComponent
       if (this.state.isBindingEnabled !== preferenceEnabled) {
         this.setState({ isBindingEnabled: preferenceEnabled });
       }
+    }
+
+    if (this.state.searchMatches) {
+      this.setState((state) => {
+        return {
+          searchMatches: state.searchMatches && {
+            focusedId: null,
+            matches: state.searchMatches.matches.map((searchMatch) => ({
+              ...searchMatch,
+              focus: false,
+            })),
+          },
+        };
+      });
+      this.searchItemInFocus.set(null);
     }
 
     // since contextMenu options are potentially evaluated on each render,

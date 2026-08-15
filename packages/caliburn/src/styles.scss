@@ -33,9 +33,12 @@
 @use "../../excalidraw/components/Switch.scss";
 @use "../../excalidraw/components/TextInput.scss";
 @use "../../excalidraw/components/ProjectName.scss";
+@use "../../excalidraw/components/TextField.scss";
+@use "../../excalidraw/components/SearchMenu.scss";
+@use "../../excalidraw/components/Sidebar/Sidebar.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
-// These four host-bound primitives (`packages/caliburn/src/components/`)
+// These host-bound primitives (`packages/caliburn/src/components/`)
 // render upstream classes/markup that were always plain `<div>`s (block by
 // default) and never carried their own `display` rule upstream — Island.scss
 // has none for `.Island`, and `ButtonSeparator`/`DropdownMenuSeparator` have
@@ -45,8 +48,35 @@ caliburn-island,
 .dropdown-menu-group,
 caliburn-button-separator,
 caliburn-dropdown-menu-separator,
-caliburn-switch {
+caliburn-switch,
+caliburn-text-field {
   display: block;
+}
+
+// Upstream's `.ExcTextField svg` is the field's icon, absolutely positioned
+// against the field; `<ng-icon>` wraps it in its own `1em`, `overflow:
+// hidden` host, which would clip it — position the host instead and let the
+// svg fill it (same treatment as the export-setting icon below).
+.excalidraw .ExcTextField {
+  ng-icon {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--color-gray-40);
+    z-index: 1;
+  }
+
+  ng-icon svg {
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: inherit;
+    height: inherit;
+  }
 }
 
 // Upstream sizes the export-setting tooltip icon with `& svg { width: 20px }`;
