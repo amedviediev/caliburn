@@ -1,10 +1,12 @@
-import { CODES, KEYS, ZOOM_STEP } from "@excalidraw/common";
+import { CODES, KEYS, THEME, ZOOM_STEP } from "@excalidraw/common";
 import {
   CaptureUpdateAction,
   getNonDeletedElements,
+  newElementWith,
 } from "@excalidraw/element";
 import { getCommonBounds } from "@excalidraw/element";
 
+import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import {
   constrainScrollState,
@@ -17,6 +19,106 @@ import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { AppState } from "@excalidraw/excalidraw/types";
 
 import { register } from "./register";
+
+export const actionChangeViewBackgroundColor = register<Partial<AppState>>({
+  name: "changeViewBackgroundColor",
+  label: "labels.canvasBackground",
+  trackEvent: false,
+  predicate: (elements, appState, props, app) => {
+    return (
+      !!app.props.UIOptions.canvasActions.changeViewBackgroundColor &&
+      !appState.viewModeEnabled
+    );
+  },
+  perform: (_, appState, value) => {
+    return {
+      appState: { ...appState, ...value },
+      captureUpdate: !!value?.viewBackgroundColor
+        ? CaptureUpdateAction.IMMEDIATELY
+        : CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+});
+
+export const actionClearCanvas = register({
+  name: "clearCanvas",
+  label: "labels.clearCanvas",
+  trackEvent: { category: "canvas" },
+  predicate: (elements, appState, props, app) => {
+    return (
+      !!app.props.UIOptions.canvasActions.clearCanvas &&
+      !appState.viewModeEnabled &&
+      appState.openDialog?.name !== "elementLinkSelector"
+    );
+  },
+  perform: (elements, appState, _, app) => {
+    app.imageCache.clear();
+    return {
+      elements: elements.map((element) =>
+        newElementWith(element, { isDeleted: true }),
+      ),
+      appState: {
+        ...getDefaultAppState(),
+        files: {},
+        theme: appState.theme,
+        penMode: appState.penMode,
+        penDetected: appState.penDetected,
+        exportBackground: appState.exportBackground,
+        exportEmbedScene: appState.exportEmbedScene,
+        gridSize: appState.gridSize,
+        gridStep: appState.gridStep,
+        gridModeEnabled: appState.gridModeEnabled,
+        stats: appState.stats,
+        colorTopPicks: appState.colorTopPicks,
+        activeTool:
+          appState.activeTool.type === "image"
+            ? {
+                ...appState.activeTool,
+                type: app.state.preferredSelectionTool.type,
+              }
+            : appState.activeTool,
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+});
+
+export const actionToggleTheme = register<AppState["theme"]>({
+  name: "toggleTheme",
+  label: (_, appState) => {
+    return appState.theme === THEME.DARK
+      ? "buttons.lightMode"
+      : "buttons.darkMode";
+  },
+  keywords: ["toggle", "dark", "light", "mode", "theme"],
+  viewMode: true,
+  trackEvent: { category: "canvas" },
+  perform: (_, appState, value, app) => {
+    const nextTheme =
+      value || (appState.theme === THEME.LIGHT ? THEME.DARK : THEME.LIGHT);
+
+    if (app.props.onThemeChange) {
+      app.props.onThemeChange(nextTheme);
+      return false;
+    }
+
+    return {
+      appState: {
+        ...appState,
+        theme: nextTheme,
+      },
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+  keyTest: (event) =>
+    !event[KEYS.CTRL_OR_CMD] &&
+    event.altKey &&
+    event.shiftKey &&
+    event.code === CODES.D,
+  predicate: (elements, appState, props, app) => {
+    return !!app.props.UIOptions.canvasActions.toggleTheme;
+  },
+});
 
 export const actionZoomIn = register({
   name: "zoomIn",
@@ -239,6 +341,9 @@ export const actionZoomToFit: Action = {
 };
 
 export const canvasActions = [
+  actionChangeViewBackgroundColor,
+  actionClearCanvas,
+  actionToggleTheme,
   actionZoomIn,
   actionZoomOut,
   actionResetZoom,

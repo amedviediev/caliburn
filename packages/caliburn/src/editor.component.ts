@@ -13,7 +13,10 @@ import {
 import {
   DEFAULT_IMAGE_OPTIONS,
   DEFAULT_UI_OPTIONS,
+  THEME,
   arrayToMap,
+  getDateTime,
+  muteFSAbortError,
   ELEMENT_SHIFT_TRANSLATE_AMOUNT,
   ELEMENT_TRANSLATE_AMOUNT,
   Emitter,
@@ -53,8 +56,12 @@ import {
 import {
   dataURLToString,
   getDataURL_sync,
+  isImageFileHandle,
 } from "@excalidraw/excalidraw/data/blob";
 import { restoreElements } from "@excalidraw/excalidraw/data/restore";
+import { exportCanvas } from "@excalidraw/excalidraw/data";
+import { trackEvent } from "@excalidraw/excalidraw/analytics";
+import { t } from "@excalidraw/excalidraw/i18n";
 
 import { ARROW_TYPE, CURSOR_TYPE, KEYS, isArrowKey } from "@excalidraw/common";
 
@@ -74,14 +81,20 @@ import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import { Renderer } from "@excalidraw/excalidraw/scene/Renderer";
 import rough from "roughjs/bin/rough";
 
-import type { EditorInterface, IMAGE_MIME_TYPES } from "@excalidraw/common";
+import type {
+  EditorInterface,
+  EXPORT_IMAGE_TYPES,
+  IMAGE_MIME_TYPES,
+} from "@excalidraw/common";
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
+  ExcalidrawFrameLikeElement,
   FileId,
   NonDeleted,
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
+import type { ExportedElements } from "@excalidraw/excalidraw/data";
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
 import type {
@@ -105,6 +118,17 @@ import {
 } from "./actions/actionBoundText";
 import { canvasActions } from "./actions/actionCanvas";
 import { actionDeleteSelected } from "./actions/actionDeleteSelected";
+import {
+  actionChangeExportBackground,
+  actionChangeExportEmbedScene,
+  actionChangeExportScale,
+  actionChangeProjectName,
+  actionExportWithDarkMode,
+  actionLoadScene,
+  actionSaveFileToDisk,
+  actionSaveToActiveFile,
+} from "./actions/actionExport";
+import { actionShortcuts } from "./actions/actionMenu";
 import { actionDeselect } from "./actions/actionDeselect";
 import {
   actionToggleElementLock,
@@ -440,10 +464,30 @@ export class CaliburnEditorComponent
   });
 
   readonly props = {
-    UIOptions: DEFAULT_UI_OPTIONS,
+    // upstream normalizes `UIOptions.canvasActions.toggleTheme` from its
+    // `null` default to `true` whenever the host controls no theme
+    // (`index.tsx`) — caliburn has no `theme`/`onThemeChange` prop, so the
+    // normalization always applies. Cloned: `DEFAULT_UI_OPTIONS` is a
+    // vendored module-level object shared with the rest of the workspace.
+    UIOptions: {
+      ...DEFAULT_UI_OPTIONS,
+      canvasActions: { ...DEFAULT_UI_OPTIONS.canvasActions, toggleTheme: true },
+    },
     onDuplicate: undefined as unknown,
+    onThemeChange: undefined as ((theme: AppState["theme"]) => void) | undefined,
     imageOptions: { ...DEFAULT_IMAGE_OPTIONS },
   };
+
+  /** the theme the *next* image export renders with, when the user overrode
+   * it in the image-export dialog (upstream `App.sessionExportThemeOverride`) */
+  sessionExportThemeOverride: AppState["theme"] | undefined;
+
+  /**
+   * Upstream keeps the clear-canvas confirmation in a per-editor jotai atom
+   * (`ActiveConfirmDialog.tsx`'s `activeConfirmDialogAtom`), not in appState —
+   * mirrored here as a per-instance signal.
+   */
+  readonly activeConfirmDialog = signal<"clearCanvas" | null>(null);
 
   imageCache: Map<
     FileId,
@@ -725,6 +769,15 @@ export class CaliburnEditorComponent
       actionCopy,
       actionCut,
       actionPaste,
+      actionShortcuts,
+      actionLoadScene,
+      actionSaveToActiveFile,
+      actionSaveFileToDisk,
+      actionChangeProjectName,
+      actionChangeExportBackground,
+      actionChangeExportEmbedScene,
+      actionChangeExportScale,
+      actionExportWithDarkMode,
       this.undoAction,
       this.redoAction,
     ]);
@@ -1890,6 +1943,47 @@ export class CaliburnEditorComponent
     this.containerRef()?.nativeElement?.focus();
   };
 
+  get excalidrawContainerValue(): { container: HTMLDivElement | null } {
+    return { container: this.containerRef()?.nativeElement ?? null };
+  }
+
+  getName = () => {
+    return this.state.name || `${t("labels.untitled")}-${getDateTime()}`;
+  };
+
+  onExportImage = async (
+    type: keyof typeof EXPORT_IMAGE_TYPES,
+    elements: ExportedElements,
+    opts: { exportingFrame: NonDeleted<ExcalidrawFrameLikeElement> | null },
+  ) => {
+    trackEvent("export", type, "ui");
+    const fileHandle = await exportCanvas(
+      type,
+      elements,
+      this.state,
+      this.files,
+      {
+        exportBackground: this.state.exportBackground,
+        name: this.getName(),
+        viewBackgroundColor: this.state.viewBackgroundColor,
+        exportingFrame: opts.exportingFrame,
+      },
+    )
+      .catch(muteFSAbortError)
+      .catch((error) => {
+        console.error(error);
+        this.setState({ errorMessage: error.message });
+      });
+
+    if (
+      this.state.exportEmbedScene &&
+      fileHandle &&
+      isImageFileHandle(fileHandle)
+    ) {
+      this.setState({ fileHandle });
+    }
+  };
+
   pasteFromClipboard = (event: ClipboardEvent) => {
     pasteFromClipboardIntoEditor(this, event);
   };
@@ -2317,6 +2411,14 @@ export class CaliburnEditorComponent
       !this.scene.getElementsIncludingDeleted().length
     ) {
       this.state = { ...this.state, showWelcomeScreen: true };
+    }
+    const shouldExportWithDarkMode =
+      (this.sessionExportThemeOverride ?? this.state.theme) === THEME.DARK;
+    if (this.state.exportWithDarkMode !== shouldExportWithDarkMode) {
+      this.state = {
+        ...this.state,
+        exportWithDarkMode: shouldExportWithDarkMode,
+      };
     }
     this.store.commit(this.scene.getElementsMapIncludingDeleted(), this.state);
     this.onChangeEmitter.trigger(
