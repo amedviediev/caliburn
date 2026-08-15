@@ -48,10 +48,28 @@ caliburn-switch {
   display: block;
 }
 
-// Angular components always render their own host element, where upstream
-// renders a React fragment / nothing at all — `display: contents` keeps
-// these transparent to layout so their children sit where upstream's do
-// (the toolbar island's own children, and the footer/toolbar sections).
+// Upstream sizes the export-setting tooltip icon with `& svg { width: 20px }`;
+// `<ng-icon>` wraps that svg in its own `1em`, `overflow: hidden` host, which
+// clips it. Give the host the same box (matching upstream's selector depth so
+// this wins) and let the svg fill it.
+.excalidraw
+  .ImageExportModal
+  .ImageExportModal__settings
+  .ImageExportModal__settings__setting
+  .ImageExportModal__settings__setting__label {
+  ng-icon {
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+  }
+
+  ng-icon svg {
+    width: inherit;
+    height: inherit;
+    margin-left: 0;
+  }
+}
+
 // Angular components always render their own host element, where upstream
 // renders a React fragment / nothing at all — `display: contents` keeps
 // these transparent to layout so their children sit where upstream's do.
