@@ -252,8 +252,7 @@ describe("props.activeTool (forced tool)", () => {
     expect(h.state.activeTool.type).toBe("laser");
   });
 
-  // requires the non-interactive editor (interaction prop) / full toolbar UI — a later slice's gate
-  it.skip("renders non-forced toolbar buttons disabled and gates the tool lock", async () => {
+  it("renders non-forced toolbar buttons disabled and gates the tool lock", async () => {
     await render(
       <Excalidraw
         activeTool={{ type: "rectangle" }}
@@ -301,8 +300,7 @@ describe("props.activeTool (forced tool)", () => {
     );
   });
 
-  // requires the non-interactive editor (interaction prop) / full toolbar UI — a later slice's gate
-  it.skip("composes with interaction.enabled.tools (presenter → viewer)", async () => {
+  it("composes with interaction.enabled.tools (presenter → viewer)", async () => {
     await render(
       <Excalidraw
         activeTool={{ type: "laser" }}
@@ -332,8 +330,7 @@ describe("props.activeTool (forced tool)", () => {
     expect(h.state.activeTool.type).toBe("laser");
   });
 
-  // requires the non-interactive editor (interaction prop) / full toolbar UI — a later slice's gate
-  it.skip("forcing a non-activatable tool resolves to selection until activatable", async () => {
+  it("forcing a non-activatable tool resolves to selection until activatable", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     await render(
       <Excalidraw activeTool={{ type: "laser" }} interaction={false} />,
