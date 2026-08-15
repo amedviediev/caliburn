@@ -1,4 +1,5 @@
 import type { Action } from "@excalidraw/excalidraw/actions/types";
+import type { LibraryItem } from "@excalidraw/excalidraw/types";
 
 import type { ActionManager } from "../../actions/manager";
 
@@ -6,9 +7,14 @@ import type { ActionManager } from "../../actions/manager";
  * Angular port of upstream `CommandPalette/types.ts`. `icon` is the ng-icon
  * registry name instead of upstream's React node (see `icons.generated.ts`),
  * and `perform`'s event is a DOM event — Angular has no synthetic ones.
+ *
+ * Upstream's library commands pass a rendered `<LibraryItemIcon/>` as their
+ * `icon`; since `icon` is a registry name here, they carry `libraryItem`
+ * instead and the template renders the preview from it.
  */
 export type CommandPaletteItem = {
   label: string;
+  libraryItem?: { id: LibraryItem["id"]; elements: LibraryItem["elements"] };
   /** additional keywords to match against
    * (appended to haystack, not displayed) */
   keywords?: string[];

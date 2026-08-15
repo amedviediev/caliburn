@@ -11,6 +11,7 @@ import {
 } from "@angular/core";
 
 import {
+  DEFAULT_SIDEBAR,
   EVENT,
   KEYS,
   THEME,
@@ -22,6 +23,7 @@ import { getSelectedElements } from "@excalidraw/element";
 
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
+import { distributeLibraryItemsOnSquareGrid } from "@excalidraw/excalidraw/data/library";
 import { TOOLS, getToolLetter } from "@excalidraw/excalidraw/components/Tools";
 import {
   canChangeBackgroundColor,
@@ -52,6 +54,7 @@ import {
 import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnDialogComponent } from "../dialog.component";
+import { CaliburnLibraryItemIconComponent } from "../library/library-item-icon.component";
 import { CaliburnTextFieldComponent } from "../text-field.component";
 import { TOOL_ICONS } from "../tools";
 
@@ -72,6 +75,7 @@ export const DEFAULT_CATEGORIES = {
   editor: "Editor",
   elements: "Elements",
   links: "Links",
+  library: "Library",
 };
 
 const getCategoryOrder = (category: string) => {
@@ -218,6 +222,7 @@ export class CaliburnCommandShortcutHintComponent {
   imports: [
     CaliburnCommandShortcutHintComponent,
     CaliburnDialogComponent,
+    CaliburnLibraryItemIconComponent,
     CaliburnTextFieldComponent,
     NgIcon,
     NgTemplateOutlet,
@@ -255,6 +260,26 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
     CommandPaletteItem,
     "haystack" | "order"
   >[] = [];
+
+  /** upstream's `libraryCommands` — one command per *named* library item,
+   * only ever offered while the user is searching */
+  private readonly libraryCommands = computed<CommandPaletteItem[]>(() =>
+    this.editor
+      .libraryItemsData()
+      .libraryItems.filter((libraryItem) => !!libraryItem.name)
+      .map((libraryItem) => ({
+        label: libraryItem.name!,
+        libraryItem: { id: libraryItem.id, elements: libraryItem.elements },
+        category: DEFAULT_CATEGORIES.library,
+        order: getCategoryOrder(DEFAULT_CATEGORIES.library),
+        haystack: deburr(libraryItem.name!),
+        perform: () => {
+          this.editor.onInsertElements(
+            distributeLibraryItemsOnSquareGrid([libraryItem]),
+          );
+        },
+      })),
+  );
 
   private readonly detachKeyDown = addEventListener(
     window,
@@ -612,6 +637,24 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
     const additionalCommands: CommandPaletteItem[] = [
       actionToCommand(actionToggleTheme, DEFAULT_CATEGORIES.app),
       {
+        label: t("toolBar.library"),
+        category: DEFAULT_CATEGORIES.app,
+        icon: "libraryIcon",
+        viewMode: false,
+        perform: () => {
+          app.batchCommits(() =>
+            app.setState((state) => ({
+              openSidebar: state.openSidebar
+                ? null
+                : {
+                    name: DEFAULT_SIDEBAR.name,
+                    tab: DEFAULT_SIDEBAR.defaultTab,
+                  },
+            })),
+          );
+        },
+      },
+      {
         label: t("search.title"),
         category: DEFAULT_CATEGORIES.app,
         icon: "searchIcon",
@@ -723,8 +766,9 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
 
     const lastUsed = this.lastUsed();
     lastUsedPaletteItem.set(
-      this.allCommands.find((command) => command.label === lastUsed?.label) ??
-        null,
+      [...this.allCommands, ...this.libraryCommands()].find(
+        (command) => command.label === lastUsed?.label,
+      ) ?? null,
     );
 
     this.applyCommands();
@@ -751,9 +795,17 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
 
     const commandSearch = this.commandSearch();
     const lastUsed = this.lastUsed();
-    let matchingCommands = this.allCommands
-      .filter((command) => this.isCommandAvailable(command))
-      .sort((a, b) => a.order - b.order);
+    let matchingCommands =
+      commandSearch?.length > 1
+        ? [
+            ...this.allCommands
+              .filter((command) => this.isCommandAvailable(command))
+              .sort((a, b) => a.order - b.order),
+            ...this.libraryCommands(),
+          ]
+        : this.allCommands
+            .filter((command) => this.isCommandAvailable(command))
+            .sort((a, b) => a.order - b.order);
 
     const showLastUsed =
       !commandSearch && lastUsed && this.isCommandAvailable(lastUsed);

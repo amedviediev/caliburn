@@ -1,6 +1,6 @@
 import React from "react";
 
-import { KEYS, THEME } from "@excalidraw/common";
+import { DEFAULT_SIDEBAR, KEYS, THEME } from "@excalidraw/common";
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
@@ -120,6 +120,7 @@ describe("CommandPalette", () => {
     }
     expect(labels()).toContain(t("toolBar.rectangle"));
     expect(labels()).toContain(t("buttons.exportImage"));
+    expect(labels()).toContain(t("toolBar.library"));
 
     for (const gated of [
       t("buttons.zenMode"),
@@ -129,7 +130,6 @@ describe("CommandPalette", () => {
       t("labels.textToDiagram"),
       t("toolBar.mermaidToExcalidraw"),
       t("labels.shapeSwitch"),
-      t("toolBar.library"),
       t("labels.copyAsPng"),
       t("labels.copyAsSvg"),
       t("labels.copyStyles"),
@@ -246,6 +246,87 @@ describe("CommandPalette", () => {
       renderResult.container.querySelector(".Toast .Toast__message")
         ?.textContent,
     ).toBe(h.state.toast?.message);
+  });
+
+  it("toggles the library sidebar from the app command", () => {
+    filter("library");
+
+    act(() => {
+      fireEvent.click(items()[0]);
+    });
+
+    expect(h.state.openSidebar).toEqual({
+      name: DEFAULT_SIDEBAR.name,
+      tab: DEFAULT_SIDEBAR.defaultTab,
+    });
+  });
+
+  it("lists named library items in the Library category while searching", async () => {
+    await act(() =>
+      h.app.library.updateLibrary({
+        libraryItems: [
+          {
+            id: "item1",
+            status: "unpublished",
+            created: 1,
+            name: "zigzag",
+            elements: [API.createElement({ id: "elem1", type: "rectangle" })],
+          },
+          {
+            id: "item2",
+            status: "unpublished",
+            created: 2,
+            elements: [API.createElement({ id: "elem2", type: "ellipse" })],
+          },
+        ],
+      }),
+    );
+
+    // a single character is below the library-command threshold
+    filter("z");
+    expect(categoryTitles()).not.toContain("Library");
+
+    act(() => {
+      updateTextEditor(input(), "zigzag");
+    });
+
+    expect(categoryTitles()).toContain("Library");
+    expect(labels()).toContain("zigzag");
+    // the unnamed item never becomes a command
+    expect(items()).toHaveLength(1);
+    expect(
+      renderResult.container.querySelector(
+        ".command-item-large .library-item-icon",
+      ),
+    ).not.toBeNull();
+  });
+
+  it("inserts the library item of the executed Library command", async () => {
+    await act(() =>
+      h.app.library.updateLibrary({
+        libraryItems: [
+          {
+            id: "item1",
+            status: "unpublished",
+            created: 1,
+            name: "zigzag",
+            elements: [API.createElement({ id: "elem1", type: "rectangle" })],
+          },
+        ],
+      }),
+    );
+
+    filter("zigzag");
+    expect(labels()).toEqual(["zigzag"]);
+
+    act(() => {
+      fireEvent.click(items()[0]);
+    });
+
+    await waitFor(() => {
+      expect(h.elements.length).toBe(1);
+      expect(h.elements[0].type).toBe("rectangle");
+    });
   });
 
   it("documents the shortcut in the help dialog", () => {

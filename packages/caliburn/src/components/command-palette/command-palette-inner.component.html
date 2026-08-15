@@ -57,7 +57,10 @@
           ) {
             <ng-container
               [ngTemplateOutlet]="commandItem"
-              [ngTemplateOutletContext]="{ $implicit: command }"
+              [ngTemplateOutletContext]="{
+                $implicit: command,
+                large: category === 'Library',
+              }"
             />
           }
         </div>
@@ -71,17 +74,33 @@
   </div>
 </caliburn-dialog>
 
-<ng-template #commandItem let-command let-disabled="disabled">
+<ng-template
+  #commandItem
+  let-command
+  let-disabled="disabled"
+  let-large="large"
+>
   <div
     class="command-item"
     [class.item-selected]="command.label === currentCommand()?.label"
     [class.item-disabled]="disabled"
+    [class.command-item-large]="large"
     [attr.title]="disabled ? itemNotAvailableLabel : ''"
     (click)="onItemClick(command, disabled, $event)"
     (mousemove)="onItemMouseMove(command, disabled)"
   >
     <div class="name">
-      @if (command.icon) {
+      @if (command.libraryItem) {
+        <span
+          class="icon"
+          style="width: var(--icon-size, 1rem); height: 100%; margin: 0 0.5ex 0 0.5ex; display: inline-flex; line-height: 0; vertical-align: middle; flex: 0 0 auto"
+        >
+          <caliburn-library-item-icon
+            [id]="command.libraryItem.id"
+            [elements]="command.libraryItem.elements"
+          />
+        </span>
+      } @else if (command.icon) {
         <span
           class="icon"
           style="width: var(--icon-size, 1rem); height: 100%; margin: 0 0.5ex 0 0.5ex; display: inline-flex; line-height: 0; vertical-align: middle; flex: 0 0 auto"
