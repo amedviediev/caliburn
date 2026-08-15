@@ -20,6 +20,7 @@ import {
 } from "../../actions";
 import { actionToggleViewMode } from "../../actions/actionToggleViewMode";
 import { getShortcutFromShortcutName } from "../../actions/shortcuts";
+import { trackEvent } from "../../analytics";
 import { useUIAppState } from "../../context/ui-appState";
 import { useSetAtom } from "../../editor-jotai";
 import { useI18n } from "../../i18n";
@@ -39,6 +40,7 @@ import DropdownMenuItemContentRadio from "../dropdownMenu/DropdownMenuItemConten
 import DropdownMenuSub from "../dropdownMenu/DropdownMenuSub";
 import { settingsIcon, emptyIcon } from "../icons";
 import {
+  boltIcon,
   DeviceDesktopIcon,
   ExportIcon,
   ExportImageIcon,
@@ -133,6 +135,28 @@ export const SaveAsImage = () => {
   );
 };
 SaveAsImage.displayName = "SaveAsImage";
+
+export const CommandPalette = (opts?: { className?: string }) => {
+  const setAppState = useExcalidrawSetAppState();
+  const { t } = useI18n();
+
+  return (
+    <DropdownMenuItem
+      icon={boltIcon}
+      data-testid="command-palette-button"
+      onSelect={() => {
+        trackEvent("command_palette", "open", "menu");
+        setAppState({ openDialog: { name: "commandPalette" } });
+      }}
+      shortcut={getShortcutFromShortcutName("commandPalette")}
+      aria-label={t("commandPalette.title")}
+      className={opts?.className}
+    >
+      {t("commandPalette.title")}
+    </DropdownMenuItem>
+  );
+};
+CommandPalette.displayName = "CommandPalette";
 
 export const SearchMenu = (opts?: { className?: string }) => {
   const { t } = useI18n();

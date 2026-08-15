@@ -11241,6 +11241,8 @@ exports[`history > multiplayer undo/redo > should redraw arrows on undo > [end o
 
 exports[`history > multiplayer undo/redo > should redraw arrows on undo > [end of test] number of elements 1`] = `3`;
 
+exports[`history > multiplayer undo/redo > should redraw arrows on undo > [end of test] number of renders 1`] = `8`;
+
 exports[`history > multiplayer undo/redo > should redraw arrows on undo > [end of test] redo stack 1`] = `
 [
   {
