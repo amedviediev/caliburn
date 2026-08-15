@@ -40,7 +40,9 @@ import {
   Store,
   embeddableURLValidator,
   getFrameChildrenInsertionIndex,
+  getBoundTextElement,
   getObservedAppState,
+  hasBackground,
   isElementInGroup,
   isBindingElement,
   isEmbeddableElement,
@@ -122,6 +124,7 @@ import type {
   ActionResult,
 } from "@excalidraw/excalidraw/actions/types";
 
+import { CaliburnBucketFill } from "./bucket-fill";
 import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
   actionBindText,
@@ -205,6 +208,7 @@ import {
 } from "./actions/actionZindex";
 import {
   actionChangeBackgroundColor,
+  actionChangeBucketFillBackgroundColor,
   actionChangeFillStyle,
   actionChangeFontFamily,
   actionChangeFontSize,
@@ -660,9 +664,7 @@ export class CaliburnEditorComponent
     );
   }
 
-  readonly bucketFill = {
-    getBucketFillBackgroundColor: (color: string) => color,
-  };
+  readonly bucketFill = new CaliburnBucketFill(this);
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
 
@@ -908,6 +910,7 @@ export class CaliburnEditorComponent
       actionIncreaseFontSize,
       actionChangeStrokeColor,
       actionChangeBackgroundColor,
+      actionChangeBucketFillBackgroundColor,
       actionChangeFillStyle,
       actionChangeStrokeWidth,
       actionChangeSloppiness,
@@ -1053,6 +1056,7 @@ export class CaliburnEditorComponent
     });
 
     document.addEventListener("keydown", this.onKeyDown);
+    document.addEventListener("keyup", this.onKeyUp);
     document.addEventListener("paste", this.pasteFromClipboard);
     document.addEventListener("copy", this.onCopy);
     document.addEventListener("cut", this.onCut);
@@ -1088,6 +1092,7 @@ export class CaliburnEditorComponent
     this.lassoTrail.stop();
     resetGesture();
     document.removeEventListener("keydown", this.onKeyDown);
+    document.removeEventListener("keyup", this.onKeyUp);
     document.removeEventListener("paste", this.pasteFromClipboard);
     document.removeEventListener("copy", this.onCopy);
     document.removeEventListener("cut", this.onCut);
@@ -1216,6 +1221,20 @@ export class CaliburnEditorComponent
     this.batchCommits(() => this.onKeyDownImpl(event));
   };
 
+  /**
+   * Upstream's `onKeyUp`, restricted to the one branch caliburn has a
+   * landing place for: the rest of it (space-drag release, bind mode, the
+   * `isBindingEnabled` reset) drives machinery no task has ported.
+   */
+  private onKeyUp = (event: KeyboardEvent) => {
+    if (!this.isInteractionEnabled()) {
+      return;
+    }
+    if (event.key === KEYS.ALT) {
+      this.batchCommits(() => this.bucketFill.closeTemporaryEyeDropper());
+    }
+  };
+
   private onKeyDownImpl = (event: KeyboardEvent) => {
     if (!this.isInteractionEnabled()) {
       // only the navigation keyboard remains: page-scroll keys and
@@ -1266,6 +1285,13 @@ export class CaliburnEditorComponent
       event.preventDefault();
       return;
     }
+
+    if (event.key === KEYS.ALT && this.state.activeTool.type === "bucketfill") {
+      this.bucketFill.openTemporaryEyeDropper();
+      event.preventDefault();
+      return;
+    }
+
     if (this.actionManager.handleKeyDown(event)) {
       return;
     }
@@ -1307,7 +1333,15 @@ export class CaliburnEditorComponent
             );
           }
 
-          if (shape === "lasso" && this.state.activeTool.type === "laser") {
+          if (
+            shape === "bucketfill" &&
+            this.state.activeTool.type === "bucketfill"
+          ) {
+            this.bucketFill.cycleBackgroundColor();
+          } else if (
+            shape === "lasso" &&
+            this.state.activeTool.type === "laser"
+          ) {
             this.setActiveTool({
               type: this.state.preferredSelectionTool.type,
             });
@@ -1404,6 +1438,60 @@ export class CaliburnEditorComponent
       event.preventDefault();
     } else if (event.key === KEYS.ENTER) {
       handleEnterToEditKeyDown(this, event);
+    }
+
+    if (
+      (event.key === KEYS.G || event.key === KEYS.S) &&
+      !event.altKey &&
+      !event[KEYS.CTRL_OR_CMD]
+    ) {
+      const selectedElements = this.scene.getSelectedElements(this.state);
+      if (
+        this.state.activeTool.type === "selection" &&
+        !selectedElements.length
+      ) {
+        return;
+      }
+
+      if (
+        event.key === KEYS.G &&
+        (hasBackground(this.state.activeTool.type) ||
+          selectedElements.some((element) => hasBackground(element.type)))
+      ) {
+        this.setState({ openPopup: "elementBackground" });
+        event.stopPropagation();
+      }
+      if (event.key === KEYS.S) {
+        this.setState({ openPopup: "elementStroke" });
+        event.stopPropagation();
+      }
+    }
+
+    if (
+      !event[KEYS.CTRL_OR_CMD] &&
+      event.shiftKey &&
+      event.key.toLowerCase() === KEYS.F
+    ) {
+      const selectedElements = this.scene.getSelectedElements(this.state);
+
+      if (
+        this.state.activeTool.type === "selection" &&
+        !selectedElements.length
+      ) {
+        return;
+      }
+
+      if (
+        this.state.activeTool.type === "text" ||
+        selectedElements.find(
+          (element) =>
+            isTextElement(element) ||
+            getBoundTextElement(element, this.scene.getNonDeletedElementsMap()),
+        )
+      ) {
+        event.preventDefault();
+        this.setState({ openPopup: "fontFamily" });
+      }
     }
 
     if (
@@ -1614,6 +1702,13 @@ export class CaliburnEditorComponent
     }
     this.applyStateInvariants();
     this.commit();
+    if (
+      this.state.activeTool.type === "bucketfill" &&
+      prevState.currentItemBackgroundColor !==
+        this.state.currentItemBackgroundColor
+    ) {
+      this.cursor.applyForTool();
+    }
     if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
       this.cursor.reset();
       // textWysiwyg's and frame-name's submit paths run through setState.
@@ -1754,6 +1849,12 @@ export class CaliburnEditorComponent
             lastActiveTool: this.state.activeTool,
           })
         : updateActiveTool(this.state, tool);
+
+    if (nextActiveTool.type === "hand") {
+      this.cursor.set(CURSOR_TYPE.GRAB);
+    } else {
+      this.cursor.applyForTool(nextActiveTool);
+    }
 
     if (nextActiveTool.type === "image") {
       onImageToolbarButtonClick(this);
@@ -2019,6 +2120,12 @@ export class CaliburnEditorComponent
       if (this.state.selectionElement) {
         this.setState({ selectionElement: null });
       }
+      // a second finger means pinch/pan intent, not a bucket click. Upstream
+      // discards the armed fill by replaying the previous gesture's
+      // pointer-up handler with this pointer-DOWN event
+      // (`maybeCleanupAfterMissingPointerUp`); caliburn drives pointer-up
+      // off the canvas binding, so the discard lands here instead.
+      this.bucketFill.cancel();
       this.pointerDownState = null;
       return;
     }
@@ -2064,6 +2171,19 @@ export class CaliburnEditorComponent
     } else if (activeToolType === "text") {
       this.pointerDownState = initialPointerDownState(this, event);
       handleTextOnPointerDown(this, event, this.pointerDownState);
+    } else if (activeToolType === "bucketfill") {
+      // one-shot click tool: pointer down only ARMS the fill — it commits in
+      // the shared pointer-up teardown, and only when the interaction stayed
+      // a single-pointer click (a second finger, a context menu, or a
+      // pointercancel aborts it). Dispatched like any other tool so the
+      // shared pointer lifecycle below — public onPointerDown/onPointerUp
+      // callbacks, pointer-up teardown — runs for bucket clicks too. In view
+      // mode this branch is unreachable:
+      // `handleCanvasPanUsingWheelOrSpaceDrag` swallows the pointer-down.
+      this.pointerDownState = initialPointerDownState(this, event);
+      this.bucketFill.handlePointerDown(
+        viewportCoordsToSceneCoords(event, this.state),
+      );
     } else if (activeToolType === "custom") {
       this.pointerDownState = initialPointerDownState(this, event);
     }
@@ -2197,6 +2317,11 @@ export class CaliburnEditorComponent
     this.batchCommits(() => this.handleCanvasPointerUpImpl(event));
   }
 
+  /** upstream binds `removePointer` on the interactive canvas's pointercancel */
+  removePointer(event: PointerEvent) {
+    this.batchCommits(() => removePointer(this, event));
+  }
+
   private handleCanvasPointerUpImpl(event: PointerEvent) {
     // upstream returns early whenever non-interactive: a tool allowed via
     // `interaction.enabled.tools` finishes its stroke through the window
@@ -2210,6 +2335,18 @@ export class CaliburnEditorComponent
     }
 
     removePointer(this, event);
+
+    // an armed bucket fill commits only on a GENUINE pointer up: a tool
+    // switch mid-press orphans the click, which must discard the fill
+    // instead of committing an unwanted edit.
+    if (
+      event.type === "pointerup" &&
+      this.state.activeTool.type === "bucketfill"
+    ) {
+      this.bucketFill.handlePointerUp();
+    } else {
+      this.bucketFill.cancel();
+    }
 
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
     this.lastPointerUpEvent = event;

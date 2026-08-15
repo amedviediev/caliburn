@@ -175,6 +175,12 @@ export const removePointer = (
   editor: CaliburnEditorComponent,
   event: PointerEvent,
 ) => {
+  if (event.type === "pointercancel") {
+    // the browser took the pointer over (scroll, palm rejection) — no
+    // pointerup will follow, so the armed bucket fill must not commit
+    editor.bucketFill.cancel();
+  }
+
   const wasMultiTouchGesture = gesture.pointers.size >= 2;
   gesture.pointers.delete(event.pointerId);
 

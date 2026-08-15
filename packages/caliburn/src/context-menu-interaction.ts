@@ -186,6 +186,10 @@ export const handleCanvasContextMenu = (
     return;
   }
 
+  // a context menu during a press (touch long-press) means the user is
+  // not committing a bucket click
+  editor.bucketFill.cancel();
+
   if (
     "pointerType" in event &&
     (event as PointerEvent).pointerType === "pen" &&
