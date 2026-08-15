@@ -52,6 +52,7 @@ import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
         [style.position]="'fixed'"
         [style.top.px]="positionTop()"
         [style.right.px]="positionRight()"
+        [style.left.px]="positionLeft()"
         #menuRoot
       >
         @if (mobile()) {
@@ -71,6 +72,10 @@ export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
   readonly menu = inject(CaliburnDropdownMenuComponent);
 
   readonly mobile = input(false);
+  /** upstream's Radix `align` prop; only the two alignments its call sites
+   * use are honored — `end` (the default, right-aligned to the trigger) and
+   * `start` (left-aligned, used by `MainMenu.tsx`) */
+  readonly align = input<"start" | "end">("end");
   readonly extraClass = input<string>("", { alias: "class" });
 
   /** fires on outside click or Escape, mirroring upstream's `onClickOutside`. */
@@ -89,7 +94,13 @@ export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
   });
   readonly positionRight = computed(() => {
     const rect = this.triggerRect();
-    return rect ? Math.max(window.innerWidth - rect.right, 0) : 0;
+    return this.align() === "end" && rect
+      ? Math.max(window.innerWidth - rect.right, 0)
+      : null;
+  });
+  readonly positionLeft = computed(() => {
+    const rect = this.triggerRect();
+    return this.align() === "start" && rect ? Math.max(rect.left, 0) : null;
   });
 
   /** re-measures the trigger every time the menu actually opens (not just

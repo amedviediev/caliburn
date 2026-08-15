@@ -28,7 +28,7 @@ import clsx from "clsx";
   host: {
     type: "button",
     "[class]": "hostClass()",
-    "data-testid": "dropdown-menu-button",
+    "[attr.data-testid]": "testId()",
     "[attr.title]": "title() ?? null",
     "(click)": "toggle.emit()",
   },
@@ -37,6 +37,9 @@ import clsx from "clsx";
 export class CaliburnDropdownMenuTriggerComponent {
   readonly mobile = input(false);
   readonly title = input<string>();
+  /** upstream spreads `...rest` after its own `data-testid`, so a consumer
+   * (e.g. `MainMenu.tsx`) can override it — hence the input */
+  readonly testId = input("dropdown-menu-button");
 
   readonly toggle = output<void>();
 
