@@ -7,7 +7,7 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import { Excalidraw } from "../src/index";
 
 import { API } from "./helpers/api";
-import { Keyboard, UI } from "./helpers/ui";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
 import {
   GlobalTestState,
   act,
@@ -19,6 +19,8 @@ import {
 import type { RenderResult } from "./test-utils";
 
 const { h } = window;
+
+const mouse = new Pointer("mouse");
 
 unmountComponent();
 
@@ -49,6 +51,33 @@ const selectRectangle = () => {
   API.setSelectedElements([rectangle]);
   return rectangle;
 };
+
+/**
+ * The link icon sits at the element's top-right corner
+ * (`getLinkHandleFromCoords`): at zoom 1 its 12x12 box starts at
+ * `x2 + 2` / `y1 - 14`.
+ */
+const linkIconCenter = (x2: number, y1: number) => ({
+  x: x2 + 2 + 6,
+  y: y1 - 14 + 6,
+});
+
+/** `EditorInterface.isTouchScreen` is readonly on the type but per-instance */
+const forceTouchScreen = () => {
+  (h.app.editorInterface as { isTouchScreen: boolean }).isTouchScreen = true;
+};
+
+const linkedRectangle = () => ({
+  // `API.createElement` drops `link`, so it is set on the plain element
+  ...API.createElement({
+    type: "rectangle",
+    x: 100,
+    y: 100,
+    width: 100,
+    height: 100,
+  }),
+  link: "https://example.com",
+});
 
 describe("element links", () => {
   beforeEach(async () => {
@@ -84,6 +113,35 @@ describe("element links", () => {
     expect(h.state.showHyperlinkPopup).toBe("info");
     expect(h.elements[0].id).toBe(rectangle.id);
     expect(h.elements[0].link).toBe("https://example.com");
+  });
+
+  it("the popup's Edit button focuses and selects the link input", () => {
+    const rectangle = {
+      // `API.createElement` drops `link`, so it is set on the plain element
+      ...API.createElement({ type: "rectangle", width: 100, height: 100 }),
+      link: "https://example.com",
+    };
+    API.setElements([rectangle]);
+    API.setSelectedElements([rectangle]);
+    act(() => {
+      API.setAppState({ showHyperlinkPopup: "info" });
+    });
+
+    expect(popupInput()).toBeNull();
+
+    act(() => {
+      fireEvent.click(
+        renderResult.container.querySelector<HTMLButtonElement>(
+          ".excalidraw-hyperlinkContainer--edit",
+        )!,
+      );
+    });
+
+    const input = popupInput()!;
+    expect(input).not.toBeNull();
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe("https://example.com".length);
   });
 
   it("the link popup's remove button clears the link", () => {
@@ -129,6 +187,21 @@ describe("element links", () => {
     ).not.toBeNull();
   });
 
+  it("tapping a link icon opens the link when links are enabled", () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const rectangle = linkedRectangle();
+
+    API.setElements([rectangle]);
+    forceTouchScreen();
+
+    const { x, y } = linkIconCenter(200, 100);
+    act(() => {
+      mouse.clickAt(x, y);
+    });
+
+    expect(open).toHaveBeenCalled();
+  });
+
   it("the element-link dialog links the source element to the selection", () => {
     const source = API.createElement({ type: "rectangle", width: 100 });
     const target = API.createElement({
@@ -155,5 +228,59 @@ describe("element links", () => {
 
     expect(h.state.openDialog).toBeNull();
     expect(h.elements[0].link).toContain(target.id);
+  });
+});
+
+describe("element links with links disabled", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("tapping a link icon does not open the link", async () => {
+    // interactive content restricted to the laser tool: the pointer handlers
+    // still run, but `interaction.enabled.links` is off
+    renderResult = await render(
+      <Excalidraw
+        activeTool={{ type: "laser" }}
+        interaction={{ enabled: { tools: { laser: true } } }}
+      />,
+    );
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const rectangle = linkedRectangle();
+
+    API.setElements([rectangle]);
+    forceTouchScreen();
+
+    expect(h.app.isLinksEnabled()).toBe(false);
+
+    const { x, y } = linkIconCenter(200, 100);
+    act(() => {
+      mouse.clickAt(x, y);
+    });
+
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("tapping a link icon opens the link once links are enabled", async () => {
+    renderResult = await render(
+      <Excalidraw
+        activeTool={{ type: "laser" }}
+        interaction={{ enabled: { links: true, tools: { laser: true } } }}
+      />,
+    );
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const rectangle = linkedRectangle();
+
+    API.setElements([rectangle]);
+    forceTouchScreen();
+
+    expect(h.app.isLinksEnabled()).toBe(true);
+
+    const { x, y } = linkIconCenter(200, 100);
+    act(() => {
+      mouse.clickAt(x, y);
+    });
+
+    expect(open).toHaveBeenCalled();
   });
 });

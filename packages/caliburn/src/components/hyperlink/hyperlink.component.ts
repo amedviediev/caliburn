@@ -160,10 +160,23 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  protected isEditing() {
+  protected readonly isEditing = computed(() => {
     this.editor.changeGeneration();
     return this.editor.state.showHyperlinkPopup === "editor";
-  }
+  });
+
+  /**
+   * Upstream re-runs its select effect on every `isEditing` flip; the popup
+   * is not remounted when the info view switches to the editor (clicking
+   * "Edit"), so the selection can't ride on mount alone. Reading `inputRef`
+   * makes this rerun once the input has actually been rendered.
+   */
+  private readonly selectOnEdit = effect(() => {
+    const input = this.inputRef();
+    if (this.isEditing() && input) {
+      this.selectInput(input.nativeElement);
+    }
+  });
 
   protected readonly coords = computed(() => {
     this.editor.changeGeneration();
@@ -199,7 +212,6 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     window.addEventListener(EVENT.POINTER_MOVE, this.onPointerMove, false);
-    this.maybeSelectInput();
   }
 
   ngOnDestroy() {
@@ -251,16 +263,16 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
     );
   };
 
-  private maybeSelectInput() {
+  private selectInput(input: HTMLInputElement) {
     const editorInterface = this.editor.editorInterface;
-    const input = this.inputRef()?.nativeElement;
     if (
-      input &&
-      !(editorInterface.formFactor === "phone" || editorInterface.isTouchScreen)
+      editorInterface.formFactor === "phone" ||
+      editorInterface.isTouchScreen
     ) {
-      input.focus();
-      input.select();
+      return;
     }
+    input.focus();
+    input.select();
   }
 
   private readonly onPointerMove = (event: PointerEvent) => {

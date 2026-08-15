@@ -2166,6 +2166,7 @@ export class CaliburnEditorComponent
     }
 
     if (
+      this.isLinksEnabled() &&
       maybeHandleElementLinkClick(
         this,
         viewportCoordsToSceneCoords(event, this.state),
