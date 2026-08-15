@@ -85,6 +85,9 @@
             (toggle)="onSidebarToggle($event)"
           ></button>
         }
+        @if (shouldShowStats()) {
+          <caliburn-stats />
+        }
       </div>
     </div>
   </caliburn-fixed-side-container>

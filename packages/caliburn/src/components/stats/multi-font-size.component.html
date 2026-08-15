@@ -1,0 +1,11 @@
+@if (textElements().length) {
+<caliburn-stats-drag-input
+  label="F"
+  icon="fontSizeIcon"
+  [elements]="textElements()"
+  [dragInputCallback]="handleFontSizeChange"
+  [value]="value()"
+  [editable]="editable()"
+  [property]="property()"
+/>
+}

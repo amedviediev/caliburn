@@ -1,0 +1,40 @@
+@if (editable()) {
+<div class="drag-input-container" [attr.data-testid]="label()">
+<div
+  #labelEl
+  class="drag-input-label"
+  (pointerdown)="onLabelPointerDown()"
+  (pointerenter)="onLabelPointerEnter()"
+>
+  @if (icon(); as icon) {
+  <span
+    style="
+      width: 1em;
+      height: 100%;
+      margin: 0 0.5ex 0 0.5ex;
+      display: inline-flex;
+      line-height: 0;
+      vertical-align: middle;
+      flex: 0 0 auto;
+    "
+  >
+    <ng-icon [name]="icon" />
+  </span>
+  } @else {
+  {{ label() }}
+  }
+</div>
+<input
+  #input
+  class="drag-input"
+  autocomplete="off"
+  spellcheck="false"
+  [value]="inputValue()"
+  (keydown)="onKeyDown($event)"
+  (input)="onInput($event)"
+  (change)="onInput($event)"
+  (focus)="onFocus()"
+  (blur)="onBlur($event)"
+/>
+</div>
+}

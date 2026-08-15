@@ -26,6 +26,7 @@ import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.componen
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
 import { CaliburnOverwriteConfirmComponent } from "./overwrite-confirm/overwrite-confirm.component";
 import { isSidebarDocked } from "./sidebar/common";
+import { CaliburnStatsComponent } from "./stats/stats.component";
 import { CaliburnDefaultSidebarComponent } from "./sidebar/default-sidebar.component";
 import { CaliburnSidebarTriggerComponent } from "./sidebar/sidebar-trigger.component";
 import {
@@ -94,6 +95,7 @@ let nextLayerUIId = 0;
     CaliburnSidebarTriggerComponent,
     CaliburnStackColComponent,
     CaliburnStackRowComponent,
+    CaliburnStatsComponent,
     CaliburnToastComponent,
     CaliburnToolbarComponent,
     CaliburnWelcomeScreenCenterComponent,
@@ -144,6 +146,16 @@ export class CaliburnLayerUIComponent {
     return openDialog?.name === "elementLinkSelector"
       ? openDialog.sourceElementId
       : null;
+  });
+
+  protected readonly shouldShowStats = computed(() => {
+    const state = this.state();
+    return (
+      state.stats.open &&
+      !state.zenModeEnabled &&
+      !state.viewModeEnabled &&
+      state.openDialog?.name !== "elementLinkSelector"
+    );
   });
 
   protected readonly showSidebarTrigger = computed(() => {

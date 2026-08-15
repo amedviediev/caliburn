@@ -48,6 +48,8 @@
 @use "../../excalidraw/components/ElementLinkDialog.scss";
 @use "../../excalidraw/components/EyeDropper.scss";
 @use "../../excalidraw/components/hyperlink/Hyperlink.scss";
+@use "../../excalidraw/components/Stats/Stats.scss";
+@use "../../excalidraw/components/Stats/DragInput.scss";
 @use "../../excalidraw/components/Toast.scss";
 @use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
 
@@ -146,6 +148,18 @@ caliburn-element-link-dialog,
 caliburn-eye-dropper,
 caliburn-hint-viewer,
 caliburn-hyperlink,
+caliburn-stats,
+caliburn-stats-angle,
+caliburn-stats-canvas-grid,
+caliburn-stats-collapsible,
+caliburn-stats-dimension,
+caliburn-stats-drag-input,
+caliburn-stats-font-size,
+caliburn-stats-multi-angle,
+caliburn-stats-multi-dimension,
+caliburn-stats-multi-font-size,
+caliburn-stats-multi-position,
+caliburn-stats-position,
 caliburn-help-button,
 caliburn-color-picker,
 caliburn-color-input,

@@ -1,0 +1,138 @@
+<div class="exc-stats">
+  <caliburn-island [padding]="3">
+    <div class="title">
+      <h2>{{ labels.title }}</h2>
+      <div class="close" (click)="close()">
+        <ng-icon name="closeIcon" />
+      </div>
+    </div>
+
+    <caliburn-stats-collapsible
+      [open]="generalStatsOpen()"
+      (openTrigger)="toggleGeneralStats()"
+    >
+      <h3 collapsibleLabel>{{ labels.generalStats }}</h3>
+      <div class="exc-stats__rows">
+        <div
+          class="exc-stats__row exc-stats__row--heading"
+          style="grid-template-columns: repeat(1, 1fr)"
+        >{{ labels.scene }}</div>
+        <div class="exc-stats__row" style="grid-template-columns: repeat(2, 1fr)">
+          <div>{{ labels.shapes }}</div>
+          <div>{{ elementCount() }}</div>
+        </div>
+        <div class="exc-stats__row" style="grid-template-columns: repeat(2, 1fr)">
+          <div>{{ labels.width }}</div>
+          <div>{{ sceneDimension().width }}</div>
+        </div>
+        <div class="exc-stats__row" style="grid-template-columns: repeat(2, 1fr)">
+          <div>{{ labels.height }}</div>
+          <div>{{ sceneDimension().height }}</div>
+        </div>
+        @if (gridModeEnabled()) {
+        <div
+          class="exc-stats__row exc-stats__row--heading"
+          style="grid-template-columns: repeat(1, 1fr)"
+        >Canvas</div>
+        <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+          <caliburn-stats-canvas-grid property="gridStep" />
+        </div>
+        }
+      </div>
+    </caliburn-stats-collapsible>
+
+    @if (showElementStats()) {
+    <div id="elementStats" style="margin-top: 12px">
+      <caliburn-stats-collapsible
+        [open]="elementPropertiesOpen()"
+        (openTrigger)="toggleElementProperties()"
+      >
+        <h3 collapsibleLabel>{{ labels.elementProperties }}</h3>
+        <div class="exc-stats__rows">
+          @if (singleElement(); as element) {
+          <div
+            class="exc-stats__row exc-stats__row--heading"
+            data-testid="stats-element-type"
+            style="grid-template-columns: repeat(1, 1fr); margin: 0.3125rem 0"
+          >{{ elementTypeLabel() }}</div>
+
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-position property="x" [element]="element" />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-position property="y" [element]="element" />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-dimension property="width" [element]="element" />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-dimension property="height" [element]="element" />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-angle property="angle" [element]="element" />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-font-size property="fontSize" [element]="element" />
+          </div>
+          }
+
+          @if (multipleElements(); as elements) {
+          @if (elementsAreInSameGroup()) {
+          <div
+            class="exc-stats__row exc-stats__row--heading"
+            style="grid-template-columns: repeat(1, 1fr)"
+          >{{ labels.group }}</div>
+          }
+
+          <div
+            class="exc-stats__row"
+            style="grid-template-columns: repeat(2, 1fr); margin: 0.3125rem 0"
+          >
+            <div>{{ labels.shapes }}</div>
+            <div>{{ elements.length }}</div>
+          </div>
+
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-multi-position
+              property="x"
+              [elements]="elements"
+              [atomicUnits]="atomicUnits()"
+            />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-multi-position
+              property="y"
+              [elements]="elements"
+              [atomicUnits]="atomicUnits()"
+            />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-multi-dimension
+              property="width"
+              [elements]="elements"
+              [atomicUnits]="atomicUnits()"
+            />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-multi-dimension
+              property="height"
+              [elements]="elements"
+              [atomicUnits]="atomicUnits()"
+            />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-multi-angle property="angle" [elements]="elements" />
+          </div>
+          <div class="exc-stats__row" style="grid-template-columns: repeat(1, 1fr)">
+            <caliburn-stats-multi-font-size
+              property="fontSize"
+              [elements]="elements"
+            />
+          </div>
+          }
+        </div>
+      </caliburn-stats-collapsible>
+    </div>
+    }
+  </caliburn-island>
+</div>

@@ -1,0 +1,31 @@
+<div
+  style="
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  "
+  (click)="openTrigger.emit()"
+>
+  <ng-content select="[collapsibleLabel]" />
+  @if (showCollapsedIcon()) {
+  <span
+    style="
+      width: 1em;
+      height: 100%;
+      margin: 0 0.5ex 0 0.5ex;
+      display: inline-flex;
+      line-height: 0;
+      vertical-align: middle;
+      flex: 0 0 auto;
+    "
+  >
+    <ng-icon [name]="open() ? 'collapseUpIcon' : 'collapseDownIcon'" />
+  </span>
+  }
+</div>
+@if (open()) {
+<div style="display: flex; flex-direction: column">
+  <ng-content />
+</div>
+}
