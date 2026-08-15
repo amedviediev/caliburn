@@ -1085,8 +1085,7 @@ describe("textWysiwyg", () => {
       );
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should update font family correctly on undo/redo by selecting bounded text when font family was updated", async () => {
+    it("should update font family correctly on undo/redo by selecting bounded text when font family was updated", async () => {
       expect(h.elements.length).toBe(1);
 
       mouse.doubleClickAt(
@@ -1235,8 +1234,7 @@ describe("textWysiwyg", () => {
       expect(text.containerId).toBe(rectangle.id);
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should respect text alignment when resizing", async () => {
+    it("should respect text alignment when resizing", async () => {
       Keyboard.keyPress(KEYS.ENTER);
 
       let editor = await getTextEditor();
@@ -1525,8 +1523,7 @@ describe("textWysiwyg", () => {
       );
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should reset the container height cache when font properties updated", async () => {
+    it("should reset the container height cache when font properties updated", async () => {
       Keyboard.keyPress(KEYS.ENTER);
       expect(getOriginalContainerHeightFromCache(rectangle.id)).toBe(75);
 
@@ -1551,8 +1548,7 @@ describe("textWysiwyg", () => {
       expect(getOriginalContainerHeightFromCache(rectangle.id)).toBe(100);
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("should update line height when font family updated", async () => {
+    it("should update line height when font family updated", async () => {
       Keyboard.keyPress(KEYS.ENTER);
       expect(getOriginalContainerHeightFromCache(rectangle.id)).toBe(75);
 
@@ -1583,8 +1579,7 @@ describe("textWysiwyg", () => {
       ).toEqual(1.25);
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    describe.skip("should align correctly", () => {
+    describe("should align correctly", () => {
       let editor: HTMLTextAreaElement;
 
       beforeEach(async () => {
@@ -1780,8 +1775,7 @@ describe("textWysiwyg", () => {
       );
     });
 
-    // requires the properties panel / context menu UI — a later slice's gate
-    it.skip("shouldn't bind to container if container has bound text not centered and text tool is used", async () => {
+    it("shouldn't bind to container if container has bound text not centered and text tool is used", async () => {
       expect(h.elements.length).toBe(1);
 
       Keyboard.keyPress(KEYS.ENTER);

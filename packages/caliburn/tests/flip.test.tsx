@@ -863,8 +863,7 @@ describe("image", () => {
 });
 
 describe("mutliple elements", () => {
-  // requires the properties panel / context menu UI — a later slice's gate
-  it.skip("with bound text flip correctly", async () => {
+  it("with bound text flip correctly", async () => {
     UI.clickTool("arrow");
     fireEvent.click(screen.getByTitle("Architect"));
     const arrow = UI.createElement("arrow", {

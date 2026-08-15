@@ -4,6 +4,7 @@ import {
   Component,
   inject,
   input,
+  signal,
   viewChild,
 } from "@angular/core";
 
@@ -126,7 +127,22 @@ import {
   actionSendBackward,
   actionSendToBack,
 } from "./actions/actionZindex";
+import {
+  actionChangeBackgroundColor,
+  actionChangeFillStyle,
+  actionChangeFontFamily,
+  actionChangeFontSize,
+  actionChangeOpacity,
+  actionChangeRoundness,
+  actionChangeSloppiness,
+  actionChangeStrokeColor,
+  actionChangeStrokeStyle,
+  actionChangeStrokeWidth,
+  actionChangeTextAlign,
+  actionChangeVerticalAlign,
+} from "./actions/actionProperties";
 import { ActionManager } from "./actions/manager";
+import { CaliburnShapeActionsComponent } from "./panel/shape-actions.component";
 
 import { createTestHook } from "./test-hook";
 import {
@@ -198,6 +214,7 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
 @Component({
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CaliburnShapeActionsComponent],
   template: `
     <div
       #container
@@ -242,6 +259,7 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         (wheel)="handleWheel($event)"
       ></canvas>
       <div class="excalidraw-textEditorContainer"></div>
+      <caliburn-shape-actions />
     </div>
   `,
 })
@@ -272,6 +290,12 @@ export class CaliburnEditorComponent
     viewChild<ElementRef<HTMLCanvasElement>>("interactiveCanvas");
 
   readonly toolbarTools = TOOLBAR_TOOLS;
+
+  /**
+   * Bumped on every commit so child views (the panels) that read it are
+   * marked dirty and refresh in the same synchronous change-detection pass.
+   */
+  readonly changeGeneration = signal(0);
 
   get canvas(): HTMLCanvasElement {
     return this.staticCanvasRef()!.nativeElement;
@@ -446,6 +470,18 @@ export class CaliburnEditorComponent
       actionUnlockAllElements,
       actionDecreaseFontSize,
       actionIncreaseFontSize,
+      actionChangeStrokeColor,
+      actionChangeBackgroundColor,
+      actionChangeFillStyle,
+      actionChangeStrokeWidth,
+      actionChangeSloppiness,
+      actionChangeStrokeStyle,
+      actionChangeOpacity,
+      actionChangeFontSize,
+      actionChangeFontFamily,
+      actionChangeTextAlign,
+      actionChangeVerticalAlign,
+      actionChangeRoundness,
       createUndoAction(this.history),
       createRedoAction(this.history),
     ]);
@@ -1332,6 +1368,7 @@ export class CaliburnEditorComponent
   refresh() {}
 
   private commit() {
+    this.changeGeneration.update((generation) => generation + 1);
     this.store.commit(this.scene.getElementsMapIncludingDeleted(), this.state);
     this.onChangeEmitter.trigger(
       this.scene.getElementsIncludingDeleted(),
