@@ -78,6 +78,13 @@ export const trackPlainPasteKeyDown = (event: KeyboardEvent) => {
   }
 };
 
+/** drops a pending plain-paste flag (and its timer) mid-flight */
+export const resetPlainPasteTracking = () => {
+  clearTimeout(IS_PLAIN_PASTE_TIMER);
+  IS_PLAIN_PASTE_TIMER = 0;
+  IS_PLAIN_PASTE = false;
+};
+
 export const insertEmbeddableElement = (
   editor: CaliburnEditorComponent,
   {

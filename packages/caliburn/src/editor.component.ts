@@ -121,6 +121,7 @@ import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
 import {
   handleAppOnDrop,
   pasteFromClipboard as pasteFromClipboardIntoEditor,
+  resetPlainPasteTracking,
   trackPlainPasteKeyDown,
 } from "./clipboard-interaction";
 import {
@@ -252,6 +253,11 @@ export interface CaliburnImperativeAPI {
     cb: (scrollX: number, scrollY: number, zoom: AppState["zoom"]) => void,
   ) => () => void;
 }
+
+/** a props snapshot the `interaction` predicates can be evaluated against */
+type InteractionProps = {
+  interaction?: boolean | InteractionConfig | null;
+};
 
 type SetStateArg =
   | Partial<AppState>
@@ -498,12 +504,17 @@ export class CaliburnEditorComponent
   };
 
   /**
-   * `props.interaction`, normalized: the input is `null` rather than
-   * `undefined` when a rerender drops the prop, which would otherwise read
-   * as an (empty) config object.
+   * `props.interaction` for a given props snapshot, normalized: the input
+   * is `null` rather than `undefined` when a rerender drops the prop, which
+   * would otherwise read as an (empty) config object. Omitting `props`
+   * means the current props — the predicates below take the whole snapshot
+   * (as upstream does) rather than the bare value, so that passing a
+   * previous `undefined` can't fall through to the current value.
    */
-  private interactionProp(): boolean | InteractionConfig | undefined {
-    return this.interaction() ?? undefined;
+  private interactionOf(
+    props?: InteractionProps,
+  ): boolean | InteractionConfig | undefined {
+    return (props ? props.interaction : this.interaction()) ?? undefined;
   }
 
   /**
@@ -514,12 +525,8 @@ export class CaliburnEditorComponent
    * All user-input entry points must consult this getter (directly or by
    * not being attached/rendered at all).
    */
-  isInteractionEnabled(
-    interaction:
-      | boolean
-      | InteractionConfig
-      | undefined = this.interactionProp(),
-  ): boolean {
+  isInteractionEnabled(props?: InteractionProps): boolean {
+    const interaction = this.interactionOf(props);
     return interaction !== false && typeof interaction !== "object";
   }
 
@@ -527,13 +534,9 @@ export class CaliburnEditorComponent
    * Whether element links render their link icon and are clickable. True
    * when fully interactive, or when `interaction: { enabled: { links: true } }`.
    */
-  isLinksEnabled(
-    interaction:
-      | boolean
-      | InteractionConfig
-      | undefined = this.interactionProp(),
-  ): boolean {
-    if (typeof interaction === "object" && interaction !== null) {
+  isLinksEnabled(props?: InteractionProps): boolean {
+    const interaction = this.interactionOf(props);
+    if (typeof interaction === "object") {
       return (
         interaction.enabled?.links === true ||
         interaction.enabled?.interactiveContent === true
@@ -547,13 +550,9 @@ export class CaliburnEditorComponent
    * enabled. True when fully interactive, or when `interaction: { enabled:
    * { navigation: true } }`. Respects `appState.scrollConstraints`.
    */
-  isNavigationEnabled(
-    interaction:
-      | boolean
-      | InteractionConfig
-      | undefined = this.interactionProp(),
-  ): boolean {
-    if (typeof interaction === "object" && interaction !== null) {
+  isNavigationEnabled(props?: InteractionProps): boolean {
+    const interaction = this.interactionOf(props);
+    if (typeof interaction === "object") {
       return interaction.enabled?.navigation === true;
     }
     return interaction !== false;
@@ -564,13 +563,9 @@ export class CaliburnEditorComponent
    * interactive, or when allowed via `interaction.enabled.embeds` /
    * `.interactiveContent`.
    */
-  isEmbedsEnabled(
-    interaction:
-      | boolean
-      | InteractionConfig
-      | undefined = this.interactionProp(),
-  ): boolean {
-    if (typeof interaction === "object" && interaction !== null) {
+  isEmbedsEnabled(props?: InteractionProps): boolean {
+    const interaction = this.interactionOf(props);
+    if (typeof interaction === "object") {
       return (
         interaction.enabled?.embeds === true ||
         interaction.enabled?.interactiveContent === true
@@ -583,13 +578,9 @@ export class CaliburnEditorComponent
    * Whether the browser's own zoom (ctrl/cmd + wheel, pinch) stays
    * available over the non-interactive editor. Prevented by default.
    */
-  isBrowserZoomEnabled(
-    interaction:
-      | boolean
-      | InteractionConfig
-      | undefined = this.interactionProp(),
-  ): boolean {
-    if (typeof interaction === "object" && interaction !== null) {
+  isBrowserZoomEnabled(props?: InteractionProps): boolean {
+    const interaction = this.interactionOf(props);
+    if (typeof interaction === "object") {
       return interaction.enabled?.browserZoom === true;
     }
     return false;
@@ -1260,7 +1251,7 @@ export class CaliburnEditorComponent
     if (partial) {
       this.state = { ...this.state, ...partial };
     }
-    this.applyToolInvariants();
+    this.applyStateInvariants();
     this.commit();
     if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
       this.cursor.reset();
@@ -1307,10 +1298,7 @@ export class CaliburnEditorComponent
    */
   isToolSupported = <T extends ToolType | "custom">(
     tool: T,
-    interaction:
-      | boolean
-      | InteractionConfig
-      | undefined = this.interactionProp(),
+    props?: InteractionProps,
   ): boolean => {
     const UIOptions = this.props.UIOptions as {
       tools?: Record<string, boolean>;
@@ -1318,13 +1306,12 @@ export class CaliburnEditorComponent
     if (UIOptions.tools?.[tool] === false) {
       return false;
     }
-    if (this.isInteractionEnabled(interaction)) {
+    if (this.isInteractionEnabled(props)) {
       return true;
     }
+    const interaction = this.interactionOf(props);
     const tools =
-      typeof interaction === "object" && interaction !== null
-        ? interaction.enabled?.tools
-        : undefined;
+      typeof interaction === "object" ? interaction.enabled?.tools : undefined;
     if (tool === "laser") {
       return tools?.laser === true;
     }
@@ -1990,14 +1977,21 @@ export class CaliburnEditorComponent
   }
 
   /**
-   * Keeps `state.activeTool` synced to the host-controlled
-   * `props.activeTool`, and — while non-interactive — to the invariant that
-   * the active tool is either input-enabled (`interaction.enabled.tools`)
-   * or the neutral default. `setActiveTool` refuses non-matching
-   * activations while forced; this backstop covers the writers that bypass
-   * the funnel.
+   * Re-asserts the host-controlled invariants after every state write:
+   * a non-interactive editor is always in view mode, `state.activeTool`
+   * tracks `props.activeTool`, and — while non-interactive — the active
+   * tool is either input-enabled (`interaction.enabled.tools`) or the
+   * neutral default. `setActiveTool` refuses non-matching activations
+   * while forced; this backstop covers the writers that bypass the funnel
+   * (actions, `updateScene`, the host's own `viewModeEnabled` prop).
    */
-  private applyToolInvariants() {
+  private applyStateInvariants() {
+    // non-interactive editor implies view mode (overrides both action
+    // results and the host-supplied `viewModeEnabled` prop)
+    if (!this.isInteractionEnabled() && !this.state.viewModeEnabled) {
+      this.state = { ...this.state, viewModeEnabled: true };
+    }
+
     const forcedTool = this.activeTool?.();
     if (
       forcedTool &&
@@ -2039,33 +2033,31 @@ export class CaliburnEditorComponent
       | ({ type: ToolType } | { type: "custom"; customType: string })
       | null;
   }) {
-    const prevInteraction = prevProps.interaction ?? undefined;
     const wasToolSupported = this.isToolSupported(
       this.state.activeTool.type,
-      prevInteraction,
+      prevProps,
     );
 
-    this.handleInteractionStateChange(prevProps, prevInteraction);
-    this.handleForcedToolChange(prevProps, prevInteraction);
+    this.handleInteractionStateChange(prevProps);
+    this.handleForcedToolChange(prevProps);
 
-    // re-applies the tool invariants (`applyToolInvariants`) and re-renders
+    // re-applies the state invariants (`applyStateInvariants`) and re-renders
     // the chrome for whatever the handlers above left unchanged
     this.setState({});
 
     if (
       wasToolSupported !== this.isToolSupported(this.state.activeTool.type) ||
-      this.isNavigationEnabled(prevInteraction) !== this.isNavigationEnabled()
+      this.isNavigationEnabled(prevProps) !== this.isNavigationEnabled()
     ) {
       this.cursor.reset();
     }
   }
 
   private handleInteractionStateChange(
-    prevProps: { viewModeEnabled: boolean | undefined },
-    prevInteraction: boolean | InteractionConfig | undefined,
+    prevProps: InteractionProps & { viewModeEnabled: boolean | undefined },
   ) {
     const prevViewModeEnabled = this.state.viewModeEnabled;
-    const wasInteractionEnabled = this.isInteractionEnabled(prevInteraction);
+    const wasInteractionEnabled = this.isInteractionEnabled(prevProps);
     const interactionEnabledChanged =
       wasInteractionEnabled !== this.isInteractionEnabled();
     const viewModePropChanged =
@@ -2094,7 +2086,7 @@ export class CaliburnEditorComponent
       this.terminateActiveInteraction();
     }
 
-    if (this.isEmbedsEnabled(prevInteraction) !== this.isEmbedsEnabled()) {
+    if (this.isEmbedsEnabled(prevProps) !== this.isEmbedsEnabled()) {
       if (!this.isEmbedsEnabled()) {
         this.setState({ activeEmbeddable: null });
       }
@@ -2107,12 +2099,11 @@ export class CaliburnEditorComponent
    * (e.g. `interaction` config changes).
    */
   private handleForcedToolChange(
-    prevProps: {
+    prevProps: InteractionProps & {
       activeTool:
         | ({ type: ToolType } | { type: "custom"; customType: string })
         | null;
     },
-    prevInteraction: boolean | InteractionConfig | undefined,
   ) {
     const forcedTool = this.activeTool();
     if (!forcedTool) {
@@ -2140,7 +2131,7 @@ export class CaliburnEditorComponent
     // on every update
     if (
       forcedToolChanged ||
-      this.isToolSupported(forcedTool.type, prevInteraction) !==
+      this.isToolSupported(forcedTool.type, prevProps) !==
         this.isToolSupported(forcedTool.type)
     ) {
       this.setActiveTool(forcedTool);
@@ -2153,6 +2144,17 @@ export class CaliburnEditorComponent
    * selection outlives it.
    */
   private terminateActiveInteraction() {
+    // Complete any active pointer interaction before clearing the state it
+    // relies on. `resetGesture` runs the pan session's own teardown — the
+    // only window-level listeners caliburn installs (pointermove/pointerup/
+    // blur, see `pan-gesture.ts`) — and clears the multi-touch gesture;
+    // dropping `pointerDownState` ends the in-flight drag so it can't
+    // resume once interaction returns (upstream's
+    // `maybeCleanupAfterMissingPointerUp` + `isPanning`/`gesture` resets).
+    resetGesture();
+    this.pointerDownState = null;
+    resetPlainPasteTracking();
+
     // textWysiwyg's submit path runs synchronously. Defer until after the
     // current update, then submit whichever text-editing session is active
     // if editing is still disabled.
