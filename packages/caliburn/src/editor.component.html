@@ -41,6 +41,11 @@
     <svg #svgLayer></svg>
   </div>
   <div class="excalidraw-textEditorContainer"></div>
+  <div class="excalidraw-eye-dropper-container">
+    @if (activeEyeDropper() && editorInterface.formFactor !== "phone") {
+      <caliburn-eye-dropper />
+    }
+  </div>
   <caliburn-context-menu />
   <caliburn-cursor-hint />
 </div>

@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  forwardRef,
   inject,
   input,
   output,
@@ -10,11 +11,19 @@ import {
   viewChild,
 } from "@angular/core";
 
+import { NgIcon } from "@ng-icons/core";
+
 import { KEYS, normalizeInputColor } from "@excalidraw/common";
 
 import { t } from "@excalidraw/excalidraw/i18n";
+import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
+
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnColorPickerSection } from "./color-picker-section";
+
+import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
+import type { CaliburnEditorComponent } from "../../editor.component";
 
 import type { ElementRef } from "@angular/core";
 
@@ -22,11 +31,9 @@ import type { ElementRef } from "@angular/core";
  * Angular port of upstream `ColorPicker/ColorInput.tsx` — the hex/CSS color
  * text field with its inline validation message.
  *
- * Upstream also renders the eye-dropper trigger here (and in
- * `Picker.tsx`'s `I`/`Alt` key handling); caliburn has no eye-dropper yet
- * (upstream `components/EyeDropper.tsx` + its `activeEyeDropperAtom` and the
- * App-level overlay it needs are unported), so the trigger is omitted rather
- * than rendered dead.
+ * The eye-dropper trigger sits at the field's right edge, as upstream's
+ * does, and toggles the editor's `activeEyeDropper` (upstream's
+ * `activeEyeDropperAtom`).
  *
  * The field listens on `change` as well as `input` (as
  * `frame-name.component` does): React routes both through one `onChange`,
@@ -35,19 +42,54 @@ import type { ElementRef } from "@angular/core";
 @Component({
   selector: "caliburn-color-input",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgIcon],
   templateUrl: "./color-input.component.html",
 })
 export class CaliburnColorInputComponent {
   private readonly section = inject(CaliburnColorPickerSection);
+  private readonly editor = inject<CaliburnEditorComponent>(
+    forwardRef(() => CaliburnEditorComponentToken),
+  );
 
   readonly color = input.required<string>();
   readonly label = input.required<string>();
+  readonly colorPickerType = input.required<ColorPickerType>();
   readonly placeholder = input<string | undefined>(undefined);
 
   readonly colorChange = output<string>();
 
   private readonly inputRef =
     viewChild.required<ElementRef<HTMLInputElement>>("colorInput");
+
+  private readonly eyeDropperTriggerRef =
+    viewChild<ElementRef<HTMLDivElement>>("eyeDropperTrigger");
+
+  protected readonly showEyeDropper =
+    this.editor.editorInterface.formFactor !== "phone";
+
+  protected readonly eyeDropperTitle = `${t(
+    "labels.eyeDropper",
+  )} — ${KEYS.I.toLocaleUpperCase()} or ${getShortcutKey("Alt")} `;
+
+  protected isEyeDropperActive() {
+    return !!this.editor.activeEyeDropper();
+  }
+
+  protected toggleEyeDropper() {
+    const editor = this.editor;
+    editor.batchCommits(() => {
+      editor.activeEyeDropper.set(
+        editor.activeEyeDropper()
+          ? null
+          : {
+              keepOpenOnAlt: false,
+              onSelect: (color) => this.colorChange.emit(color),
+              colorPickerType: this.colorPickerType(),
+            },
+      );
+      editor.setState({});
+    });
+  }
 
   protected readonly innerValue = signal("");
   protected readonly errorMessage = signal<string | null>(null);
@@ -101,6 +143,8 @@ export class CaliburnColorInputComponent {
   protected onKeyDown(event: KeyboardEvent) {
     if (event.key === KEYS.TAB) {
       return;
+    } else if (event.key === KEYS.ESCAPE) {
+      this.eyeDropperTriggerRef()?.nativeElement.focus();
     }
     event.stopPropagation();
   }

@@ -44,6 +44,7 @@ import { CaliburnTopPicksComponent } from "./top-picks.component";
 import type { ElementRef } from "@angular/core";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
+import type { EyeDropperProperties } from "../eye-dropper";
 
 const isColorPickerPopup = (
   popup: AppState["openPopup"],
@@ -178,5 +179,47 @@ export class CaliburnColorPickerComponent {
     if (this.isOpen()) {
       this.updateData()({ openPopup: null });
     }
+  }
+
+  /** upstream's `onEscape`: the eye dropper closes before the popup does */
+  protected onEscape() {
+    if (this.editor.activeEyeDropper()) {
+      this.setEyeDropper(null);
+    } else {
+      this.onClose();
+    }
+  }
+
+  /** upstream's `onEyeDropperToggle` */
+  protected onEyeDropperToggle(force?: boolean) {
+    const state = this.editor.activeEyeDropper();
+
+    if (force) {
+      const next = state || {
+        keepOpenOnAlt: true,
+        onSelect: (color: string) => this.colorChange.emit(color),
+        colorPickerType: this.type(),
+      };
+      next.keepOpenOnAlt = true;
+      this.setEyeDropper(next);
+      return;
+    }
+
+    this.setEyeDropper(
+      force === false || state
+        ? null
+        : {
+            keepOpenOnAlt: false,
+            onSelect: (color: string) => this.colorChange.emit(color),
+            colorPickerType: this.type(),
+          },
+    );
+  }
+
+  private setEyeDropper(next: EyeDropperProperties | null) {
+    this.editor.batchCommits(() => {
+      this.editor.activeEyeDropper.set(next);
+      this.editor.setState({});
+    });
   }
 }

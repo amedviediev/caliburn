@@ -17,6 +17,24 @@
       (focus)="onFocus()"
       (keydown)="onKeyDown($event)"
     />
+    @if (showEyeDropper) {
+    <div
+      style="
+        width: 1px;
+        height: 1.25rem;
+        background-color: var(--default-border-color);
+      "
+    ></div>
+    <div
+      #eyeDropperTrigger
+      class="excalidraw-eye-dropper-trigger"
+      [class.selected]="isEyeDropperActive()"
+      [attr.title]="eyeDropperTitle"
+      (click)="toggleEyeDropper()"
+    >
+      <ng-icon name="eyeDropperIcon" />
+    </div>
+    }
   </div>
   @if (errorMessage(); as errorMessage) {
   <div class="color-picker__error-message" role="alert">{{ errorMessage }}</div>

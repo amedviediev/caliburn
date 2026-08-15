@@ -4,6 +4,7 @@
     <caliburn-color-input
       [color]="color() || ''"
       [label]="label()"
+      [colorPickerType]="type()"
       [placeholder]="colorPlaceholder"
       (colorChange)="colorChange.emit($event)"
     />
@@ -52,7 +53,8 @@
       [updateData]="updateData()"
       [excludedColors]="excludedColors()"
       (colorChange)="colorChange.emit($event)"
-      (escape)="onClose()"
+      (escape)="onEscape()"
+      (eyeDropperToggle)="onEyeDropperToggle($event)"
     >
       <ng-container [ngTemplateOutlet]="colorInput" />
     </div>

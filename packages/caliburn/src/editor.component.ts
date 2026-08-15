@@ -48,6 +48,7 @@ import {
   isLinearElement,
   isTextElement,
   makeNextSelectedElementIds,
+  newElementWith,
   normalizeSVG,
   syncInvalidIndices,
   updateBoundElements,
@@ -96,6 +97,7 @@ import type {
   FileId,
   NonDeleted,
   NonDeletedExcalidrawElement,
+  Theme,
 } from "@excalidraw/element/types";
 import type { ExportedElements } from "@excalidraw/excalidraw/data";
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
@@ -211,6 +213,7 @@ import {
 import { ActionManager } from "./actions/manager";
 import { CaliburnCursorHintComponent } from "./components/cursor-hint.component";
 import { CursorHints } from "./components/cursor-hints";
+import { CaliburnEyeDropperComponent } from "./components/eye-dropper.component";
 import { provideCaliburnIcons } from "./components/icons";
 import { CaliburnFrameNameComponent } from "./components/frame-name.component";
 import { CaliburnLayerUIComponent } from "./components/layer-ui.component";
@@ -277,6 +280,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { ElementRef } from "@angular/core";
 
 import type { CursorHintView } from "./components/cursor-hints";
+import type { EyeDropperProperties } from "./components/eye-dropper";
 import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
 import type { PointerDownState } from "./selection-interaction";
 
@@ -339,6 +343,7 @@ type SetStateArg =
   imports: [
     CaliburnContextMenuComponent,
     CaliburnCursorHintComponent,
+    CaliburnEyeDropperComponent,
     CaliburnFrameNameComponent,
     CaliburnLayerUIComponent,
   ],
@@ -357,6 +362,7 @@ export class CaliburnEditorComponent
   readonly interaction = input<boolean | InteractionConfig | null | undefined>(
     undefined,
   );
+  readonly theme = input<Theme | undefined>(undefined);
   readonly onExcalidrawAPI = input<
     ((api: CaliburnImperativeAPI) => void) | null
   >(null);
@@ -450,6 +456,13 @@ export class CaliburnEditorComponent
   /** the mounted `<caliburn-cursor-hint>`, if any (see `CursorHints`) */
   cursorHintView: CursorHintView | null = null;
 
+  /**
+   * Upstream keeps the open eye dropper in a module-level jotai atom
+   * (`EyeDropper.tsx`'s `activeEyeDropperAtom`) — mirrored here as a
+   * per-instance signal, as `activeConfirmDialog` above is.
+   */
+  readonly activeEyeDropper = signal<EyeDropperProperties | null>(null);
+
   visibleElements: readonly NonDeletedExcalidrawElement[] = [];
 
   readonly editorInterface: EditorInterface = {
@@ -470,16 +483,16 @@ export class CaliburnEditorComponent
   });
 
   readonly props = {
-    // upstream normalizes `UIOptions.canvasActions.toggleTheme` from its
-    // `null` default to `true` whenever the host controls no theme
-    // (`index.tsx`) — caliburn has no `theme`/`onThemeChange` prop, so the
-    // normalization always applies. Cloned: `DEFAULT_UI_OPTIONS` is a
-    // vendored module-level object shared with the rest of the workspace.
+    // Cloned: `DEFAULT_UI_OPTIONS` is a vendored module-level object shared
+    // with the rest of the workspace. `canvasActions.toggleTheme` is
+    // normalized from its `null` default in `ngOnInit`, once the `theme`
+    // input is readable (`index.tsx`).
     UIOptions: {
       ...DEFAULT_UI_OPTIONS,
-      canvasActions: { ...DEFAULT_UI_OPTIONS.canvasActions, toggleTheme: true },
+      canvasActions: { ...DEFAULT_UI_OPTIONS.canvasActions },
     },
     onDuplicate: undefined as unknown,
+    theme: undefined as Theme | undefined,
     onThemeChange: undefined as
       | ((theme: AppState["theme"]) => void)
       | undefined,
@@ -785,6 +798,7 @@ export class CaliburnEditorComponent
       const interaction = this.interaction();
       const viewModeEnabled = this.viewModeEnabled();
       const forcedTool = this.activeTool();
+      const theme = this.theme();
       untracked(() => {
         if (this.unmounted || !this.removeSceneUpdateListener) {
           // pre-mount: `ngOnInit` seeds the initial state from the props
@@ -794,8 +808,10 @@ export class CaliburnEditorComponent
           interaction: this.prevInteraction,
           viewModeEnabled: this.prevViewModeEnabled,
           activeTool: this.prevForcedTool,
+          theme: this.prevTheme,
         };
         this.prevInteraction = interaction;
+        this.prevTheme = theme;
         this.prevViewModeEnabled = viewModeEnabled;
         this.prevForcedTool = forcedTool;
         this.handlePropsChange(prevProps);
@@ -912,6 +928,22 @@ export class CaliburnEditorComponent
     this.props.libraryReturnUrl = this.libraryReturnUrl();
     this.props.onLibraryChange = this.onLibraryChange() ?? undefined;
 
+    const theme = this.theme();
+    this.props.theme = theme;
+    if (theme) {
+      this.state = { ...this.state, theme };
+    }
+    // upstream normalizes `UIOptions.canvasActions.toggleTheme` from its
+    // `null` default to `true` whenever the host controls no theme
+    // (`index.tsx`); caliburn has no `onThemeChange` prop, so a host-supplied
+    // `theme` leaves the toggle off
+    if (
+      this.props.UIOptions.canvasActions.toggleTheme === null &&
+      theme == null
+    ) {
+      this.props.UIOptions.canvasActions.toggleTheme = true;
+    }
+
     const viewModeEnabled = this.viewModeEnabled();
     if (!this.isInteractionEnabled()) {
       // non-interactive editor implies view mode so that all edit-mode
@@ -940,6 +972,7 @@ export class CaliburnEditorComponent
     this.prevInteraction = this.interaction();
     this.prevViewModeEnabled = viewModeEnabled;
     this.prevForcedTool = forcedTool;
+    this.prevTheme = theme;
 
     this.onExcalidrawAPI()?.(this.getApi());
 
@@ -1315,6 +1348,66 @@ export class CaliburnEditorComponent
       // the refresh to ride along with, so flush the views here
       this.cdr.detectChanges();
     }
+
+    // eye dropper
+    // -----------------------------------------------------------------------
+    const lowerCased = event.key.toLocaleLowerCase();
+    const isPickingStroke =
+      lowerCased === KEYS.S && event.shiftKey && !event[KEYS.CTRL_OR_CMD];
+    const isPickingBackground =
+      event.key === KEYS.I || (lowerCased === KEYS.G && event.shiftKey);
+
+    if (isPickingStroke || isPickingBackground) {
+      this.openEyeDropper({
+        type: isPickingStroke ? "stroke" : "background",
+      });
+    }
+    // -----------------------------------------------------------------------
+  };
+
+  private openEyeDropper = ({ type }: { type: "stroke" | "background" }) => {
+    this.activeEyeDropper.set({
+      swapPreviewOnAlt: true,
+      colorPickerType:
+        type === "stroke" ? "elementStroke" : "elementBackground",
+      onSelect: (color, event) => {
+        const shouldUpdateStrokeColor =
+          (type === "background" && event.altKey) ||
+          (type === "stroke" && !event.altKey);
+        const selectedElements = this.scene.getSelectedElements(this.state);
+        if (
+          !selectedElements.length ||
+          this.state.activeTool.type !== "selection"
+        ) {
+          if (shouldUpdateStrokeColor) {
+            this.syncActionResult({
+              appState: { ...this.state, currentItemStrokeColor: color },
+              captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+            });
+          } else {
+            this.syncActionResult({
+              appState: { ...this.state, currentItemBackgroundColor: color },
+              captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+            });
+          }
+        } else {
+          this.updateScene({
+            elements: this.scene.getElementsIncludingDeleted().map((el) => {
+              if (this.state.selectedElementIds[el.id]) {
+                return newElementWith(el, {
+                  [shouldUpdateStrokeColor ? "strokeColor" : "backgroundColor"]:
+                    color,
+                });
+              }
+              return el;
+            }),
+            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+          });
+        }
+      },
+      keepOpenOnAlt: false,
+    });
+    this.cdr.detectChanges();
   };
 
   handleWheel = (event: WheelEvent) => {
@@ -2335,6 +2428,7 @@ export class CaliburnEditorComponent
 
   private prevInteraction: boolean | InteractionConfig | null | undefined;
   private prevViewModeEnabled: boolean | undefined;
+  private prevTheme: Theme | undefined;
   private prevForcedTool:
     | ({ type: ToolType } | { type: "custom"; customType: string })
     | null = null;
@@ -2345,6 +2439,7 @@ export class CaliburnEditorComponent
     activeTool:
       | ({ type: ToolType } | { type: "custom"; customType: string })
       | null;
+    theme: Theme | undefined;
   }) {
     const wasToolSupported = this.isToolSupported(
       this.state.activeTool.type,
@@ -2353,6 +2448,11 @@ export class CaliburnEditorComponent
 
     this.handleInteractionStateChange(prevProps);
     this.handleForcedToolChange(prevProps);
+
+    const theme = this.theme();
+    if (prevProps.theme !== theme && theme) {
+      this.setState({ theme });
+    }
 
     // re-applies the state invariants (`applyStateInvariants`) and re-renders
     // the chrome for whatever the handlers above left unchanged

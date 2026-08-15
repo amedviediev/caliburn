@@ -13,6 +13,8 @@ import {
 import {
   DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX,
   DEFAULT_ELEMENT_STROKE_COLOR_INDEX,
+  EVENT,
+  KEYS,
 } from "@excalidraw/common";
 
 import {
@@ -34,7 +36,7 @@ import { CaliburnPickerHeadingComponent } from "./picker-heading.component";
 import { CaliburnShadeListComponent } from "./shade-list.component";
 
 import type React from "react";
-import type { OnInit, ElementRef } from "@angular/core";
+import type { OnDestroy, OnInit, ElementRef } from "@angular/core";
 
 /**
  * Angular port of upstream `ColorPicker/Picker.tsx` — the popup body: the
@@ -42,8 +44,10 @@ import type { OnInit, ElementRef } from "@angular/core";
  * caller projects after them (the hex input). Attribute-selector component:
  * the host IS upstream's outer `role="dialog"` element.
  *
- * The eye-dropper toggles upstream's keyboard handler exposes (`I`, `Alt`)
- * are inert here — see `color-input.component.ts` for why.
+ * The eye-dropper toggles upstream's keyboard handler exposes (`I`, `Alt`,
+ * and the `Alt` keyup that closes it again) are forwarded to the parent
+ * `caliburn-color-picker`, which owns the editor's `activeEyeDropper` — as
+ * upstream's `Picker` forwards them to `ColorPicker.tsx`.
  */
 @Component({
   selector: "div[caliburn-picker]",
@@ -61,7 +65,7 @@ import type { OnInit, ElementRef } from "@angular/core";
   ],
   templateUrl: "./picker.component.html",
 })
-export class CaliburnPickerComponent implements OnInit {
+export class CaliburnPickerComponent implements OnInit, OnDestroy {
   private readonly section = inject(CaliburnColorPickerSection);
 
   readonly theme = input.required<Theme>();
@@ -76,6 +80,7 @@ export class CaliburnPickerComponent implements OnInit {
 
   readonly colorChange = output<string>();
   readonly escape = output<KeyboardEvent>();
+  readonly eyeDropperToggle = output<boolean | undefined>();
 
   private readonly contentRef =
     viewChild.required<ElementRef<HTMLDivElement>>("pickerContent");
@@ -110,6 +115,8 @@ export class CaliburnPickerComponent implements OnInit {
   );
 
   ngOnInit() {
+    document.addEventListener(EVENT.KEYUP, this.onKeyUp, { capture: true });
+
     const type = this.type();
     this.customColors.set(
       type === "canvasBackground"
@@ -156,6 +163,16 @@ export class CaliburnPickerComponent implements OnInit {
     this.contentRef().nativeElement.focus();
   });
 
+  ngOnDestroy() {
+    document.removeEventListener(EVENT.KEYUP, this.onKeyUp, { capture: true });
+  }
+
+  private readonly onKeyUp = (event: KeyboardEvent) => {
+    if (event.key === KEYS.ALT) {
+      this.eyeDropperToggle.emit(false);
+    }
+  };
+
   protected onKeyDown(event: KeyboardEvent) {
     const handled = colorPickerKeyNavHandler({
       event: event as unknown as React.KeyboardEvent,
@@ -163,7 +180,7 @@ export class CaliburnPickerComponent implements OnInit {
       palette: this.palette(),
       color: this.color(),
       onChange: (color) => this.colorChange.emit(color),
-      onEyeDropperToggle: () => {},
+      onEyeDropperToggle: (force?: boolean) => this.eyeDropperToggle.emit(force),
       customColors: this.customColors(),
       setActiveColorPickerSection: this.section.set,
       updateData: this.updateData(),

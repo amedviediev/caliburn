@@ -1,0 +1,13 @@
+<div
+  #backdrop
+  class="excalidraw excalidraw-eye-dropper-backdrop"
+  [class.excalidraw--mobile]="isPhone"
+  [class.theme--dark]="isDarkTheme()"
+  tabindex="-1"
+  [style.cursor]="cursor"
+  (keydown)="onKeyDown($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointerup)="onPointerUp($event)"
+>
+  <div #preview class="excalidraw-eye-dropper-preview"></div>
+</div>
