@@ -185,6 +185,11 @@ import {
   createScheduleImageRefresh,
   onImageToolbarButtonClick,
 } from "./image-interaction";
+import {
+  applyElementLinkHoverAffordance,
+  getElementLinkAtPosition,
+  maybeHandleElementLinkClick,
+} from "./link-interaction";
 import { renderEditor } from "./render";
 import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
 import { actionGroup, actionUngroup } from "./actions/actionGroup";
@@ -216,6 +221,7 @@ import { CursorHints } from "./components/cursor-hints";
 import { CaliburnEyeDropperComponent } from "./components/eye-dropper.component";
 import { provideCaliburnIcons } from "./components/icons";
 import { CaliburnFrameNameComponent } from "./components/frame-name.component";
+import { CaliburnHyperlinkComponent } from "./components/hyperlink/hyperlink.component";
 import { CaliburnLayerUIComponent } from "./components/layer-ui.component";
 import { CaliburnContextMenuComponent } from "./panel/context-menu.component";
 import { handleCanvasContextMenu } from "./context-menu-interaction";
@@ -345,6 +351,7 @@ type SetStateArg =
     CaliburnCursorHintComponent,
     CaliburnEyeDropperComponent,
     CaliburnFrameNameComponent,
+    CaliburnHyperlinkComponent,
     CaliburnLayerUIComponent,
   ],
   providers: [provideCaliburnIcons()],
@@ -568,6 +575,9 @@ export class CaliburnEditorComponent
 
   lastPointerDownEvent: PointerEvent | null = null;
 
+  /** the element whose link icon the pointer is currently over, if any */
+  hitLinkElement: NonDeletedExcalidrawElement | undefined;
+
   readonly flowchart = { isCreatingChart: false };
 
   files: BinaryFiles = {};
@@ -603,6 +613,8 @@ export class CaliburnEditorComponent
   };
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
+
+  lastPointerUpEvent: PointerEvent | null = null;
 
   lastPointerUpIsDoubleClick = false;
 
@@ -1958,6 +1970,10 @@ export class CaliburnEditorComponent
     const activeToolType = this.state.activeTool.type;
     if (activeToolType === "selection" || activeToolType === "lasso") {
       this.pointerDownState = handleSelectionPointerDown(this, event);
+      if (!this.pointerDownState) {
+        // the pointer hit an element's link icon — no gesture starts
+        return;
+      }
       if (this.state.activeTool.type === "lasso") {
         handleLassoPointerDown(this, event, this.pointerDownState);
       }
@@ -2060,6 +2076,36 @@ export class CaliburnEditorComponent
     scenePointer: { x: number; y: number },
     event: PointerEvent,
   ) {
+    this.hitLinkElement = this.isLinksEnabled()
+      ? getElementLinkAtPosition(
+          this,
+          scenePointer,
+          getElementAtPosition(this, scenePointer.x, scenePointer.y, {
+            includeLockedElements: true,
+          }),
+        )
+      : undefined;
+
+    if (applyElementLinkHoverAffordance(this)) {
+      return;
+    }
+
+    const hoveredElement = getElementAtPosition(
+      this,
+      scenePointer.x,
+      scenePointer.y,
+    );
+    if (
+      hoveredElement &&
+      (hoveredElement.link || isEmbeddableElement(hoveredElement)) &&
+      this.state.selectedElementIds[hoveredElement.id] &&
+      !this.state.contextMenu &&
+      !this.state.showHyperlinkPopup
+    ) {
+      this.setState({ showHyperlinkPopup: "info" });
+      return;
+    }
+
     if (this.state.viewModeEnabled) {
       this.cursor.set(CURSOR_TYPE.GRAB);
       return;
@@ -2110,11 +2156,23 @@ export class CaliburnEditorComponent
     removePointer(this, event);
 
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
+    this.lastPointerUpEvent = event;
+
     if (!event.ctrlKey) {
       const preferenceEnabled = this.state.bindingPreference === "enabled";
       if (this.state.isBindingEnabled !== preferenceEnabled) {
         this.setState({ isBindingEnabled: preferenceEnabled });
       }
+    }
+
+    if (
+      maybeHandleElementLinkClick(
+        this,
+        viewportCoordsToSceneCoords(event, this.state),
+      )
+    ) {
+      this.pointerDownState = null;
+      return;
     }
 
     if (this.pointerDownState) {
@@ -2149,6 +2207,24 @@ export class CaliburnEditorComponent
       this.clearHighlightsOnPointerUp();
       this.pointerDownState = null;
     }
+  }
+
+  /**
+   * The single selected element the hyperlink popup renders for, as a
+   * one-or-zero item list so `@for`'s `track` gives it upstream's per-element
+   * `key` (a different element remounts the popup, submitting the previous
+   * one's edit).
+   */
+  hyperlinkElements(): readonly NonDeletedExcalidrawElement[] {
+    this.changeGeneration();
+    if (
+      !this.state.showHyperlinkPopup ||
+      this.state.openDialog?.name === "elementLinkSelector"
+    ) {
+      return [];
+    }
+    const selectedElements = this.scene.getSelectedElements(this.state);
+    return selectedElements.length === 1 ? selectedElements : [];
   }
 
   private clearHighlightsOnPointerUp() {

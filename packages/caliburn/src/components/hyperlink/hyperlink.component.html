@@ -1,0 +1,65 @@
+@if (coords(); as coords) {
+<div
+  class="excalidraw-hyperlinkContainer"
+  [style.top.px]="coords.y"
+  [style.left.px]="coords.x"
+  [style.width.px]="popupWidth"
+  [style.padding.px]="popupPadding"
+>
+  @if (isEditing()) {
+  <input
+    #linkInput
+    class="excalidraw-hyperlinkContainer-input"
+    [attr.placeholder]="hintLabel"
+    [value]="inputValue()"
+    (input)="inputValue.set($any($event.target).value)"
+    (keydown)="onKeyDown($event)"
+  />
+  } @else if (element().link) {
+  <a
+    [attr.href]="normalizedLink()"
+    class="excalidraw-hyperlinkContainer-link"
+    [attr.target]="linkTarget()"
+    rel="noopener noreferrer"
+    >{{ element().link }}</a
+  >
+  } @else {
+  <div class="excalidraw-hyperlinkContainer-link">{{ emptyLabel }}</div>
+  }
+  <div class="excalidraw-hyperlinkContainer__buttons">
+    @if (!isEditing()) {
+    <button
+      caliburn-icon-button
+      mode="button"
+      class="excalidraw-hyperlinkContainer--edit"
+      icon="freedrawIcon"
+      [title]="editLabel"
+      [ariaLabel]="editLabel"
+      [labelText]="editLabel"
+      [onClick]="onEdit"
+    ></button>
+    }
+    <button
+      caliburn-icon-button
+      mode="button"
+      icon="elementLinkIcon"
+      [title]="linkToElementLabel"
+      [ariaLabel]="linkToElementLabel"
+      [labelText]="linkToElementLabel"
+      [onClick]="onLinkToElement"
+    ></button>
+    @if (showRemove()) {
+    <button
+      caliburn-icon-button
+      mode="button"
+      class="excalidraw-hyperlinkContainer--remove"
+      icon="trashIcon"
+      [title]="removeLabel"
+      [ariaLabel]="removeLabel"
+      [labelText]="removeLabel"
+      [onClick]="onRemove"
+    ></button>
+    }
+  </div>
+</div>
+}

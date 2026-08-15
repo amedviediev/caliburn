@@ -15,6 +15,9 @@
   <caliburn-image-export-dialog />
 }
 <caliburn-json-export-dialog />
+@if (elementLinkSourceId(); as sourceElementId) {
+  <caliburn-element-link-dialog [sourceElementId]="sourceElementId" />
+}
 <caliburn-command-palette />
 <div
   class="layer-ui__wrapper"

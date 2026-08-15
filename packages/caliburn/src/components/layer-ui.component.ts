@@ -16,6 +16,7 @@ import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component"
 
 import { CaliburnActiveConfirmDialogComponent } from "./active-confirm-dialog.component";
 import { CaliburnCommandPaletteComponent } from "./command-palette/command-palette.component";
+import { CaliburnElementLinkDialogComponent } from "./element-link-dialog.component";
 import { CaliburnErrorDialogComponent } from "./error-dialog.component";
 import { CaliburnFixedSideContainerComponent } from "./fixed-side-container.component";
 import { CaliburnFooterComponent } from "./footer.component";
@@ -81,6 +82,7 @@ let nextLayerUIId = 0;
     CaliburnCommandPaletteComponent,
     CaliburnDefaultMainMenuComponent,
     CaliburnDefaultSidebarComponent,
+    CaliburnElementLinkDialogComponent,
     CaliburnErrorDialogComponent,
     CaliburnFixedSideContainerComponent,
     CaliburnFooterComponent,
@@ -136,6 +138,13 @@ export class CaliburnLayerUIComponent {
       isSidebarDocked() &&
       this.editor.editorInterface.canFitSidebar,
   );
+
+  protected readonly elementLinkSourceId = computed(() => {
+    const openDialog = this.state().openDialog;
+    return openDialog?.name === "elementLinkSelector"
+      ? openDialog.sourceElementId
+      : null;
+  });
 
   protected readonly showSidebarTrigger = computed(() => {
     const state = this.state();

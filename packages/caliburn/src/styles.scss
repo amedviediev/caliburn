@@ -45,7 +45,9 @@
 @use "../../excalidraw/components/CommandPalette/CommandPalette.scss";
 @use "../../excalidraw/components/ContextMenu.scss";
 @use "../../excalidraw/components/CursorHint.scss";
+@use "../../excalidraw/components/ElementLinkDialog.scss";
 @use "../../excalidraw/components/EyeDropper.scss";
+@use "../../excalidraw/components/hyperlink/Hyperlink.scss";
 @use "../../excalidraw/components/Toast.scss";
 @use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
 
@@ -140,8 +142,10 @@ caliburn-text-field {
 // aliased `class` input that puts it on the real `.dropdown-menu`/`.Modal`
 // root — `display: contents` keeps the duplicate inert.
 caliburn-cursor-hint,
+caliburn-element-link-dialog,
 caliburn-eye-dropper,
 caliburn-hint-viewer,
+caliburn-hyperlink,
 caliburn-help-button,
 caliburn-color-picker,
 caliburn-color-input,

@@ -1,0 +1,45 @@
+<div class="ElementLinkDialog">
+  <div class="ElementLinkDialog__header">
+    <h2>{{ title }}</h2>
+    <p>{{ desc }}</p>
+  </div>
+
+  <div class="ElementLinkDialog__input">
+    <caliburn-text-field
+      class="ElementLinkDialog__input-field"
+      [value]="nextLink() ?? ''"
+      [selectOnRender]="true"
+      (valueChange)="onLinkChange($event)"
+      (keyDown)="onKeyDown($event)"
+    />
+
+    @if (originalLink() && nextLink()) {
+    <button
+      caliburn-icon-button
+      mode="button"
+      class="ElementLinkDialog__remove"
+      icon="trashIcon"
+      [title]="removeLabel"
+      [ariaLabel]="removeLabel"
+      [labelText]="removeLabel"
+      [onClick]="onRemove"
+    ></button>
+    }
+  </div>
+
+  <div class="ElementLinkDialog__actions">
+    <button
+      caliburn-dialog-action-button
+      [label]="cancelLabel"
+      style="margin-right: 10px"
+      (select)="onClose()"
+    ></button>
+
+    <button
+      caliburn-dialog-action-button
+      [label]="confirmLabel"
+      actionType="primary"
+      (select)="onConfirm()"
+    ></button>
+  </div>
+</div>

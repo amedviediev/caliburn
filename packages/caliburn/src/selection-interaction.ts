@@ -35,6 +35,7 @@ import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
 import { originInGridFromEvent } from "./create-interaction";
 import { maybeDragSelectedElements } from "./drag-interaction";
+import { getElementLinkAtPosition } from "./link-interaction";
 import { isEditingTextContent } from "./text-interaction";
 import {
   initialResizeState,
@@ -270,10 +271,15 @@ export const getElementAtPosition = (
   return null;
 };
 
+/**
+ * Returns `null` when the gesture must not start at all — upstream's
+ * `handleSelectionOnPointerDown` returning `true` (the pointer hit an
+ * element's link icon).
+ */
 export const handleSelectionPointerDown = (
   editor: CaliburnEditorComponent,
   event: PointerEvent,
-): PointerDownState => {
+): PointerDownState | null => {
   const pointerDownState = initialPointerDownState(editor, event);
   const { origin } = pointerDownState;
   // upstream reads this off the pre-update state, which React only settles
@@ -348,6 +354,29 @@ export const handleSelectionPointerDown = (
   }
 
   pointerDownState.hit.element = hitElement;
+
+  editor.hitLinkElement = getElementLinkAtPosition(
+    editor,
+    origin,
+    hitElementMightBeLocked,
+  );
+
+  if (editor.hitLinkElement) {
+    return null;
+  }
+
+  if (pointerDownState.hit.element) {
+    // Early return if pointer is hitting link icon
+    const hitLinkElement = getElementLinkAtPosition(
+      editor,
+      origin,
+      pointerDownState.hit.element,
+    );
+    if (hitLinkElement) {
+      return pointerDownState;
+    }
+  }
+
   pointerDownState.hit.allHitElements = unlockedHitElements;
 
   const someHitElementIsSelected = allHitElements.some(
