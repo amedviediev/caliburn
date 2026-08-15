@@ -1,0 +1,228 @@
+@if (visible()) {
+<div class="selected-shape-actions {{ shapeActionsMenuClass }}">
+  @if (predicates().strokeColor) {
+  <fieldset>
+    <legend>{{ labels.stroke }}</legend>
+    <button
+      type="button"
+      class="color-picker__button"
+      [attr.aria-label]="labels.stroke"
+      [style.--swatch-color]="currentStrokeColor()"
+      (click)="togglePopup('elementStroke')"
+    ></button>
+    @if (editor().state.openPopup === 'elementStroke') {
+    <div class="color-picker-popover properties-content">
+      @for (swatch of strokeSwatches; track swatch.key) {
+      <button
+        type="button"
+        class="color-picker__button"
+        [attr.data-testid]="'color-' + swatch.key"
+        [attr.aria-label]="swatch.key"
+        [attr.title]="swatch.key"
+        [style.--swatch-color]="swatch.color"
+        (click)="setStrokeColor(swatch.color)"
+      ></button>
+      }
+    </div>
+    }
+  </fieldset>
+  } @if (predicates().backgroundColor) {
+  <fieldset>
+    <legend>{{ labels.background }}</legend>
+    <button
+      type="button"
+      class="color-picker__button"
+      [attr.aria-label]="labels.background"
+      [style.--swatch-color]="currentBackgroundColor()"
+      (click)="togglePopup('elementBackground')"
+    ></button>
+    @if (editor().state.openPopup === 'elementBackground') {
+    <div class="color-picker-popover properties-content">
+      @for (swatch of backgroundSwatches; track swatch.key) {
+      <button
+        type="button"
+        class="color-picker__button"
+        [attr.data-testid]="'color-' + swatch.key"
+        [attr.aria-label]="swatch.key"
+        [attr.title]="swatch.key"
+        [style.--swatch-color]="swatch.color"
+        (click)="setBackgroundColor(swatch.color)"
+      ></button>
+      }
+    </div>
+    }
+  </fieldset>
+  } @if (predicates().fill) {
+  <fieldset>
+    <legend>{{ labels.fill }}</legend>
+    <div class="buttonList">
+      @for (option of fillOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        [attr.data-testid]="option.testId"
+        (click)="execute(fillStyleAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().strokeWidth) {
+  <fieldset>
+    <legend>{{ labels.strokeWidth }}</legend>
+    <div class="buttonList">
+      @for (option of strokeWidthOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        [attr.data-testid]="option.testId"
+        (click)="execute(strokeWidthAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().strokeStyle) {
+  <fieldset>
+    <legend>{{ labels.strokeStyle }}</legend>
+    <div class="buttonList">
+      @for (option of strokeStyleOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        (click)="execute(strokeStyleAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().sloppiness) {
+  <fieldset>
+    <legend>{{ labels.sloppiness }}</legend>
+    <div class="buttonList">
+      @for (option of sloppinessOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        (click)="execute(sloppinessAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().roundness) {
+  <fieldset>
+    <legend>{{ labels.edges }}</legend>
+    <div class="buttonList">
+      @for (option of roundnessOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        (click)="execute(roundnessAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().text) {
+  <fieldset>
+    <legend>{{ labels.fontFamily }}</legend>
+    <div class="buttonList">
+      @for (option of fontFamilyOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        [attr.data-testid]="option.testId"
+        (click)="setFontFamily(option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>{{ labels.fontSize }}</legend>
+    <div class="buttonList">
+      @for (option of fontSizeOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        [attr.data-testid]="option.testId"
+        (click)="execute(fontSizeAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  @if (predicates().textAlign) {
+  <fieldset>
+    <legend>{{ labels.textAlign }}</legend>
+    <div class="buttonList">
+      @for (option of textAlignOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        [attr.data-testid]="option.testId"
+        (click)="execute(textAlignAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } } @if (predicates().verticalAlign) {
+  <fieldset>
+    <div class="buttonList">
+      @for (option of verticalAlignOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        [attr.data-testid]="option.testId"
+        (click)="execute(verticalAlignAction, option.value)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().opacity) {
+  <fieldset>
+    <legend>{{ labels.opacity }}</legend>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      step="10"
+      data-testid="opacity"
+      [value]="currentOpacity()"
+      (input)="setOpacity($event)"
+    />
+  </fieldset>
+  } @if (predicates().layers) {
+  <fieldset>
+    <legend>{{ labels.layers }}</legend>
+    <div class="buttonList">
+      @for (option of layerOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        (click)="execute(option.action, null)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  } @if (predicates().showExtraActions) {
+  <fieldset>
+    <legend>{{ labels.actions }}</legend>
+    <div class="buttonList">
+      @for (option of extraActionOptions; track option.text) {
+      <button
+        type="button"
+        [attr.title]="option.text"
+        [attr.aria-label]="option.text"
+        (click)="execute(option.action, null)"
+      ></button>
+      }
+    </div>
+  </fieldset>
+  }
+</div>
+}

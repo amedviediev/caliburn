@@ -44,30 +44,7 @@ import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
   selector: "caliburn-dropdown-menu-content",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnIslandComponent, CaliburnStackColComponent],
-  template: `
-    @if (menu.open()) {
-      <div
-        class="{{ hostClass() }}"
-        data-testid="dropdown-menu"
-        [style.position]="'fixed'"
-        [style.top.px]="positionTop()"
-        [style.right.px]="positionRight()"
-        [style.left.px]="positionLeft()"
-        (caliburn-dropdown-menu-item-select)="onItemSelect($any($event))"
-        #menuRoot
-      >
-        @if (mobile()) {
-          <caliburn-stack-col class="dropdown-menu-container">
-            <ng-content />
-          </caliburn-stack-col>
-        } @else {
-          <caliburn-island class="dropdown-menu-container" [padding]="2">
-            <ng-content />
-          </caliburn-island>
-        }
-      </div>
-    }
-  `,
+  templateUrl: "./dropdown-menu-content.component.html",
 })
 export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
   readonly menu = inject(CaliburnDropdownMenuComponent);

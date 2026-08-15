@@ -1,0 +1,48 @@
+<caliburn-dialog
+  class="HelpDialog"
+  [title]="title"
+  [fullscreen]="isMobile"
+  (closeRequest)="close.emit()"
+>
+  <div class="HelpDialog__header">
+    @for (link of links; track link.href) {
+      <a
+        class="HelpDialog__btn"
+        [href]="link.href"
+        target="_blank"
+        [attr.rel]="link.rel"
+      >
+        <div class="HelpDialog__link-icon">
+          <ng-icon [name]="link.icon" />
+        </div>
+        {{ link.label }}
+      </a>
+    }
+  </div>
+  <h3>{{ shortcutsTitle }}</h3>
+  <div class="HelpDialog__islands-container">
+    @for (island of islands(); track island.className) {
+      <div class="HelpDialog__island {{ island.className }}">
+        <h4 class="HelpDialog__island-title">{{ island.caption }}</h4>
+        <div class="HelpDialog__island-content">
+          @for (row of island.rows; track $index) {
+            <div class="HelpDialog__shortcut">
+              <div>{{ row.label }}</div>
+              <div class="HelpDialog__key-container">
+                @for (part of row.parts; track $index) {
+                  @if (isDelim(part)) {
+                    {{ asDelim(part) }}
+                  } @else {
+                    @for (key of asKeys(part); track $index) {
+                      <kbd class="HelpDialog__key">{{ key }}</kbd>
+                    }
+                  }
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</caliburn-dialog>

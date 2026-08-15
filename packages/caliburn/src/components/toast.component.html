@@ -1,0 +1,11 @@
+<div class="Toast__message">{{ message() }}</div>
+@if (closable()) {
+<button
+  caliburn-icon-button
+  class="close"
+  mode="icon"
+  icon="closeIcon"
+  ariaLabel="close"
+  [onClick]="onCloseClick"
+></button>
+}

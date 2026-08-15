@@ -1,0 +1,20 @@
+<caliburn-dropdown-menu [open]="state().openMenu === 'canvas'">
+  <button
+    caliburn-dropdown-menu-trigger
+    class="main-menu-trigger"
+    testId="main-menu-trigger"
+    [mobile]="isMobile"
+    (toggle)="onToggle()"
+  >
+    <ng-icon name="hamburgerMenuIcon" />
+  </button>
+  <caliburn-dropdown-menu-content
+    class="main-menu"
+    align="start"
+    [mobile]="isMobile"
+    (closeOutside)="closeMenu()"
+    (itemSelected)="onItemSelected($event)"
+  >
+    <ng-content />
+  </caliburn-dropdown-menu-content>
+</caliburn-dropdown-menu>

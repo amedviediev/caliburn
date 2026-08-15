@@ -1,0 +1,12 @@
+@if (enabled()) {
+<button
+  caliburn-dropdown-menu-item
+  [icon]="isDark() ? 'sunIcon' : 'moonIcon'"
+  testId="toggle-dark-mode"
+  [shortcut]="shortcut"
+  [ariaLabel]="label()"
+  (select)="handleSelect($event)"
+>
+  {{ label() }}
+</button>
+}

@@ -27,12 +27,7 @@ import { KEYS } from "@excalidraw/common";
     "[attr.aria-labelledby]": "labelledBy()",
     "(keydown)": "onKeydown($event)",
   },
-  template: `
-    <div class="Modal__background" (click)="onBackgroundClick()"></div>
-    <div class="Modal__content" [style.--max-width]="maxWidthStyle()" tabindex="0">
-      <ng-content />
-    </div>
-  `,
+  templateUrl: "./modal.component.html",
 })
 export class CaliburnModalComponent {
   readonly maxWidth = input<number>();

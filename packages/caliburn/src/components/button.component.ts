@@ -30,7 +30,7 @@ import clsx from "clsx";
     "[attr.aria-label]": "ariaLabel() ?? null",
     "(click)": "select.emit()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./button.component.html",
 })
 export class CaliburnButtonComponent {
   readonly type = input<"button" | "submit" | "reset">("button");

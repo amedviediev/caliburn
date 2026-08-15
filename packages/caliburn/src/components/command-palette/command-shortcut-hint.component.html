@@ -1,0 +1,6 @@
+@for (item of keys(); track $index) {
+  <div class="shortcut-wrapper">
+    <div class="shortcut-key">{{ item === "$" ? "+" : item }}</div>
+  </div>
+}
+<div class="shortcut-desc"><ng-content /></div>

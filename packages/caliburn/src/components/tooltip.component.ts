@@ -86,7 +86,7 @@ const updateTooltip = (
     "(pointerenter)": "onPointerEnter($event)",
     "(pointerleave)": "onPointerLeave()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./tooltip.component.html",
 })
 export class CaliburnTooltipComponent implements OnDestroy {
   readonly label = input.required<string>();

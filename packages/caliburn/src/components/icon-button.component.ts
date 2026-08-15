@@ -61,47 +61,7 @@ export type IconButtonMode = "button" | "icon" | "toggle";
     "(pointerup)": "onPointerUp()",
     "(click)": "onHostClick($event)",
   },
-  template: `
-    @if (isToggle()) {
-      <div class="ToolIcon__icon">
-        @if (icon()) {
-          <ng-icon [name]="icon()!" />
-        }
-        @if (keyBindingLabel()) {
-          <span class="ToolIcon__keybinding">{{ keyBindingLabel() }}</span>
-        }
-      </div>
-    } @else {
-      @if (icon() || labelText()) {
-        <div
-          class="ToolIcon__icon"
-          aria-hidden="true"
-          [attr.aria-disabled]="disabled()"
-        >
-          @if (icon()) {
-            <ng-icon [name]="icon()!" />
-          } @else {
-            {{ labelText() }}
-          }
-          @if (keyBindingLabel()) {
-            <span class="ToolIcon__keybinding">{{ keyBindingLabel() }}</span>
-          }
-          @if (isLoading()) {
-            <caliburn-spinner />
-          }
-        </div>
-      }
-      @if (showAriaLabel()) {
-        <div class="ToolIcon__label">
-          {{ ariaLabel() }}
-          @if (internalLoading()) {
-            <caliburn-spinner />
-          }
-        </div>
-      }
-      <ng-content />
-    }
-  `,
+  templateUrl: "./icon-button.component.html",
 })
 export class CaliburnIconButtonComponent {
   readonly mode = input.required<IconButtonMode>();

@@ -39,15 +39,7 @@ import { CaliburnDropdownMenuItemContentComponent } from "./dropdown-menu-item-c
     "[attr.data-testid]": "testId() ?? null",
     "(click)": "handleSelect($event)",
   },
-  template: `
-    <caliburn-dropdown-menu-item-content
-      [icon]="icon()"
-      [shortcut]="shortcut()"
-      [mobile]="content?.mobile() ?? false"
-    >
-      <ng-content />
-    </caliburn-dropdown-menu-item-content>
-  `,
+  templateUrl: "./dropdown-menu-item-link.component.html",
 })
 export class CaliburnDropdownMenuItemLinkComponent {
   protected readonly content = inject(CaliburnDropdownMenuContentComponent, {

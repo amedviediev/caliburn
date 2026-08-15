@@ -78,77 +78,7 @@ let nextLayerUIId = 0;
     CaliburnToastComponent,
     CaliburnToolbarComponent,
   ],
-  template: `
-    @if (state().errorMessage) {
-      <caliburn-error-dialog (close)="clearErrorMessage()">{{
-        state().errorMessage
-      }}</caliburn-error-dialog>
-    }
-    @if (state().openDialog?.name === "help") {
-      <caliburn-help-dialog (close)="closeDialog()" />
-    }
-    <caliburn-active-confirm-dialog />
-    @if (
-      uiOptions.canvasActions.saveAsImage &&
-      state().openDialog?.name === "imageExport"
-    ) {
-      <caliburn-image-export-dialog />
-    }
-    <caliburn-json-export-dialog />
-    <caliburn-command-palette />
-    <div class="layer-ui__wrapper">
-      <caliburn-fixed-side-container side="top">
-        <div class="App-menu App-menu_top">
-          <caliburn-stack-col [gap]="6" class="App-menu_top__left">
-            <div style="position: relative">
-              <div class="excalidraw-ui-top-left">
-                <caliburn-default-main-menu />
-              </div>
-            </div>
-            <div class="selected-shape-actions-container">
-              <caliburn-shape-actions />
-            </div>
-          </caliburn-stack-col>
-          @if (!state().viewModeEnabled) {
-            <section class="shapes-section" [attr.aria-labelledby]="headingId">
-              <div style="position: relative">
-                <caliburn-stack-col [gap]="4" align="start">
-                  <caliburn-stack-row
-                    [gap]="1"
-                    class="App-toolbar-container"
-                    [class.zen-mode]="state().zenModeEnabled"
-                  >
-                    <caliburn-toolbar [headingId]="headingId" />
-                  </caliburn-stack-row>
-                </caliburn-stack-col>
-              </div>
-            </section>
-          }
-          <div class="layer-ui__wrapper__top-right zen-mode-transition"></div>
-        </div>
-      </caliburn-fixed-side-container>
-      <caliburn-footer />
-      @if (state().toast; as toast) {
-        <div class="floating-status-stack">
-          <caliburn-toast
-            [message]="toast.message"
-            [closable]="!!toast.closable"
-            [duration]="toast.duration ?? defaultToastDuration"
-            (close)="clearToast()"
-          />
-        </div>
-      }
-    </div>
-    @if (isSearchSidebarOpen()) {
-      <caliburn-island
-        class="sidebar sidebar--docked default-sidebar"
-        viewportUi="side"
-        viewportUiName="sidebar"
-      >
-        <caliburn-search-menu />
-      </caliburn-island>
-    }
-  `,
+  templateUrl: "./layer-ui.component.html",
 })
 export class CaliburnLayerUIComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

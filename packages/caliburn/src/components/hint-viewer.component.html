@@ -1,0 +1,11 @@
+@if (parts(); as parts) {
+<div class="HintViewer">
+  <span
+    >@for (part of parts; track $index) {@if (part.kbd) {<kbd>{{
+      part.text
+    }}</kbd
+    >} @else {<ng-container>{{ part.text }}</ng-container
+    >}}</span
+  >
+</div>
+}

@@ -45,25 +45,7 @@ export type FilledButtonStatus = null | "loading" | "success";
     "[disabled]": "isDisabled()",
     "(click)": "handleClick($event)",
   },
-  template: `
-    <div class="ExcButton__contents">
-      @if (effectiveStatus() === "loading") {
-        <caliburn-spinner class="ExcButton__statusIcon" />
-      } @else if (effectiveStatus() === "success") {
-        <div class="ExcButton__statusIcon">
-          <ng-icon name="tablerCheckIcon" />
-        </div>
-      }
-      @if (icon()) {
-        <div class="ExcButton__icon" aria-hidden="true">
-          <ng-icon [name]="icon()!" />
-        </div>
-      }
-      @if (variant() !== "icon") {
-        <ng-content>{{ label() }}</ng-content>
-      }
-    </div>
-  `,
+  templateUrl: "./filled-button.component.html",
 })
 export class CaliburnFilledButtonComponent {
   readonly label = input<string>();

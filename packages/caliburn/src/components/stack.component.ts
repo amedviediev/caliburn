@@ -16,7 +16,7 @@ type StackJustify = "center" | "space-around" | "space-between";
     "[style.align-items]": "align()",
     "[style.justify-content]": "justifyContent()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./stack-row.component.html",
 })
 export class CaliburnStackRowComponent {
   readonly gap = input<number>();
@@ -37,7 +37,7 @@ export class CaliburnStackRowComponent {
     "[style.justify-items]": "align()",
     "[style.justify-content]": "justifyContent()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./stack-col.component.html",
 })
 export class CaliburnStackColComponent {
   readonly gap = input<number>();

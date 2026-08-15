@@ -1,0 +1,14 @@
+<label
+  [attr.for]="name() ?? null"
+  class="ImageExportModal__settings__setting__label"
+>
+  {{ label() }}
+  @if (tooltip()) {
+    <caliburn-tooltip [label]="tooltip()!" [long]="true">
+      <ng-icon name="helpIcon2" />
+    </caliburn-tooltip>
+  }
+</label>
+<div class="ImageExportModal__settings__setting__content">
+  <ng-content />
+</div>

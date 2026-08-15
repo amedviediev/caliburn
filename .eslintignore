@@ -9,3 +9,8 @@ packages/excalidraw/types
 examples/**/public
 dev-dist
 coverage
+
+# prettier's html parser doesn't understand Angular templates (control-flow
+# blocks like @if/@for, or the self-closing custom-element syntax caliburn's
+# components use) and hard-errors on them — see Task 29's separate-files sweep
+**/*.component.html

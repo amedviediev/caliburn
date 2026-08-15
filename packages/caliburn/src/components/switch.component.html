@@ -1,0 +1,10 @@
+<input
+  [name]="name()"
+  [id]="name()"
+  [attr.title]="title() ?? null"
+  type="checkbox"
+  [checked]="checked()"
+  [disabled]="disabled()"
+  (change)="valueChange.emit(!checked())"
+  (keydown)="onKeydown($event)"
+/>

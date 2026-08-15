@@ -54,20 +54,7 @@ const injectEditor = () =>
   selector: "caliburn-menu-load-scene",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    @if (enabled()) {
-    <button
-      caliburn-dropdown-menu-item
-      icon="loadIcon"
-      testId="load-button"
-      [shortcut]="shortcut"
-      [ariaLabel]="label"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-    }
-  `,
+  templateUrl: "./menu-load-scene.component.html",
 })
 export class CaliburnMenuLoadSceneComponent {
   private readonly editor = injectEditor();
@@ -89,20 +76,7 @@ export class CaliburnMenuLoadSceneComponent {
   selector: "caliburn-menu-save-to-active-file",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    @if (enabled()) {
-    <button
-      caliburn-dropdown-menu-item
-      icon="save"
-      testId="save-button"
-      [shortcut]="shortcut"
-      [ariaLabel]="label"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-    }
-  `,
+  templateUrl: "./menu-save-to-active-file.component.html",
 })
 export class CaliburnMenuSaveToActiveFileComponent {
   private readonly editor = injectEditor();
@@ -124,18 +98,7 @@ export class CaliburnMenuSaveToActiveFileComponent {
   selector: "caliburn-menu-save-as-image",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    <button
-      caliburn-dropdown-menu-item
-      icon="exportImageIcon"
-      testId="image-export-button"
-      [shortcut]="shortcut"
-      [ariaLabel]="label"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-  `,
+  templateUrl: "./menu-save-as-image.component.html",
 })
 export class CaliburnMenuSaveAsImageComponent {
   private readonly editor = injectEditor();
@@ -161,19 +124,7 @@ export class CaliburnMenuSaveAsImageComponent {
   selector: "caliburn-menu-command-palette",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    <button
-      caliburn-dropdown-menu-item
-      icon="boltIcon"
-      testId="command-palette-button"
-      [shortcut]="shortcut"
-      [ariaLabel]="label"
-      [class]="extraClass()"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-  `,
+  templateUrl: "./menu-command-palette.component.html",
 })
 export class CaliburnMenuCommandPaletteComponent {
   private readonly editor = injectEditor();
@@ -195,19 +146,7 @@ export class CaliburnMenuCommandPaletteComponent {
   selector: "caliburn-menu-search",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    <button
-      caliburn-dropdown-menu-item
-      icon="searchIcon"
-      testId="search-menu-button"
-      [shortcut]="shortcut"
-      [ariaLabel]="label"
-      [class]="extraClass()"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-  `,
+  templateUrl: "./menu-search.component.html",
 })
 export class CaliburnMenuSearchComponent {
   private readonly editor = injectEditor();
@@ -226,18 +165,7 @@ export class CaliburnMenuSearchComponent {
   selector: "caliburn-menu-help",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    <button
-      caliburn-dropdown-menu-item
-      icon="helpIcon"
-      testId="help-menu-item"
-      shortcut="?"
-      [ariaLabel]="label"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-  `,
+  templateUrl: "./menu-help.component.html",
 })
 export class CaliburnMenuHelpComponent {
   private readonly editor = injectEditor();
@@ -253,19 +181,7 @@ export class CaliburnMenuHelpComponent {
   selector: "caliburn-menu-clear-canvas",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    @if (enabled()) {
-    <button
-      caliburn-dropdown-menu-item
-      icon="trashIcon"
-      testId="clear-canvas-button"
-      [ariaLabel]="label"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-    }
-  `,
+  templateUrl: "./menu-clear-canvas.component.html",
 })
 export class CaliburnMenuClearCanvasComponent {
   private readonly editor = injectEditor();
@@ -293,20 +209,7 @@ export class CaliburnMenuClearCanvasComponent {
   selector: "caliburn-menu-toggle-theme",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    @if (enabled()) {
-    <button
-      caliburn-dropdown-menu-item
-      [icon]="isDark() ? 'sunIcon' : 'moonIcon'"
-      testId="toggle-dark-mode"
-      [shortcut]="shortcut"
-      [ariaLabel]="label()"
-      (select)="handleSelect($event)"
-    >
-      {{ label() }}
-    </button>
-    }
-  `,
+  templateUrl: "./menu-toggle-theme.component.html",
 })
 export class CaliburnMenuToggleThemeComponent {
   private readonly editor = injectEditor();
@@ -345,38 +248,7 @@ export class CaliburnMenuToggleThemeComponent {
 @Component({
   selector: "caliburn-menu-change-canvas-background",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (visible()) {
-    <div style="margin-top: 0.75rem">
-      <div
-        data-testid="canvas-background-label"
-        style="font-size: 0.875rem; margin-bottom: 0.25rem; margin-left: 0.5rem"
-      >
-        {{ label }}
-      </div>
-      <div style="padding: 0 0.625rem">
-        <div class="color-picker__top-picks">
-          @for (pick of picks(); track pick.color; let index = $index) {
-          <button
-            type="button"
-            class="color-picker__button"
-            [class.active]="pick.color === currentColor()"
-            [class.is-transparent]="pick.isTransparent"
-            [class.has-outline]="pick.hasOutline"
-            [attr.title]="pick.color"
-            [attr.data-testid]="'color-top-pick-' + pick.color"
-            [attr.data-top-pick-index]="index"
-            [style.--swatch-color]="pick.displayColor"
-            (click)="setColor(pick.color)"
-          >
-            <div class="color-picker__button-outline"></div>
-          </button>
-          }
-        </div>
-      </div>
-    </div>
-    }
-  `,
+  templateUrl: "./menu-change-canvas-background.component.html",
 })
 export class CaliburnMenuChangeCanvasBackgroundComponent {
   private readonly editor = injectEditor();
@@ -422,17 +294,7 @@ export class CaliburnMenuChangeCanvasBackgroundComponent {
   selector: "caliburn-menu-export",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    <button
-      caliburn-dropdown-menu-item
-      icon="exportIcon"
-      testId="json-export-button"
-      [ariaLabel]="label"
-      (select)="handleSelect()"
-    >
-      {{ label }}
-    </button>
-  `,
+  templateUrl: "./menu-export.component.html",
 })
 export class CaliburnMenuExportComponent {
   private readonly editor = injectEditor();
@@ -450,17 +312,7 @@ export class CaliburnMenuExportComponent {
   selector: "caliburn-menu-live-collaboration-trigger",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemComponent],
-  template: `
-    <button
-      caliburn-dropdown-menu-item
-      icon="usersIcon"
-      testId="collab-button"
-      [class]="itemClass()"
-      (select)="select.emit()"
-    >
-      {{ label }}
-    </button>
-  `,
+  templateUrl: "./menu-live-collaboration-trigger.component.html",
 })
 export class CaliburnMenuLiveCollaborationTriggerComponent {
   readonly isCollaborating = input(false);

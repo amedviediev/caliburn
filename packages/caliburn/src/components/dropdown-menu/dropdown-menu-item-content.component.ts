@@ -30,27 +30,7 @@ import { NgIcon } from "@ng-icons/core";
     style: "display: contents;",
   },
   imports: [NgIcon],
-  template: `
-    @if (icon()) {
-      <div class="dropdown-menu-item__icon">
-        <ng-icon [name]="icon()!" />
-      </div>
-    }
-    <div
-      class="dropdown-menu-item__text"
-      style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap"
-    >
-      <ng-content />
-    </div>
-    @if (hasBadge()) {
-      <div class="dropdown-menu-item__badge">
-        <ng-content select="[dropdown-menu-item-badge-slot]" />
-      </div>
-    }
-    @if (shortcut() && !mobile()) {
-      <div class="dropdown-menu-item__shortcut">{{ shortcut() }}</div>
-    }
-  `,
+  templateUrl: "./dropdown-menu-item-content.component.html",
 })
 export class CaliburnDropdownMenuItemContentComponent {
   readonly icon = input<string>();

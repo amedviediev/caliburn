@@ -306,53 +306,7 @@ type SetStateArg =
     CaliburnLayerUIComponent,
   ],
   providers: [provideCaliburnIcons()],
-  template: `
-    <div
-      #container
-      class="excalidraw excalidraw-container"
-      [class.excalidraw--view-mode]="state.viewModeEnabled"
-      [class.excalidraw--non-interactive]="!isInteractionEnabled()"
-      [class.excalidraw--navigation]="
-        !isInteractionEnabled() && isNavigationEnabled()
-      "
-      [class.excalidraw--tools]="
-        !isInteractionEnabled() && isToolSupported(state.activeTool.type)
-      "
-      [class.excalidraw--embeds]="!isInteractionEnabled() && isEmbedsEnabled()"
-      [class.excalidraw--allow-browser-zoom]="
-        !isInteractionEnabled() && isBrowserZoomEnabled()
-      "
-      [class.excalidraw--zen-mode]="state.zenModeEnabled"
-      [style.--ui-pointerEvents]="uiPointerEvents"
-      tabindex="0"
-      (drop)="handleAppOnDrop($event)"
-      (dragover)="handleAppOnDragOver($event)"
-    >
-      <caliburn-layer-ui />
-      <canvas #staticCanvas class="excalidraw__canvas static"></canvas>
-      <canvas
-        #newElementCanvas
-        class="excalidraw__canvas"
-        style="display: none"
-      ></canvas>
-      <canvas
-        #interactiveCanvas
-        class="excalidraw__canvas interactive"
-        (pointerdown)="handleCanvasPointerDown($event)"
-        (pointermove)="handleCanvasPointerMove($event)"
-        (pointerup)="handleCanvasPointerUp($event)"
-        (dblclick)="handleCanvasDoubleClick($event)"
-        (contextmenu)="handleCanvasContextMenu($event)"
-        (wheel)="handleWheel($event)"
-      ></canvas>
-      <caliburn-frame-names />
-      <div class="SVGLayer">
-        <svg #svgLayer></svg>
-      </div>
-      <div class="excalidraw-textEditorContainer"></div>
-      <caliburn-context-menu />
-    </div>
-  `,
+  templateUrl: "./editor.component.html",
 })
 export class CaliburnEditorComponent
   implements OnInit, AfterViewInit, OnDestroy

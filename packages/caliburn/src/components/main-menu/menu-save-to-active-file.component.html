@@ -1,0 +1,12 @@
+@if (enabled()) {
+<button
+  caliburn-dropdown-menu-item
+  icon="save"
+  testId="save-button"
+  [shortcut]="shortcut"
+  [ariaLabel]="label"
+  (select)="handleSelect()"
+>
+  {{ label }}
+</button>
+}

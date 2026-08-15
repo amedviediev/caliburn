@@ -31,7 +31,7 @@ import { CaliburnDropdownMenuTriggerComponent } from "./dropdown-menu-trigger.co
     class: CLASSES.DROPDOWN_MENU_EVENT_WRAPPER,
     style: "display: contents;",
   },
-  template: `<ng-content />`,
+  templateUrl: "./dropdown-menu.component.html",
 })
 export class CaliburnDropdownMenuComponent {
   readonly open = input.required<boolean>();

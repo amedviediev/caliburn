@@ -188,14 +188,7 @@ const getActionIconName = (
   selector: "caliburn-command-shortcut-hint",
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: "shortcut" },
-  template: `
-    @for (item of keys(); track $index) {
-      <div class="shortcut-wrapper">
-        <div class="shortcut-key">{{ item === "$" ? "+" : item }}</div>
-      </div>
-    }
-    <div class="shortcut-desc"><ng-content /></div>
-  `,
+  templateUrl: "./command-shortcut-hint.component.html",
 })
 export class CaliburnCommandShortcutHintComponent {
   readonly shortcut = input.required<string>();
@@ -229,109 +222,7 @@ export class CaliburnCommandShortcutHintComponent {
     NgIcon,
     NgTemplateOutlet,
   ],
-  template: `
-    <caliburn-dialog
-      class="command-palette-dialog"
-      [size]="720"
-      [closeOnClickOutside]="true"
-      [fullscreen]="isPhone"
-      (closeRequest)="closeCommandPalette()"
-    >
-      <caliburn-text-field
-        [value]="commandSearch()"
-        [placeholder]="placeholder"
-        [selectOnRender]="true"
-        (valueChange)="handleSearchChange($event)"
-      />
-
-      @if (!isPhone) {
-        <div class="shortcuts-wrapper">
-          <caliburn-command-shortcut-hint shortcut="↑↓">{{
-            selectLabel
-          }}</caliburn-command-shortcut-hint>
-          <caliburn-command-shortcut-hint shortcut="↵">{{
-            confirmLabel
-          }}</caliburn-command-shortcut-hint>
-          <caliburn-command-shortcut-hint [shortcut]="escapeShortcut">{{
-            closeLabel
-          }}</caliburn-command-shortcut-hint>
-        </div>
-      }
-
-      <div class="commands">
-        @if (lastUsed(); as recent) {
-          @if (!commandSearch()) {
-            <div class="command-category">
-              <div class="command-category-title">
-                {{ recentsLabel }}
-                <div class="icon" style="margin-left: 6px">
-                  <ng-icon name="historyCommandIcon" />
-                </div>
-              </div>
-              <ng-container
-                [ngTemplateOutlet]="commandItem"
-                [ngTemplateOutletContext]="{
-                  $implicit: recent,
-                  disabled: !isCommandAvailable(recent),
-                }"
-              />
-            </div>
-          }
-        }
-
-        @if (categories().length > 0) {
-          @for (category of categories(); track category) {
-            <div class="command-category">
-              <div class="command-category-title">{{ category }}</div>
-              @for (
-                command of commandsByCategory()[category];
-                track command.label
-              ) {
-                <ng-container
-                  [ngTemplateOutlet]="commandItem"
-                  [ngTemplateOutletContext]="{ $implicit: command }"
-                />
-              }
-            </div>
-          }
-        } @else {
-          <div class="no-match">
-            <div class="icon"><ng-icon name="searchIcon" /></div>
-            {{ noMatchLabel }}
-          </div>
-        }
-      </div>
-    </caliburn-dialog>
-
-    <ng-template #commandItem let-command let-disabled="disabled">
-      <div
-        class="command-item"
-        [class.item-selected]="command.label === currentCommand()?.label"
-        [class.item-disabled]="disabled"
-        [attr.title]="disabled ? itemNotAvailableLabel : ''"
-        (click)="onItemClick(command, disabled, $event)"
-        (mousemove)="onItemMouseMove(command, disabled)"
-      >
-        <div class="name">
-          @if (command.icon) {
-            <span
-              class="icon"
-              style="width: var(--icon-size, 1rem); height: 100%; margin: 0 0.5ex 0 0.5ex; display: inline-flex; line-height: 0; vertical-align: middle; flex: 0 0 auto"
-            >
-              <ng-icon [name]="command.icon" />
-            </span>
-          }
-          <span
-            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap"
-            >{{ command.label }}</span
-          >
-        </div>
-        @if (!isPhone && command.shortcut) {
-          <caliburn-command-shortcut-hint [shortcut]="command.shortcut" />
-        }
-      </div>
-    </ng-template>
-  `,
+  templateUrl: "./command-palette-inner.component.html",
 })
 export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
   private readonly editor = inject<CaliburnEditorComponent>(
@@ -907,11 +798,7 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
   selector: "caliburn-command-palette",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnCommandPaletteInnerComponent],
-  template: `
-    @if (isOpen()) {
-      <caliburn-command-palette-inner />
-    }
-  `,
+  templateUrl: "./command-palette.component.html",
 })
 export class CaliburnCommandPaletteComponent implements OnDestroy {
   private readonly editor = inject<CaliburnEditorComponent>(

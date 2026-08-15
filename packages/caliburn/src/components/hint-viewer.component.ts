@@ -265,19 +265,7 @@ type HintPart = { text: string; kbd: boolean };
 @Component({
   selector: "caliburn-hint-viewer",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (parts(); as parts) {
-    <div class="HintViewer">
-      <span
-        >@for (part of parts; track $index) {@if (part.kbd) {<kbd>{{
-          part.text
-        }}</kbd
-        >} @else {<ng-container>{{ part.text }}</ng-container
-        >}}</span
-      >
-    </div>
-    }
-  `,
+  templateUrl: "./hint-viewer.component.html",
 })
 export class CaliburnHintViewerComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

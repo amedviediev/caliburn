@@ -11,6 +11,6 @@ import { ChangeDetectionStrategy, Component } from "@angular/core";
     style:
       "height: 1px; background-color: var(--default-border-color); margin: 6px 0; flex: 0 0 auto;",
   },
-  template: ``,
+  templateUrl: "./dropdown-menu-separator.component.html",
 })
 export class CaliburnDropdownMenuSeparatorComponent {}

@@ -51,13 +51,7 @@ const initialData = {
 @Component({
   selector: "demo-root",
   imports: [CaliburnEditorComponent],
-  template: `
-    <caliburn-editor
-      [autoFocus]="true"
-      [handleKeyboardGlobally]="true"
-      [initialData]="initialData"
-    />
-  `,
+  templateUrl: "./demo-root.component.html",
 })
 class DemoRoot {
   readonly initialData = initialData;

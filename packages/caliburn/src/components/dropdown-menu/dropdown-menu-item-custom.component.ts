@@ -18,7 +18,7 @@ import clsx from "clsx";
   host: {
     "[class]": "hostClass()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./dropdown-menu-item-custom.component.html",
 })
 export class CaliburnDropdownMenuItemCustomComponent {
   readonly selected = input(false);

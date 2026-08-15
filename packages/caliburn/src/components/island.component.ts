@@ -15,7 +15,7 @@ import { ChangeDetectionStrategy, Component, input } from "@angular/core";
     "[attr.data-viewport-ui]": "viewportUi()",
     "[attr.data-viewport-ui-name]": "viewportUiName()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./island.component.html",
 })
 export class CaliburnIslandComponent {
   readonly padding = input<number>();

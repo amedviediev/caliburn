@@ -11,6 +11,6 @@ import { ChangeDetectionStrategy, Component } from "@angular/core";
     style:
       "width: 1px; height: 1rem; background-color: var(--default-border-color); margin: 0 auto;",
   },
-  template: ``,
+  templateUrl: "./button-separator.component.html",
 })
 export class CaliburnButtonSeparatorComponent {}

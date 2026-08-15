@@ -22,24 +22,7 @@ export interface RadioGroupChoice<T> {
   host: {
     class: "RadioGroup",
   },
-  template: `
-    @for (choice of choices(); track choice.value) {
-    <div
-      class="RadioGroup__choice"
-      [class.active]="choice.value === value()"
-      [attr.title]="choice.ariaLabel ?? null"
-    >
-      <input
-        [name]="name()"
-        type="radio"
-        [checked]="choice.value === value()"
-        (change)="valueChange.emit(choice.value)"
-        [attr.aria-label]="choice.ariaLabel ?? null"
-      />
-      {{ choice.label }}
-    </div>
-    }
-  `,
+  templateUrl: "./radio-group.component.html",
 })
 export class CaliburnRadioGroupComponent<T> {
   readonly choices = input.required<RadioGroupChoice<T>[]>();

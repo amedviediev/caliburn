@@ -31,10 +31,7 @@ let nextSectionId = 0;
   host: {
     "[attr.aria-labelledby]": "titleId()",
   },
-  template: `
-    <h2 class="visually-hidden" [id]="titleId()">{{ headingLabel() }}</h2>
-    <ng-content />
-  `,
+  templateUrl: "./section.component.html",
 })
 export class CaliburnSectionComponent {
   private readonly id = `caliburn-section-${nextSectionId++}`;

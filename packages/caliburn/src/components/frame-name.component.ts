@@ -41,38 +41,7 @@ const FRAME_NAME_EDIT_PADDING = 6;
 @Component({
   selector: "caliburn-frame-names",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @for (frame of frames(); track frame.id) {
-    <div
-      class="{{ frameNameClass }}"
-      [style]="labelStyle(frame)"
-      (pointerdown)="editor().handleCanvasPointerDown($event)"
-      (wheel)="editor().handleWheel($event)"
-      (contextmenu)="editor().handleCanvasContextMenu($event)"
-      (dblclick)="startEditing(frame)"
-    >
-      @if (frame.id === state().editingFrame) {
-      <input
-        #frameNameInput
-        [value]="title(frame)"
-        [attr.size]="title(frame).length + 1 || 1"
-        [style]="inputStyle(frame)"
-        dir="auto"
-        autocomplete="off"
-        autocapitalize="off"
-        autocorrect="off"
-        (input)="onInput(frame, $event)"
-        (change)="onInput(frame, $event)"
-        (focus)="onFocus($event)"
-        (blur)="commitName(frame)"
-        (keydown)="onKeydown(frame, $event)"
-      />
-      } @else {
-      {{ title(frame) }}
-      }
-    </div>
-    }
-  `,
+  templateUrl: "./frame-name.component.html",
 })
 export class CaliburnFrameNameComponent {
   private readonly host = inject<CaliburnEditorComponent>(

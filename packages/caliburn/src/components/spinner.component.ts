@@ -17,23 +17,7 @@ import {
   host: {
     class: "Spinner",
   },
-  template: `
-    <svg
-      viewBox="0 0 100 100"
-      [style.width]="size()"
-      [style.height]="size()"
-      [style.--spinner-delay]="spinnerDelay()"
-    >
-      <circle
-        cx="50"
-        cy="50"
-        [attr.r]="radius()"
-        [attr.stroke-width]="circleWidth()"
-        fill="none"
-        stroke-miterlimit="10"
-      />
-    </svg>
-  `,
+  templateUrl: "./spinner.component.html",
 })
 export class CaliburnSpinnerComponent {
   readonly size = input<string | number>("1em");

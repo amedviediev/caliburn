@@ -63,22 +63,7 @@ const COPY_STATUS_TIMEOUT = 2000;
     class: "ImageExportModal__settings__setting",
     "[attr.title]": "label()",
   },
-  template: `
-    <label
-      [attr.for]="name() ?? null"
-      class="ImageExportModal__settings__setting__label"
-    >
-      {{ label() }}
-      @if (tooltip()) {
-        <caliburn-tooltip [label]="tooltip()!" [long]="true">
-          <ng-icon name="helpIcon2" />
-        </caliburn-tooltip>
-      }
-    </label>
-    <div class="ImageExportModal__settings__setting__content">
-      <ng-content />
-    </div>
-  `,
+  templateUrl: "./export-setting.component.html",
 })
 export class CaliburnExportSettingComponent {
   readonly label = input.required<string>();
@@ -103,128 +88,7 @@ export class CaliburnExportSettingComponent {
     CaliburnRadioGroupComponent,
     CaliburnSwitchComponent,
   ],
-  template: `
-    <caliburn-dialog
-      size="wide"
-      [fullscreen]="isMobile"
-      (closeRequest)="handleClose()"
-    >
-      <div class="ImageExportModal">
-        <h3>{{ labels.header }}</h3>
-        <div class="ImageExportModal__preview">
-          <div class="ImageExportModal__preview__canvas" #preview>
-            @if (renderError()) {
-              <div>
-                <h3>{{ labels.cannotShowPreview }}</h3>
-                <p>
-                  <span>{{ labels.canvasTooBig }}</span>
-                </p>
-                <em>({{ labels.canvasTooBigTip }})</em>
-              </div>
-            }
-          </div>
-          <div class="ImageExportModal__preview__filename">
-            @if (!nativeFileSystemSupported) {
-              <input
-                type="text"
-                class="TextInput"
-                style="width: 30ch"
-                [value]="projectName()"
-                (input)="setProjectName($any($event.target).value)"
-              />
-            }
-          </div>
-        </div>
-        <div class="ImageExportModal__settings">
-          <h3>{{ labels.header }}</h3>
-          @if (hasSelection) {
-            <caliburn-export-setting
-              [label]="labels.onlySelected"
-              name="exportOnlySelected"
-            >
-              <caliburn-switch
-                name="exportOnlySelected"
-                [checked]="exportSelectionOnly()"
-                (valueChange)="exportSelectionOnly.set($event)"
-              />
-            </caliburn-export-setting>
-          }
-          <caliburn-export-setting
-            [label]="labels.withBackground"
-            name="exportBackgroundSwitch"
-          >
-            <caliburn-switch
-              name="exportBackgroundSwitch"
-              [checked]="exportWithBackground()"
-              (valueChange)="setExportWithBackground($event)"
-            />
-          </caliburn-export-setting>
-          <caliburn-export-setting
-            [label]="labels.darkMode"
-            name="exportDarkModeSwitch"
-          >
-            <caliburn-switch
-              name="exportDarkModeSwitch"
-              [checked]="exportWithDarkMode()"
-              (valueChange)="setExportWithDarkMode($event)"
-            />
-          </caliburn-export-setting>
-          <caliburn-export-setting
-            [label]="labels.embedScene"
-            [tooltip]="labels.embedSceneTooltip"
-            name="exportEmbedSwitch"
-          >
-            <caliburn-switch
-              name="exportEmbedSwitch"
-              [checked]="embedScene()"
-              (valueChange)="setEmbedScene($event)"
-            />
-          </caliburn-export-setting>
-          <caliburn-export-setting [label]="labels.scale" name="exportScale">
-            <caliburn-radio-group
-              name="exportScale"
-              [value]="exportScale()"
-              [choices]="scaleChoices"
-              (valueChange)="setExportScale($event)"
-            />
-          </caliburn-export-setting>
-
-          <div class="ImageExportModal__settings__buttons">
-            <button
-              caliburn-filled-button
-              class="ImageExportModal__settings__buttons__button"
-              [label]="labels.exportToPngTitle"
-              [onClick]="exportToPng"
-              icon="downloadIcon"
-            >
-              {{ labels.exportToPng }}
-            </button>
-            <button
-              caliburn-filled-button
-              class="ImageExportModal__settings__buttons__button"
-              [label]="labels.exportToSvgTitle"
-              [onClick]="exportToSvg"
-              icon="downloadIcon"
-            >
-              {{ labels.exportToSvg }}
-            </button>
-            @if (canCopyToClipboard) {
-              <button
-                caliburn-filled-button
-                class="ImageExportModal__settings__buttons__button"
-                [label]="labels.copyPngToClipboardTitle"
-                [status]="copyStatus()"
-                [onClick]="copyPngToClipboard"
-                icon="copyIcon"
-              >
-                {{ labels.copyPngToClipboard }}
-              </button>
-            }
-          </div>
-        </div>
-      </div>
-    </caliburn-dialog>
-  `,
+  templateUrl: "./image-export-dialog.component.html",
 })
 export class CaliburnImageExportDialogComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

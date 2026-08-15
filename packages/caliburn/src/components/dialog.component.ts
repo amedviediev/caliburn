@@ -60,36 +60,7 @@ let nextDialogId = 0;
   selector: "caliburn-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnModalComponent, CaliburnIslandComponent, NgIcon],
-  template: `
-    <caliburn-modal
-      [class]="modalClass()"
-      [class.Dialog--fullscreen]="fullscreen()"
-      [maxWidth]="dialogSize()"
-      labelledBy="dialog-title"
-      [closeOnClickOutside]="closeOnClickOutside()"
-      (closeRequest)="onClose()"
-    >
-      <caliburn-island>
-        @if (title()) {
-          <h2 [id]="titleId" class="Dialog__title">
-            <span class="Dialog__titleContent">{{ title() }}</span>
-          </h2>
-        }
-        @if (fullscreen()) {
-          <button
-            class="Dialog__close"
-            (click)="onClose()"
-            [title]="closeLabel"
-            [attr.aria-label]="closeLabel"
-            type="button"
-          >
-            <ng-icon name="closeIcon" />
-          </button>
-        }
-        <div class="Dialog__content"><ng-content /></div>
-      </caliburn-island>
-    </caliburn-modal>
-  `,
+  templateUrl: "./dialog.component.html",
 })
 export class CaliburnDialogComponent implements AfterViewInit, OnDestroy {
   private readonly id = `caliburn-dialog-${nextDialogId++}`;

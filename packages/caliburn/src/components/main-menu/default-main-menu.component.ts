@@ -45,25 +45,7 @@ import type { CaliburnEditorComponent } from "../../editor.component";
     CaliburnMenuSearchComponent,
     CaliburnMenuToggleThemeComponent,
   ],
-  template: `
-    <caliburn-main-menu>
-      <caliburn-menu-load-scene />
-      <caliburn-menu-save-to-active-file />
-      @if (uiOptions.canvasActions.export) {
-        <caliburn-menu-export />
-      }
-      @if (uiOptions.canvasActions.saveAsImage) {
-        <caliburn-menu-save-as-image />
-      }
-      <caliburn-menu-command-palette />
-      <caliburn-menu-search />
-      <caliburn-menu-help />
-      <caliburn-menu-clear-canvas />
-      <caliburn-dropdown-menu-separator />
-      <caliburn-menu-toggle-theme />
-      <caliburn-menu-change-canvas-background />
-    </caliburn-main-menu>
-  `,
+  templateUrl: "./default-main-menu.component.html",
 })
 export class CaliburnDefaultMainMenuComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

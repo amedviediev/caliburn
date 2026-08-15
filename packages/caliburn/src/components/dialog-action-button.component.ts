@@ -35,20 +35,7 @@ export type DialogActionType = "primary" | "danger";
     "[attr.data-testid]": "testId() ?? null",
     "(click)": "select.emit($event)",
   },
-  template: `
-    <div
-      style="display: contents"
-      [style.visibility]="isLoading() ? 'hidden' : null"
-    >
-      <ng-content />
-    </div>
-    <div [style.visibility]="isLoading() ? 'hidden' : null">{{ label() }}</div>
-    @if (isLoading()) {
-      <div style="position: absolute; inset: 0">
-        <caliburn-spinner />
-      </div>
-    }
-  `,
+  templateUrl: "./dialog-action-button.component.html",
 })
 export class CaliburnDialogActionButtonComponent {
   readonly label = input.required<string>();

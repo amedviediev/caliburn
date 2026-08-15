@@ -17,12 +17,7 @@ import clsx from "clsx";
   host: {
     "[class]": "hostClass()",
   },
-  template: `
-    @if (title()) {
-      <p class="dropdown-menu-group-title">{{ title() }}</p>
-    }
-    <ng-content />
-  `,
+  templateUrl: "./dropdown-menu-group.component.html",
 })
 export class CaliburnDropdownMenuGroupComponent {
   readonly title = input<string>();

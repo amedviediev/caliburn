@@ -40,47 +40,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
     CaliburnProjectNameComponent,
     NgIcon,
   ],
-  template: `
-    @if (visible()) {
-      <caliburn-dialog
-        [title]="title"
-        [fullscreen]="isMobile"
-        (closeRequest)="handleClose()"
-      >
-        <div class="ExportDialog ExportDialog--json">
-          <div class="ExportDialog-cards">
-            @if (exportOpts.saveFileToDisk) {
-              <caliburn-card color="lime">
-                <div class="Card-icon">
-                  <ng-icon name="exportToFileIcon" />
-                </div>
-                <h2>{{ diskTitle }}</h2>
-                <div class="Card-details">
-                  {{ diskDetails }}
-                  @if (!nativeFileSystemSupported) {
-                    <caliburn-project-name
-                      [label]="fileTitleLabel"
-                      [value]="projectName()"
-                      (valueChange)="setProjectName($event)"
-                    />
-                  }
-                </div>
-                <button
-                  caliburn-icon-button
-                  class="Card-button"
-                  mode="button"
-                  [title]="diskButton"
-                  [ariaLabel]="diskButton"
-                  [showAriaLabel]="true"
-                  [onClick]="saveFileToDisk"
-                ></button>
-              </caliburn-card>
-            }
-          </div>
-        </div>
-      </caliburn-dialog>
-    }
-  `,
+  templateUrl: "./json-export-dialog.component.html",
 })
 export class CaliburnJSONExportDialogComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

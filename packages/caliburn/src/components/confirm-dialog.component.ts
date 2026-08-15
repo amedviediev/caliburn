@@ -27,30 +27,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
   selector: "caliburn-confirm-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDialogComponent, CaliburnDialogActionButtonComponent],
-  template: `
-    <caliburn-dialog
-      [class]="dialogClass()"
-      size="small"
-      [title]="title()"
-      [fullscreen]="isMobile"
-      (closeRequest)="cancel.emit()"
-    >
-      <ng-content />
-      <div class="confirm-dialog-buttons">
-        <button
-          caliburn-dialog-action-button
-          [label]="cancelText()"
-          (select)="handleCancel()"
-        ></button>
-        <button
-          caliburn-dialog-action-button
-          [label]="confirmText()"
-          actionType="danger"
-          (select)="handleConfirm()"
-        ></button>
-      </div>
-    </caliburn-dialog>
-  `,
+  templateUrl: "./confirm-dialog.component.html",
 })
 export class CaliburnConfirmDialogComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

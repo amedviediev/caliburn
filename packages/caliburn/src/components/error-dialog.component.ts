@@ -25,18 +25,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
   selector: "caliburn-error-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDialogComponent],
-  template: `
-    @if (modalIsShown()) {
-      <caliburn-dialog
-        size="small"
-        [title]="title"
-        [fullscreen]="isMobile"
-        (closeRequest)="handleClose()"
-      >
-        <div style="white-space: pre-wrap"><ng-content /></div>
-      </caliburn-dialog>
-    }
-  `,
+  templateUrl: "./error-dialog.component.html",
 })
 export class CaliburnErrorDialogComponent {
   private readonly editor = inject<CaliburnEditorComponent>(

@@ -18,18 +18,7 @@ import clsx from "clsx";
   host: {
     "[class]": "hostClass()",
   },
-  template: `
-    <input
-      [name]="name()"
-      [id]="name()"
-      [attr.title]="title() ?? null"
-      type="checkbox"
-      [checked]="checked()"
-      [disabled]="disabled()"
-      (change)="valueChange.emit(!checked())"
-      (keydown)="onKeydown($event)"
-    />
-  `,
+  templateUrl: "./switch.component.html",
 })
 export class CaliburnSwitchComponent {
   readonly name = input.required<string>();

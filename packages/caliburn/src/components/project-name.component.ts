@@ -22,18 +22,7 @@ let nextProjectNameId = 0;
   host: {
     class: "ProjectName",
   },
-  template: `
-    <label class="ProjectName-label" [attr.for]="inputId">{{ label() }}:</label>
-    <input
-      type="text"
-      class="TextInput"
-      [id]="inputId"
-      [value]="fileName()"
-      (input)="fileName.set($any($event.target).value)"
-      (blur)="handleBlur($event)"
-      (keydown)="handleKeyDown($event)"
-    />
-  `,
+  templateUrl: "./project-name.component.html",
 })
 export class CaliburnProjectNameComponent {
   readonly value = input.required<string>();

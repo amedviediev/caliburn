@@ -1,0 +1,22 @@
+<caliburn-dialog
+  [class]="dialogClass()"
+  size="small"
+  [title]="title()"
+  [fullscreen]="isMobile"
+  (closeRequest)="cancel.emit()"
+>
+  <ng-content />
+  <div class="confirm-dialog-buttons">
+    <button
+      caliburn-dialog-action-button
+      [label]="cancelText()"
+      (select)="handleCancel()"
+    ></button>
+    <button
+      caliburn-dialog-action-button
+      [label]="confirmText()"
+      actionType="danger"
+      (select)="handleConfirm()"
+    ></button>
+  </div>
+</caliburn-dialog>

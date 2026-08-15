@@ -30,7 +30,7 @@ export type DropdownMenuItemBadgeType = "green" | "red" | "blue";
     class: "DropDownMenuItemBadge",
     "[style]": "hostStyle()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./dropdown-menu-item-badge.component.html",
 })
 export class CaliburnDropdownMenuItemBadgeComponent {
   readonly type = input<DropdownMenuItemBadgeType>("blue");
@@ -81,20 +81,7 @@ export class CaliburnDropdownMenuItemBadgeComponent {
     "[disabled]": "disabled()",
     "(click)": "handleSelect($event)",
   },
-  template: `
-    <caliburn-dropdown-menu-item-content
-      [icon]="icon()"
-      [shortcut]="shortcut()"
-      [hasBadge]="hasBadge()"
-      [mobile]="content?.mobile() ?? false"
-    >
-      <ng-content />
-      <ng-content
-        select="[dropdown-menu-item-badge-slot]"
-        ngProjectAs="[dropdown-menu-item-badge-slot]"
-      />
-    </caliburn-dropdown-menu-item-content>
-  `,
+  templateUrl: "./dropdown-menu-item.component.html",
 })
 export class CaliburnDropdownMenuItemComponent {
   protected readonly content = inject(CaliburnDropdownMenuContentComponent, {

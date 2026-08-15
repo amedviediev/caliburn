@@ -32,7 +32,7 @@ import clsx from "clsx";
     "[attr.title]": "title() ?? null",
     "(click)": "toggle.emit()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./dropdown-menu-trigger.component.html",
 })
 export class CaliburnDropdownMenuTriggerComponent {
   readonly mobile = input(false);

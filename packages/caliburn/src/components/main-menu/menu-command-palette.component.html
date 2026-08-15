@@ -1,0 +1,11 @@
+<button
+  caliburn-dropdown-menu-item
+  icon="boltIcon"
+  testId="command-palette-button"
+  [shortcut]="shortcut"
+  [ariaLabel]="label"
+  [class]="extraClass()"
+  (select)="handleSelect()"
+>
+  {{ label }}
+</button>

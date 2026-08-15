@@ -1,0 +1,10 @@
+@if (modalIsShown()) {
+  <caliburn-dialog
+    size="small"
+    [title]="title"
+    [fullscreen]="isMobile"
+    (closeRequest)="handleClose()"
+  >
+    <div style="white-space: pre-wrap"><ng-content /></div>
+  </caliburn-dialog>
+}

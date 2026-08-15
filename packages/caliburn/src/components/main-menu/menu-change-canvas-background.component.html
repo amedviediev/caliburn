@@ -1,0 +1,30 @@
+@if (visible()) {
+<div style="margin-top: 0.75rem">
+  <div
+    data-testid="canvas-background-label"
+    style="font-size: 0.875rem; margin-bottom: 0.25rem; margin-left: 0.5rem"
+  >
+    {{ label }}
+  </div>
+  <div style="padding: 0 0.625rem">
+    <div class="color-picker__top-picks">
+      @for (pick of picks(); track pick.color; let index = $index) {
+      <button
+        type="button"
+        class="color-picker__button"
+        [class.active]="pick.color === currentColor()"
+        [class.is-transparent]="pick.isTransparent"
+        [class.has-outline]="pick.hasOutline"
+        [attr.title]="pick.color"
+        [attr.data-testid]="'color-top-pick-' + pick.color"
+        [attr.data-top-pick-index]="index"
+        [style.--swatch-color]="pick.displayColor"
+        (click)="setColor(pick.color)"
+      >
+        <div class="color-picker__button-outline"></div>
+      </button>
+      }
+    </div>
+  </div>
+</div>
+}

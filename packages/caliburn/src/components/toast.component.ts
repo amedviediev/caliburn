@@ -28,19 +28,7 @@ export const DEFAULT_TOAST_TIMEOUT = 5000;
     "(mouseenter)": "onMouseEnter()",
     "(mouseleave)": "onMouseLeave()",
   },
-  template: `
-    <div class="Toast__message">{{ message() }}</div>
-    @if (closable()) {
-    <button
-      caliburn-icon-button
-      class="close"
-      mode="icon"
-      icon="closeIcon"
-      ariaLabel="close"
-      [onClick]="onCloseClick"
-    ></button>
-    }
-  `,
+  templateUrl: "./toast.component.html",
 })
 export class CaliburnToastComponent implements OnDestroy {
   readonly message = input.required<string>();

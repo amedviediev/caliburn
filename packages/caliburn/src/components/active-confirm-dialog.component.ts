@@ -23,17 +23,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
   selector: "caliburn-active-confirm-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnConfirmDialogComponent],
-  template: `
-    @if (editor.activeConfirmDialog() === "clearCanvas") {
-    <caliburn-confirm-dialog
-      [title]="title"
-      (confirm)="handleConfirm()"
-      (cancel)="editor.activeConfirmDialog.set(null)"
-    >
-      <p class="clear-canvas__content">{{ content }}</p>
-    </caliburn-confirm-dialog>
-    }
-  `,
+  templateUrl: "./active-confirm-dialog.component.html",
 })
 export class CaliburnActiveConfirmDialogComponent {
   protected readonly editor = inject<CaliburnEditorComponent>(

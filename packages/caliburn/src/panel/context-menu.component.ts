@@ -26,35 +26,7 @@ interface RenderedItem {
  */
 @Component({
   selector: "caliburn-context-menu",
-  template: `
-    @if (menu(); as menu) {
-    <div
-      class="context-menu-popover"
-      [style.position]="'absolute'"
-      [style.top.px]="menu.top"
-      [style.left.px]="menu.left"
-    >
-      <ul class="context-menu" (contextmenu)="$event.preventDefault()">
-        @for (item of items(); track $index) { @if (item.separator) {
-        <hr class="context-menu-item-separator" />
-        } @else {
-        <li
-          [attr.data-testid]="item.action?.name"
-          (click)="executeItem(item.action!)"
-        >
-          <button
-            type="button"
-            class="context-menu-item"
-            [class.dangerous]="item.dangerous"
-          >
-            <div class="context-menu-item__label">{{ item.label }}</div>
-          </button>
-        </li>
-        } }
-      </ul>
-    </div>
-    }
-  `,
+  templateUrl: "./context-menu.component.html",
 })
 export class CaliburnContextMenuComponent {
   private readonly host = inject<CaliburnEditorComponent>(

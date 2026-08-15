@@ -1,0 +1,12 @@
+<div
+  style="display: contents"
+  [style.visibility]="isLoading() ? 'hidden' : null"
+>
+  <ng-content />
+</div>
+<div [style.visibility]="isLoading() ? 'hidden' : null">{{ label() }}</div>
+@if (isLoading()) {
+  <div style="position: absolute; inset: 0">
+    <caliburn-spinner />
+  </div>
+}

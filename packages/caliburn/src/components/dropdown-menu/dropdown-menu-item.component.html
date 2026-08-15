@@ -1,0 +1,12 @@
+<caliburn-dropdown-menu-item-content
+  [icon]="icon()"
+  [shortcut]="shortcut()"
+  [hasBadge]="hasBadge()"
+  [mobile]="content?.mobile() ?? false"
+>
+  <ng-content />
+  <ng-content
+    select="[dropdown-menu-item-badge-slot]"
+    ngProjectAs="[dropdown-menu-item-badge-slot]"
+  />
+</caliburn-dropdown-menu-item-content>

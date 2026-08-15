@@ -37,7 +37,7 @@ export type CardColor = keyof typeof COLOR_MAP;
     class: "Card",
     "[style]": "hostStyle()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./card.component.html",
 })
 export class CaliburnCardComponent {
   readonly color = input.required<CardColor>();

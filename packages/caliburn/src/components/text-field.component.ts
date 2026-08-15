@@ -36,40 +36,7 @@ import type { AfterViewInit, ElementRef } from "@angular/core";
     "[class.ExcTextField--hasIcon]": "!!icon()",
     "(click)": "focus()",
   },
-  template: `
-    @if (icon()) {
-      <ng-icon [name]="icon()!" />
-    }
-    @if (label()) {
-      <div class="ExcTextField__label">{{ label() }}</div>
-    }
-    <div
-      class="ExcTextField__input"
-      [class.ExcTextField__input--readonly]="readonly()"
-    >
-      <input
-        #input
-        [class.is-redacted]="isRedactedNow()"
-        [readOnly]="readonly()"
-        [value]="value()"
-        [attr.placeholder]="placeholder() ?? null"
-        [attr.type]="type() ?? null"
-        (input)="valueChange.emit($any($event.target).value)"
-        (keydown)="keyDown.emit($event)"
-      />
-      @if (isRedacted()) {
-        <button
-          caliburn-button
-          style="border: 0; user-select: none"
-          (select)="isTemporarilyUnredacted.set(!isTemporarilyUnredacted())"
-        >
-          <ng-icon
-            [name]="isTemporarilyUnredacted() ? 'eyeClosedIcon' : 'eyeIcon'"
-          />
-        </button>
-      }
-    </div>
-  `,
+  templateUrl: "./text-field.component.html",
 })
 export class CaliburnTextFieldComponent implements AfterViewInit {
   readonly value = input.required<string>();

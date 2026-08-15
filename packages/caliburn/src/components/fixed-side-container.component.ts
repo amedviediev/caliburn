@@ -15,7 +15,7 @@ import {
   host: {
     "[class]": "hostClass()",
   },
-  template: `<ng-content />`,
+  templateUrl: "./fixed-side-container.component.html",
 })
 export class CaliburnFixedSideContainerComponent {
   readonly side = input.required<"top" | "left" | "right">();
