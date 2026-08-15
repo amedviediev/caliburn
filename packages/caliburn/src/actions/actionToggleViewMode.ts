@@ -2,14 +2,11 @@ import { CODES, KEYS } from "@excalidraw/common";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { eyeIcon } from "@excalidraw/excalidraw/components/icons";
-
 import { register } from "./register";
 
 export const actionToggleViewMode = register({
   name: "viewMode",
   label: "labels.viewMode",
-  icon: eyeIcon,
   viewMode: true,
   trackEvent: {
     category: "canvas",

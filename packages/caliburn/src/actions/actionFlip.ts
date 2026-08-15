@@ -12,11 +12,6 @@ import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
 
-import {
-  flipHorizontal,
-  flipVertical,
-} from "@excalidraw/excalidraw/components/icons";
-
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElbowArrowElement,
@@ -35,7 +30,6 @@ import { register } from "./register";
 export const actionFlipHorizontal = register({
   name: "flipHorizontal",
   label: "labels.flipHorizontal",
-  icon: flipHorizontal,
   trackEvent: { category: "element" },
   perform: (elements, appState, _, app) => {
     return {
@@ -60,7 +54,6 @@ export const actionFlipHorizontal = register({
 export const actionFlipVertical = register({
   name: "flipVertical",
   label: "labels.flipVertical",
-  icon: flipVertical,
   trackEvent: { category: "element" },
   perform: (elements, appState, _, app) => {
     return {

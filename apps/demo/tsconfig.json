@@ -1,0 +1,7 @@
+{
+  "extends": "../../packages/caliburn/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false
+  },
+  "include": ["./*.ts", "../../packages/caliburn/src/**/*.ts"]
+}

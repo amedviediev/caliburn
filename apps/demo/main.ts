@@ -1,0 +1,67 @@
+import "@excalidraw/excalidraw/css/app.scss";
+import "@excalidraw/excalidraw/css/styles.scss";
+
+import { Component, provideZonelessChangeDetection } from "@angular/core";
+import { bootstrapApplication } from "@angular/platform-browser";
+
+import { convertToExcalidrawElements } from "@excalidraw/element";
+
+import { CaliburnEditorComponent } from "../../packages/caliburn/src/index";
+
+// resolve font assets against the dev server rather than the npm CDN
+(window as { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH = "/";
+
+const initialData = {
+  elements: convertToExcalidrawElements([
+    {
+      type: "text",
+      x: 180,
+      y: 80,
+      fontSize: 28,
+      text: "Caliburn",
+    },
+    {
+      type: "rectangle",
+      x: 140,
+      y: 160,
+      width: 200,
+      height: 120,
+      backgroundColor: "#a5d8ff",
+      label: { text: "drag me" },
+    },
+    {
+      type: "ellipse",
+      x: 480,
+      y: 340,
+      width: 180,
+      height: 120,
+      backgroundColor: "#b2f2bb",
+    },
+    {
+      type: "arrow",
+      x: 360,
+      y: 250,
+      width: 110,
+      height: 100,
+    },
+  ]),
+};
+
+@Component({
+  selector: "demo-root",
+  imports: [CaliburnEditorComponent],
+  template: `
+    <caliburn-editor
+      [autoFocus]="true"
+      [handleKeyboardGlobally]="true"
+      [initialData]="initialData"
+    />
+  `,
+})
+class DemoRoot {
+  readonly initialData = initialData;
+}
+
+bootstrapApplication(DemoRoot, {
+  providers: [provideZonelessChangeDetection()],
+}).catch((error) => console.error(error));

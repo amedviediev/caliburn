@@ -8,8 +8,6 @@ import { selectGroupsForSelectedElements } from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { selectAllIcon } from "@excalidraw/excalidraw/components/icons";
-
 import type {
   ExcalidrawElement,
   ExcalidrawLinearElement,
@@ -21,7 +19,6 @@ import { register } from "./register";
 export const actionSelectAll = register({
   name: "selectAll",
   label: "labels.selectAll",
-  icon: selectAllIcon,
   trackEvent: { category: "canvas" },
   viewMode: false,
   perform: (elements, appState, value, app) => {

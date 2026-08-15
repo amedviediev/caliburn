@@ -53,6 +53,7 @@ import { restoreElements } from "@excalidraw/excalidraw/data/restore";
 import { KEYS, isArrowKey } from "@excalidraw/common";
 
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
+import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
 import { History } from "@excalidraw/excalidraw/history";
 import {
@@ -61,6 +62,9 @@ import {
 } from "@excalidraw/excalidraw/viewport";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import { Renderer } from "@excalidraw/excalidraw/scene/Renderer";
+import rough from "roughjs/bin/rough";
+
+import type { RoughCanvas } from "roughjs/bin/canvas";
 
 import type { EditorInterface, IMAGE_MIME_TYPES } from "@excalidraw/common";
 import type {
@@ -108,8 +112,10 @@ import {
 } from "./clipboard-interaction";
 import {
   addNewImagesToImageCache,
+  createScheduleImageRefresh,
   onImageToolbarButtonClick,
 } from "./image-interaction";
+import { renderEditor } from "./render";
 import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
 import { actionGroup, actionUngroup } from "./actions/actionGroup";
 import { createRedoAction, createUndoAction } from "./actions/actionHistory";
@@ -207,17 +213,27 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
           [attr.data-testid]="'toolbar-' + tool"
           [attr.aria-label]="tool"
           (click)="setActiveTool({ type: tool })"
-        ></button>
+        >
+          {{ tool }}
+        </button>
         }
         <button
           type="button"
           data-testid="toolbar-lock"
           aria-label="lock"
           (click)="toggleToolLock()"
-        ></button>
+        >
+          lock
+        </button>
       </div>
       <canvas #staticCanvas class="excalidraw__canvas static"></canvas>
       <canvas
+        #newElementCanvas
+        class="excalidraw__canvas"
+        style="display: none"
+      ></canvas>
+      <canvas
+        #interactiveCanvas
         class="excalidraw__canvas interactive"
         (pointerdown)="handleCanvasPointerDown($event)"
         (pointermove)="handleCanvasPointerMove($event)"
@@ -250,12 +266,28 @@ export class CaliburnEditorComponent
   readonly containerRef = viewChild<ElementRef<HTMLDivElement>>("container");
   readonly staticCanvasRef =
     viewChild<ElementRef<HTMLCanvasElement>>("staticCanvas");
+  readonly newElementCanvasRef =
+    viewChild<ElementRef<HTMLCanvasElement>>("newElementCanvas");
+  readonly interactiveCanvasRef =
+    viewChild<ElementRef<HTMLCanvasElement>>("interactiveCanvas");
 
   readonly toolbarTools = TOOLBAR_TOOLS;
 
   get canvas(): HTMLCanvasElement {
     return this.staticCanvasRef()!.nativeElement;
   }
+
+  rc: RoughCanvas | null = null;
+
+  embedsValidationStatus: Map<ExcalidrawElement["id"], boolean> = new Map();
+
+  elementsPendingErasure: Set<ExcalidrawElement["id"]> = new Set();
+
+  private scheduleImageRefresh = createScheduleImageRefresh(this);
+
+  renderInteractiveSceneCallback = () => {
+    this.scheduleImageRefresh();
+  };
 
   state: AppState = {
     ...getDefaultAppState(),
@@ -269,6 +301,7 @@ export class CaliburnEditorComponent
   readonly renderer = new Renderer(this.scene);
   readonly store = new Store(this as any);
   readonly history = new History(this.store);
+  readonly fonts = new Fonts(this.scene);
 
   readonly editorInterface: EditorInterface = {
     formFactor: "desktop",
@@ -464,16 +497,26 @@ export class CaliburnEditorComponent
 
     document.addEventListener("keydown", this.onKeyDown);
     document.addEventListener("paste", this.pasteFromClipboard);
+    window.addEventListener("resize", this.onWindowResize);
 
     this.commit();
   }
 
+  private onWindowResize = () => {
+    this.updateDOMRect();
+  };
+
   ngAfterViewInit() {
+    const staticCanvas = this.staticCanvasRef()?.nativeElement;
+    if (staticCanvas) {
+      this.rc = rough.canvas(staticCanvas);
+    }
     this.updateDOMRect();
     this.initializeScene();
     if (this.autoFocus()) {
       this.focusContainer();
     }
+    renderEditor(this);
   }
 
   ngOnDestroy() {
@@ -481,6 +524,7 @@ export class CaliburnEditorComponent
     resetGesture();
     document.removeEventListener("keydown", this.onKeyDown);
     document.removeEventListener("paste", this.pasteFromClipboard);
+    window.removeEventListener("resize", this.onWindowResize);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
     this.store.onStoreIncrementEmitter.clear();
@@ -537,6 +581,12 @@ export class CaliburnEditorComponent
       elements: restoredElements,
       appState: restoredAppState as AppState,
       captureUpdate: CaptureUpdateAction.NEVER,
+    });
+
+    // manually loading the font faces seems faster even in browsers that do
+    // fire the loadingdone event
+    this.fonts.loadSceneFonts().then((fontFaces) => {
+      this.fonts.onLoaded(fontFaces);
     });
   }
 
@@ -1288,5 +1338,8 @@ export class CaliburnEditorComponent
       this.state,
       this.files,
     );
+    if (!this.unmounted) {
+      renderEditor(this);
+    }
   }
 }

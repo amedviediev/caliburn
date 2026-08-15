@@ -9,12 +9,6 @@ import {
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import {
-  BringForwardIcon,
-  BringToFrontIcon,
-  SendBackwardIcon,
-  SendToBackIcon,
-} from "@excalidraw/excalidraw/components/icons";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
 
@@ -24,7 +18,6 @@ export const actionSendBackward = register({
   name: "sendBackward",
   label: "labels.sendBackward",
   keywords: ["move down", "zindex", "layer"],
-  icon: SendBackwardIcon,
   trackEvent: { category: "element" },
   perform: (elements, appState, value, app) => {
     return {
@@ -44,7 +37,6 @@ export const actionBringForward = register({
   name: "bringForward",
   label: "labels.bringForward",
   keywords: ["move up", "zindex", "layer"],
-  icon: BringForwardIcon,
   trackEvent: { category: "element" },
   perform: (elements, appState, value, app) => {
     return {
@@ -64,7 +56,6 @@ export const actionSendToBack = register({
   name: "sendToBack",
   label: "labels.sendToBack",
   keywords: ["move down", "zindex", "layer"],
-  icon: SendToBackIcon,
   trackEvent: { category: "element" },
   perform: (elements, appState) => {
     return {
@@ -87,7 +78,6 @@ export const actionBringToFront = register({
   name: "bringToFront",
   label: "labels.bringToFront",
   keywords: ["move up", "zindex", "layer"],
-  icon: BringToFrontIcon,
   trackEvent: { category: "element" },
 
   perform: (elements, appState) => {

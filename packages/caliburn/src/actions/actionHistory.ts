@@ -9,8 +9,6 @@ import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { orderByFractionalIndex } from "@excalidraw/element";
 
-import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
-import { UndoIcon, RedoIcon } from "@excalidraw/excalidraw/components/icons";
 import { HistoryChangedEvent } from "@excalidraw/excalidraw/history";
 import { useEmitter } from "@excalidraw/excalidraw/hooks/useEmitter";
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -73,7 +71,6 @@ type ActionCreator = (history: History) => Action;
 export const createUndoAction: ActionCreator = (history) => ({
   name: "undo",
   label: "buttons.undo",
-  icon: UndoIcon,
   trackEvent: { category: "history" },
   viewMode: false,
   perform: (elements, appState, value, app) =>
@@ -87,7 +84,6 @@ export const createUndoAction: ActionCreator = (history) => ({
 export const createRedoAction: ActionCreator = (history) => ({
   name: "redo",
   label: "buttons.redo",
-  icon: RedoIcon,
   trackEvent: { category: "history" },
   viewMode: false,
   perform: (elements, appState, __, app) =>

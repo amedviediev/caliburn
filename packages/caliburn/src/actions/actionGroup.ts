@@ -30,12 +30,6 @@ import { syncMovedIndices } from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
-import {
-  UngroupIcon,
-  GroupIcon,
-} from "@excalidraw/excalidraw/components/icons";
-
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import { isSomeElementSelected } from "@excalidraw/excalidraw/scene";

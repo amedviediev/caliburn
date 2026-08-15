@@ -28,8 +28,6 @@ import {
   getSelectedElements,
   isSomeElementSelected,
 } from "@excalidraw/excalidraw/scene";
-import { TrashIcon } from "@excalidraw/excalidraw/components/icons";
-import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
@@ -212,7 +210,6 @@ const handleGroupEditingState = (
 export const actionDeleteSelected = register({
   name: "deleteSelectedElements",
   label: "labels.delete",
-  icon: TrashIcon,
   trackEvent: { category: "element", action: "delete" },
   perform: (elements, appState, formData, app) => {
     if (appState.selectedLinearElement?.isEditing) {
