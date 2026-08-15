@@ -11,6 +11,16 @@ import { pointFrom, pointRotateRads } from "@excalidraw/math";
 
 import { getCommonBounds, isTextElement } from "@excalidraw/element";
 
+import type { Scene } from "@excalidraw/element";
+
+import type {
+  ElementsMap,
+  ExcalidrawElement,
+  NonDeletedExcalidrawElement,
+} from "@excalidraw/element/types";
+
+import type { AppState } from "@excalidraw/excalidraw/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnStatsDragInputComponent } from "./drag-input.component";
@@ -22,14 +32,6 @@ import {
   moveElement,
   STEP_SIZE,
 } from "./utils";
-
-import type { Scene } from "@excalidraw/element";
-import type {
-  ElementsMap,
-  ExcalidrawElement,
-  NonDeletedExcalidrawElement,
-} from "@excalidraw/element/types";
-import type { AppState } from "@excalidraw/excalidraw/types";
 
 import type { DragInputCallbackType } from "./drag-input.component";
 import type { AtomicUnit } from "./utils";

@@ -25,6 +25,15 @@ import {
 
 import { getCommonBounds } from "@excalidraw/utils";
 
+import type { GlobalPoint } from "@excalidraw/math";
+
+import type { Scene } from "@excalidraw/element";
+
+import type {
+  ElementsMap,
+  NonDeletedExcalidrawElement,
+} from "@excalidraw/element/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnStatsDragInputComponent } from "./drag-input.component";
@@ -34,13 +43,6 @@ import {
   getStepSizedValue,
   isPropertyEditable,
 } from "./utils";
-
-import type { GlobalPoint } from "@excalidraw/math";
-import type { Scene } from "@excalidraw/element";
-import type {
-  ElementsMap,
-  NonDeletedExcalidrawElement,
-} from "@excalidraw/element/types";
 
 import type {
   DragFinishedCallbackType,
@@ -478,7 +480,9 @@ export class CaliburnStatsMultiDimensionComponent {
 
   protected readonly value = computed<number | "Mixed">(() => {
     const sizes = this.sizes();
-    return new Set(sizes).size === 1 ? Math.round(sizes[0] * 100) / 100 : "Mixed";
+    return new Set(sizes).size === 1
+      ? Math.round(sizes[0] * 100) / 100
+      : "Mixed";
   });
 
   protected readonly editable = computed(() => this.sizes().length > 0);

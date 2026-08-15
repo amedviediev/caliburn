@@ -174,9 +174,7 @@ describe("color top picks drag & drop", () => {
     expect(menu).not.toBeNull();
 
     act(() => {
-      fireEvent.click(
-        menu!.querySelector(".color-picker__context-menu-item")!,
-      );
+      fireEvent.click(menu!.querySelector(".color-picker__context-menu-item")!);
     });
 
     expect(h.state.colorTopPicks.elementStroke).toBe(null);

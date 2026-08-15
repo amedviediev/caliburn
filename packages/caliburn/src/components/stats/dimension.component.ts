@@ -21,15 +21,15 @@ import {
   resizeSingleElement,
 } from "@excalidraw/element";
 
-import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
-
-import { CaliburnStatsDragInputComponent } from "./drag-input.component";
-import { getStepSizedValue, isPropertyEditable } from "./utils";
-
 import type {
   ExcalidrawElement,
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
+
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+
+import { CaliburnStatsDragInputComponent } from "./drag-input.component";
+import { getStepSizedValue, isPropertyEditable } from "./utils";
 
 import type {
   DragFinishedCallbackType,

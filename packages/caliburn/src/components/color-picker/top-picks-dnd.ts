@@ -167,9 +167,9 @@ export class CaliburnTopPicksDnD {
   private positionGhost(x: number, y: number) {
     const session = this.session;
     if (session?.ghost) {
-      session.ghost.style.transform = `translate(${
-        x - session.ghostW / 2
-      }px, ${y - session.ghostH / 2}px)`;
+      session.ghost.style.transform = `translate(${x - session.ghostW / 2}px, ${
+        y - session.ghostH / 2
+      }px)`;
     }
   }
 
@@ -292,7 +292,12 @@ export class CaliburnTopPicksDnD {
       const rect = session.slotRects[overIndex];
       this.setGhostSize(rect.width, rect.height, x, y);
     } else {
-      this.setGhostSize(session.sourceRect.width, session.sourceRect.height, x, y);
+      this.setGhostSize(
+        session.sourceRect.width,
+        session.sourceRect.height,
+        x,
+        y,
+      );
     }
   }
 
@@ -515,11 +520,7 @@ export class CaliburnTopPicksDnD {
     }
   };
 
-  private begin(
-    event: PointerEvent,
-    color: string | null,
-    origin: DragOrigin,
-  ) {
+  private begin(event: PointerEvent, color: string | null, origin: DragOrigin) {
     if (!this.config.enabled || this.session || event.button !== 0 || !color) {
       return;
     }

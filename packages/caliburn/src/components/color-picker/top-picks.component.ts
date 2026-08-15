@@ -25,10 +25,10 @@ import {
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
-import { CaliburnTopPicksDnD } from "./top-picks-dnd";
-
 import type { Theme } from "@excalidraw/element/types";
 import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
+
+import { CaliburnTopPicksDnD } from "./top-picks-dnd";
 
 import type { AfterViewInit, OnDestroy } from "@angular/core";
 
@@ -171,7 +171,11 @@ export class CaliburnTopPicksComponent implements AfterViewInit, OnDestroy {
     return (newIndex - index) * dragState.slotSpan;
   }
 
-  protected onPickPointerDown(event: PointerEvent, index: number, color: string) {
+  protected onPickPointerDown(
+    event: PointerEvent,
+    index: number,
+    color: string,
+  ) {
     this.dnd.startPickDrag(event, index, color);
   }
 

@@ -18,13 +18,13 @@ import {
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
 import { CaliburnDialogActionButtonComponent } from "./dialog-action-button.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 import { CaliburnTextFieldComponent } from "./text-field.component";
-
-import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import type { CaliburnEditorComponent } from "../editor.component";
 
@@ -67,9 +67,8 @@ export class CaliburnElementLinkDialogComponent implements OnInit, OnDestroy {
   protected readonly originalLink = computed(() => {
     this.editor.changeGeneration();
     return (
-      this.editor.scene
-        .getNonDeletedElementsMap()
-        .get(this.sourceElementId())?.link ?? null
+      this.editor.scene.getNonDeletedElementsMap().get(this.sourceElementId())
+        ?.link ?? null
     );
   });
 

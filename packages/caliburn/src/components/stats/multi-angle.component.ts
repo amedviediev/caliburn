@@ -15,13 +15,14 @@ import {
   isInGroup,
 } from "@excalidraw/element";
 
+import type { Degrees } from "@excalidraw/math";
+
+import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnStatsDragInputComponent } from "./drag-input.component";
 import { getStepSizedValue, isPropertyEditable } from "./utils";
-
-import type { Degrees } from "@excalidraw/math";
-import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 import type { DragInputCallbackType } from "./drag-input.component";
 import type { CaliburnEditorComponent } from "../../editor.component";

@@ -22,6 +22,10 @@ import {
 import { t } from "@excalidraw/excalidraw/i18n";
 import { isGridModeEnabled } from "@excalidraw/excalidraw/snapping";
 
+import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+
+import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnIslandComponent } from "../island.component";
 
@@ -36,9 +40,6 @@ import { CaliburnStatsMultiFontSizeComponent } from "./multi-font-size.component
 import { CaliburnStatsMultiPositionComponent } from "./multi-position.component";
 import { CaliburnStatsPositionComponent } from "./position.component";
 import { getAtomicUnits } from "./utils";
-
-import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
-import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
 

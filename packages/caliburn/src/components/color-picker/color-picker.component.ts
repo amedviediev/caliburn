@@ -151,14 +151,13 @@ export class CaliburnColorPickerComponent {
 
   /** fully-resolved picks currently displayed in the strip — the baseline
    * the drag & drop customization starts from */
-  private readonly effectiveTopPicks = computed(
-    () =>
-      this.customTopPicks()?.length
-        ? this.customTopPicks()!
-        : this.topPicks() ??
-          (this.type() === "elementStroke"
-            ? DEFAULT_ELEMENT_STROKE_PICKS
-            : DEFAULT_ELEMENT_BACKGROUND_PICKS),
+  private readonly effectiveTopPicks = computed(() =>
+    this.customTopPicks()?.length
+      ? this.customTopPicks()!
+      : this.topPicks() ??
+        (this.type() === "elementStroke"
+          ? DEFAULT_ELEMENT_STROKE_PICKS
+          : DEFAULT_ELEMENT_BACKGROUND_PICKS),
   );
 
   private readonly configureDnD = effect(() => {

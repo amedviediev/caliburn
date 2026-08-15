@@ -1,4 +1,7 @@
-import { HYPERLINK_TOOLTIP_DELAY, sceneCoordsToViewportCoords } from "@excalidraw/common";
+import {
+  HYPERLINK_TOOLTIP_DELAY,
+  sceneCoordsToViewportCoords,
+} from "@excalidraw/common";
 import {
   getElementAbsoluteCoords,
   isElementLink,
@@ -10,13 +13,13 @@ import { getLinkHandleFromCoords } from "@excalidraw/excalidraw/components/hyper
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
 
-import { getTooltipDiv, updateTooltipPosition } from "../tooltip.component";
-
 import type {
   ElementsMap,
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 import type { AppState, UIAppState } from "@excalidraw/excalidraw/types";
+
+import { getTooltipDiv, updateTooltipPosition } from "../tooltip.component";
 
 let IS_HYPERLINK_TOOLTIP_VISIBLE = false;
 

@@ -15,16 +15,16 @@ import {
   redrawTextBoundingBox,
 } from "@excalidraw/element";
 
-import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
-
-import { CaliburnStatsDragInputComponent } from "./drag-input.component";
-import { getStepSizedValue } from "./utils";
-
 import type {
   ExcalidrawElement,
   ExcalidrawTextElement,
   NonDeletedSceneElementsMap,
 } from "@excalidraw/element/types";
+
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+
+import { CaliburnStatsDragInputComponent } from "./drag-input.component";
+import { getStepSizedValue } from "./utils";
 
 import type { DragInputCallbackType } from "./drag-input.component";
 import type { CaliburnEditorComponent } from "../../editor.component";

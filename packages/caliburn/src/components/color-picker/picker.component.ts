@@ -180,7 +180,8 @@ export class CaliburnPickerComponent implements OnInit, OnDestroy {
       palette: this.palette(),
       color: this.color(),
       onChange: (color) => this.colorChange.emit(color),
-      onEyeDropperToggle: (force?: boolean) => this.eyeDropperToggle.emit(force),
+      onEyeDropperToggle: (force?: boolean) =>
+        this.eyeDropperToggle.emit(force),
       customColors: this.customColors(),
       setActiveColorPickerSection: this.section.set,
       updateData: this.updateData(),

@@ -9,12 +9,12 @@ import {
 
 import { getNormalizedGridStep } from "@excalidraw/excalidraw/scene";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnStatsDragInputComponent } from "./drag-input.component";
 import { getStepSizedValue } from "./utils";
-
-import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import type { DragInputCallbackType } from "./drag-input.component";
 import type { CaliburnEditorComponent } from "../../editor.component";

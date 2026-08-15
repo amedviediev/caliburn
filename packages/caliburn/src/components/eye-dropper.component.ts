@@ -19,9 +19,9 @@ import { ShapeCache, mutateElement } from "@excalidraw/element";
 
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
 
-import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
-
 import { positionElementBesideCursor } from "@excalidraw/excalidraw/components/positionElementBesideCursor";
+
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
 import { eyeDropperCursor } from "./eye-dropper";
 

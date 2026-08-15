@@ -18,11 +18,12 @@ import { KEYS, normalizeInputColor } from "@excalidraw/common";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
 
+import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnColorPickerSection } from "./color-picker-section";
 
-import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
 import type { CaliburnEditorComponent } from "../../editor.component";
 
 import type { ElementRef } from "@angular/core";

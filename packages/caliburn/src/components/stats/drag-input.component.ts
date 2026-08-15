@@ -13,10 +13,6 @@ import { NgIcon } from "@ng-icons/core";
 import { EVENT, KEYS, cloneJSON } from "@excalidraw/common";
 import { CaptureUpdateAction, deepCopyElement } from "@excalidraw/element";
 
-import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
-
-import { SMALLEST_DELTA } from "./utils";
-
 import type {
   ElementsMap,
   ExcalidrawElement,
@@ -24,6 +20,10 @@ import type {
 } from "@excalidraw/element/types";
 import type { Scene } from "@excalidraw/element";
 import type { AppState } from "@excalidraw/excalidraw/types";
+
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+
+import { SMALLEST_DELTA } from "./utils";
 
 import type { StatsInputProperty } from "./utils";
 import type { CaliburnEditorComponent } from "../../editor.component";

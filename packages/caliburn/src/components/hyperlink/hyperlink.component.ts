@@ -32,9 +32,6 @@ import {
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 
-import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
-import { CaliburnIconButtonComponent } from "../icon-button.component";
-
 import type { GlobalPoint } from "@excalidraw/math";
 import type {
   ElementsMap,
@@ -42,6 +39,9 @@ import type {
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 import type { AppState } from "@excalidraw/excalidraw/types";
+
+import { CaliburnIconButtonComponent } from "../icon-button.component";
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
 
@@ -323,7 +323,10 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
         const embedLink = getEmbedLink(link);
         if (embedLink?.error instanceof URIError) {
           this.editor.setState({
-            toast: { message: t("toast.unrecognizedLinkFormat"), closable: true },
+            toast: {
+              message: t("toast.unrecognizedLinkFormat"),
+              closable: true,
+            },
           });
         }
         const ar = embedLink
