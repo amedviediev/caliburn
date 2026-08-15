@@ -157,8 +157,7 @@ describe("view mode", () => {
     });
   });
 
-  // requires frame-name editing UI — a later slice's gate
-  it.skip("commits frame-name editing when entering view mode", async () => {
+  it("commits frame-name editing when entering view mode", async () => {
     const frame = API.createElement({
       type: "frame",
       x: 20,

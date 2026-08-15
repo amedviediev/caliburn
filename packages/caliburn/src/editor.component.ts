@@ -156,6 +156,7 @@ import {
 } from "./actions/actionProperties";
 import { ActionManager } from "./actions/manager";
 import { provideCaliburnIcons } from "./components/icons";
+import { CaliburnFrameNameComponent } from "./components/frame-name.component";
 import { CaliburnLayerUIComponent } from "./components/layer-ui.component";
 import { CaliburnContextMenuComponent } from "./panel/context-menu.component";
 import { handleCanvasContextMenu } from "./context-menu-interaction";
@@ -178,6 +179,7 @@ import {
 import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
 import {
   maybeUpdateFrameToHighlightOnPointerMove,
+  resetEditingFrame,
   updateFrameMembershipOnPointerUp,
   updateFrameToHighlight,
 } from "./frame-interaction";
@@ -272,7 +274,11 @@ type SetStateArg =
 @Component({
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnContextMenuComponent, CaliburnLayerUIComponent],
+  imports: [
+    CaliburnContextMenuComponent,
+    CaliburnFrameNameComponent,
+    CaliburnLayerUIComponent,
+  ],
   providers: [provideCaliburnIcons()],
   template: `
     <div
@@ -313,6 +319,7 @@ type SetStateArg =
         (contextmenu)="handleCanvasContextMenu($event)"
         (wheel)="handleWheel($event)"
       ></canvas>
+      <caliburn-frame-names />
       <div class="SVGLayer">
         <svg #svgLayer></svg>
       </div>
@@ -1255,12 +1262,21 @@ export class CaliburnEditorComponent
     this.commit();
     if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
       this.cursor.reset();
-      // textWysiwyg's submit path runs synchronously. Defer until after the
-      // current update, then submit whichever text-editing session is active
-      // if editing is still disabled.
+      // textWysiwyg's and frame-name's submit paths run through setState.
+      // Defer until after the current update, then submit whichever editing
+      // session is active if editing is still disabled.
       queueMicrotask(() => {
         if (this.state.viewModeEnabled) {
           this.textWysiwygSubmitHandler?.();
+          if (this.state.editingFrame) {
+            const frame = this.scene.getNonDeletedElement(
+              this.state.editingFrame,
+            );
+            resetEditingFrame(
+              this,
+              frame && isFrameLikeElement(frame) ? frame : null,
+            );
+          }
         }
       });
     }
@@ -2154,6 +2170,14 @@ export class CaliburnEditorComponent
     resetGesture();
     this.pointerDownState = null;
     resetPlainPasteTracking();
+
+    if (this.state.editingFrame) {
+      const frame = this.scene.getNonDeletedElement(this.state.editingFrame);
+      resetEditingFrame(
+        this,
+        frame && isFrameLikeElement(frame) ? frame : null,
+      );
+    }
 
     // textWysiwyg's submit path runs synchronously. Defer until after the
     // current update, then submit whichever text-editing session is active

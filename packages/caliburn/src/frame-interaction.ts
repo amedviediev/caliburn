@@ -14,13 +14,26 @@ import {
   updateFrameMembershipOfSelectedElements,
 } from "@excalidraw/element";
 
-import type { ExcalidrawElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawElement,
+  ExcalidrawFrameLikeElement,
+} from "@excalidraw/element/types";
 import type { AppState } from "@excalidraw/excalidraw/types";
 
 import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 import type { PointerDownState } from "./selection-interaction";
+
+export const resetEditingFrame = (
+  editor: CaliburnEditorComponent,
+  frame: ExcalidrawFrameLikeElement | null,
+) => {
+  if (frame) {
+    editor.scene.mutateElement(frame, { name: frame.name?.trim() || null });
+  }
+  editor.setState({ editingFrame: null });
+};
 
 export const updateFrameToHighlight = (
   editor: CaliburnEditorComponent,
