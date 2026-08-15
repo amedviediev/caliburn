@@ -13,14 +13,19 @@ import {
   dragNewElement,
   editGroupForSelectedElement,
   getCommonBounds,
+  getElementsInGroup,
   getElementsWithinSelection,
+  getSelectedElements,
   hasBoundingBox,
   hitElementBoundingBox,
   hitElementBoundText,
   hitElementItself,
+  isEmbeddableElement,
   isLinearElement,
+  isSelectedViaGroup,
   isSomeElementSelected,
   isTextElement,
+  makeNextSelectedElementIds,
   newElement,
   selectGroupsForSelectedElements,
 } from "@excalidraw/element";
@@ -271,9 +276,35 @@ export const handleSelectionPointerDown = (
 ): PointerDownState => {
   const pointerDownState = initialPointerDownState(editor, event);
   const { origin } = pointerDownState;
+  // upstream reads this off the pre-update state, which React only settles
+  // once the handler returns
+  const previousSelectedElementIds = editor.state.selectedElementIds;
 
+  // upstream skips the hit/selection handling below when a transform handle is
+  // armed, but still falls through to the selection-element creation
   if (maybeArmResizeOnPointerDown(editor, pointerDownState, event)) {
+    createSelectionElementOnPointerDown(editor, pointerDownState);
     return pointerDownState;
+  }
+
+  if (editor.state.selectedLinearElement) {
+    const ret = LinearElementEditor.handlePointerDown(
+      event as any,
+      editor as any,
+      editor.store,
+      pointerDownState.origin,
+      editor.state.selectedLinearElement,
+      editor.scene,
+    );
+    if (ret.hitElement) {
+      pointerDownState.hit.element = ret.hitElement;
+    }
+    if (ret.linearElementEditor) {
+      editor.setState({ selectedLinearElement: ret.linearElementEditor });
+    }
+    if (ret.didAddPoint) {
+      return pointerDownState;
+    }
   }
 
   const allHitElements = getElementsAtPosition(editor, origin.x, origin.y, {
@@ -310,7 +341,10 @@ export const handleSelectionPointerDown = (
   ) {
     hitElement = null;
   } else {
-    hitElement = getElementAtPosition(editor, origin.x, origin.y);
+    // may already be set by the linear editor above, so check first
+    hitElement =
+      pointerDownState.hit.element ??
+      getElementAtPosition(editor, origin.x, origin.y);
   }
 
   pointerDownState.hit.element = hitElement;
@@ -323,12 +357,34 @@ export const handleSelectionPointerDown = (
   if (
     (hitElement === null || !someHitElementIsSelected) &&
     !event.shiftKey &&
-    !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
+    !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements &&
+    (!editor.state.selectedLinearElement?.isEditing ||
+      (hitElement &&
+        hitElement?.id !== editor.state.selectedLinearElement?.elementId))
   ) {
     editor.clearSelection(hitElement);
   }
 
-  if (hitElement != null) {
+  if (editor.state.selectedLinearElement?.isEditing) {
+    editor.setState((prevState) => ({
+      selectedLinearElement: prevState.selectedLinearElement
+        ? {
+            ...prevState.selectedLinearElement,
+            isEditing:
+              !!hitElement &&
+              hitElement.id === prevState.selectedLinearElement.elementId,
+          }
+        : null,
+      selectedElementIds: prevState.selectedLinearElement
+        ? makeNextSelectedElementIds(
+            {
+              [prevState.selectedLinearElement.elementId]: true,
+            },
+            prevState,
+          )
+        : makeNextSelectedElementIds({}, prevState),
+    }));
+  } else if (hitElement != null) {
     // == deep selection ==
     // on CMD/CTRL, drill down to hit element regardless of groups etc.
     if (event[KEYS.CTRL_OR_CMD]) {
@@ -348,7 +404,7 @@ export const handleSelectionPointerDown = (
       }
       editor.setState((prevState) => ({
         ...editGroupForSelectedElement(prevState, hitElement),
-        previousSelectedElementIds: editor.state.selectedElementIds,
+        previousSelectedElementIds,
       }));
       // the fall-through below creates the selection element so a
       // cmd/ctrl-drag can marquee-select within the hit element
@@ -376,7 +432,7 @@ export const handleSelectionPointerDown = (
   }
 
   editor.setState({
-    previousSelectedElementIds: editor.state.selectedElementIds,
+    previousSelectedElementIds,
   });
 
   if (editor.state.activeTool.type !== "lasso") {
@@ -615,8 +671,172 @@ const updateBoxSelection = (
 
 export const handleSelectionPointerUp = (
   editor: CaliburnEditorComponent,
-  _pointerDownState: PointerDownState,
+  pointerDownState: PointerDownState,
+  event: PointerEvent,
 ) => {
+  const hitElement = pointerDownState.hit.element;
+
+  if (
+    hitElement &&
+    !pointerDownState.drag.hasOccurred &&
+    !pointerDownState.hit.wasAddedToSelection &&
+    // if we're editing a line, pointerup shouldn't switch selection if
+    // box selected
+    (!editor.state.selectedLinearElement?.isEditing ||
+      !pointerDownState.boxSelection.hasOccurred) &&
+    // hitElement can be set when alt + ctrl to toggle lasso and we will
+    // just respect the selected elements from lasso instead
+    editor.state.activeTool.type !== "lasso"
+  ) {
+    // when inside line editor, shift selects points instead
+    if (event.shiftKey && !editor.state.selectedLinearElement?.isEditing) {
+      if (editor.state.selectedElementIds[hitElement.id]) {
+        if (isSelectedViaGroup(editor.state, hitElement)) {
+          editor.setState((prevState) => {
+            const nextSelectedElementIds = {
+              ...prevState.selectedElementIds,
+            };
+
+            // We want to unselect all groups hitElement is part of
+            // as well as all elements that are part of the groups
+            // hitElement is part of
+            for (const groupedElement of hitElement.groupIds.flatMap(
+              (groupId) =>
+                getElementsInGroup(
+                  editor.scene.getNonDeletedElements(),
+                  groupId,
+                ),
+            )) {
+              delete nextSelectedElementIds[groupedElement.id];
+            }
+
+            return {
+              selectedGroupIds: {
+                ...prevState.selectedElementIds,
+                ...hitElement.groupIds
+                  .map((gId) => ({ [gId]: false }))
+                  .reduce((prev, acc) => ({ ...prev, ...acc }), {}),
+              },
+              selectedElementIds: makeNextSelectedElementIds(
+                nextSelectedElementIds,
+                prevState,
+              ),
+            };
+          });
+          // if not dragging a linear element point (outside editor)
+        } else if (!editor.state.selectedLinearElement?.isDragging) {
+          // remove element from selection while
+          // keeping prev elements selected
+          editor.setState((prevState) => {
+            const newSelectedElementIds = {
+              ...prevState.selectedElementIds,
+            };
+            delete newSelectedElementIds[hitElement.id];
+            const newSelectedElements = getSelectedElements(
+              editor.scene.getNonDeletedElements(),
+              { selectedElementIds: newSelectedElementIds },
+            );
+
+            return {
+              ...selectGroupsForSelectedElements(
+                {
+                  editingGroupId: prevState.editingGroupId,
+                  selectedElementIds: newSelectedElementIds,
+                },
+                editor.scene.getNonDeletedElements(),
+                prevState,
+                editor as any,
+              ),
+              // set selectedLinearElement only if thats the only element selected
+              selectedLinearElement:
+                newSelectedElements.length === 1 &&
+                isLinearElement(newSelectedElements[0])
+                  ? new LinearElementEditor(
+                      newSelectedElements[0],
+                      editor.scene.getNonDeletedElementsMap(),
+                    )
+                  : prevState.selectedLinearElement,
+            };
+          });
+        }
+      } else if (
+        hitElement.frameId &&
+        editor.state.selectedElementIds[hitElement.frameId]
+      ) {
+        // when hitElement is part of a selected frame, deselect the frame
+        // to avoid frame and containing elements selected simultaneously
+        editor.setState((prevState) => {
+          const nextSelectedElementIds: {
+            [id: string]: true;
+          } = {
+            ...prevState.selectedElementIds,
+            [hitElement.id]: true,
+          };
+          // deselect the frame
+          delete nextSelectedElementIds[hitElement.frameId!];
+
+          // deselect groups containing the frame
+          (editor.scene.getElement(hitElement.frameId!)?.groupIds ?? [])
+            .flatMap((gid) =>
+              getElementsInGroup(editor.scene.getNonDeletedElements(), gid),
+            )
+            .forEach((element) => {
+              delete nextSelectedElementIds[element.id];
+            });
+
+          return {
+            ...selectGroupsForSelectedElements(
+              {
+                editingGroupId: prevState.editingGroupId,
+                selectedElementIds: nextSelectedElementIds,
+              },
+              editor.scene.getNonDeletedElements(),
+              prevState,
+              editor as any,
+            ),
+            showHyperlinkPopup:
+              hitElement.link || isEmbeddableElement(hitElement)
+                ? "info"
+                : false,
+          };
+        });
+      } else {
+        // add element to selection while keeping prev elements selected
+        editor.setState((prevState) => ({
+          selectedElementIds: makeNextSelectedElementIds(
+            {
+              ...prevState.selectedElementIds,
+              [hitElement.id]: true,
+            },
+            prevState,
+          ),
+        }));
+      }
+    } else {
+      editor.setState((prevState) => ({
+        ...selectGroupsForSelectedElements(
+          {
+            editingGroupId: prevState.editingGroupId,
+            selectedElementIds: { [hitElement.id]: true },
+          },
+          editor.scene.getNonDeletedElements(),
+          prevState,
+          editor as any,
+        ),
+        selectedLinearElement:
+          isLinearElement(hitElement) &&
+          // Don't set `selectedLinearElement` if its same as the hitElement, this is mainly to prevent resetting the `hoverPointIndex` to -1.
+          // Future we should update the API to take care of setting the correct `hoverPointIndex` when initialized
+          prevState.selectedLinearElement?.elementId !== hitElement.id
+            ? new LinearElementEditor(
+                hitElement,
+                editor.scene.getNonDeletedElementsMap(),
+              )
+            : prevState.selectedLinearElement,
+      }));
+    }
+  }
+
   if (editor.state.selectionElement) {
     editor.setState({ selectionElement: null });
   }

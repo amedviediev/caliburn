@@ -1303,6 +1303,9 @@ export class CaliburnEditorComponent
   }
 
   clearSelection(hitElement?: ExcalidrawElement | null) {
+    // upstream reads this off the pre-update state, which React only settles
+    // once the handler returns
+    const previousSelectedElementIds = this.state.selectedElementIds;
     this.setState((prevState) => ({
       selectedElementIds: makeNextSelectedElementIds({}, prevState),
       activeEmbeddable: null,
@@ -1319,7 +1322,7 @@ export class CaliburnEditorComponent
     this.setState({
       selectedElementIds: makeNextSelectedElementIds({}, this.state),
       activeEmbeddable: null,
-      previousSelectedElementIds: this.state.selectedElementIds,
+      previousSelectedElementIds,
       selectedLinearElement: null,
     });
   }
@@ -1610,7 +1613,7 @@ export class CaliburnEditorComponent
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleLinearEditorPointerUp(this, this.pointerDownState, event);
-        handleSelectionPointerUp(this, this.pointerDownState);
+        handleSelectionPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
         if (
