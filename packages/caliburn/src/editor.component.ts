@@ -118,6 +118,7 @@ import type {
   ActionResult,
 } from "@excalidraw/excalidraw/actions/types";
 
+import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
   actionBindText,
   actionUnbindText,
@@ -145,10 +146,28 @@ import {
   actionDecreaseFontSize,
   actionIncreaseFontSize,
 } from "./actions/actionFontSize";
+import {
+  actionCopyElementLink,
+  actionLinkToElement,
+} from "./actions/actionElementLink";
+import {
+  actionRemoveAllElementsFromFrame,
+  actionSelectAllElementsInFrame,
+  actionWrapSelectionInFrame,
+  actionupdateFrameRendering,
+} from "./actions/actionFrame";
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
+import { actionLink } from "./actions/actionLink";
+import { actionCopyStyles, actionPasteStyles } from "./actions/actionStyles";
 import { actionTextAutoResize } from "./actions/actionTextAutoResize";
+import { actionToggleArrowBinding } from "./actions/actionToggleArrowBinding";
+import { actionToggleGridMode } from "./actions/actionToggleGridMode";
+import { actionToggleMidpointSnapping } from "./actions/actionToggleMidpointSnapping";
+import { actionToggleObjectsSnapMode } from "./actions/actionToggleObjectsSnapMode";
 import { actionToggleSearchMenu } from "./actions/actionToggleSearchMenu";
+import { actionToggleStats } from "./actions/actionToggleStats";
 import { actionToggleViewMode } from "./actions/actionToggleViewMode";
+import { actionToggleZenMode } from "./actions/actionToggleZenMode";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
 import {
@@ -404,6 +423,10 @@ export class CaliburnEditorComponent
 
   state: AppState = {
     ...getDefaultAppState(),
+    // upstream seeds the scene name at construction, from `props.name` or the
+    // dated default (`App.tsx`); caliburn has no `name` prop, so only the
+    // default applies
+    name: `${t("labels.untitled")}-${getDateTime()}`,
     offsetLeft: 0,
     offsetTop: 0,
     width: 0,
@@ -810,8 +833,24 @@ export class CaliburnEditorComponent
       actionCopy,
       actionCut,
       actionPaste,
+      actionCopyStyles,
+      actionPasteStyles,
+      actionAddToLibrary,
+      actionSelectAllElementsInFrame,
+      actionRemoveAllElementsFromFrame,
+      actionWrapSelectionInFrame,
+      actionupdateFrameRendering,
+      actionLink,
+      actionCopyElementLink,
+      actionLinkToElement,
       actionShortcuts,
       actionToggleSearchMenu,
+      actionToggleGridMode,
+      actionToggleObjectsSnapMode,
+      actionToggleArrowBinding,
+      actionToggleMidpointSnapping,
+      actionToggleZenMode,
+      actionToggleStats,
       actionToggleViewMode,
       actionLoadScene,
       actionSaveToActiveFile,

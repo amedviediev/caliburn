@@ -12,6 +12,7 @@ import { trackEvent } from "@excalidraw/excalidraw/analytics";
 
 import type { Action } from "@excalidraw/excalidraw/actions/types";
 
+import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
   actionBindText,
   actionUnbindText,
@@ -24,11 +25,26 @@ import {
   actionToggleElementLock,
   actionUnlockAllElements,
 } from "./actions/actionElementLock";
+import { actionCopyElementLink } from "./actions/actionElementLink";
 import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
+import {
+  actionRemoveAllElementsFromFrame,
+  actionSelectAllElementsInFrame,
+  actionWrapSelectionInFrame,
+} from "./actions/actionFrame";
 import { actionGroup, actionUngroup } from "./actions/actionGroup";
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
+import { actionLink } from "./actions/actionLink";
 import { actionSelectAll } from "./actions/actionSelectAll";
+import { actionCopyStyles, actionPasteStyles } from "./actions/actionStyles";
 import { actionTextAutoResize } from "./actions/actionTextAutoResize";
+import { actionToggleArrowBinding } from "./actions/actionToggleArrowBinding";
+import { actionToggleGridMode } from "./actions/actionToggleGridMode";
+import { actionToggleMidpointSnapping } from "./actions/actionToggleMidpointSnapping";
+import { actionToggleObjectsSnapMode } from "./actions/actionToggleObjectsSnapMode";
+import { actionToggleStats } from "./actions/actionToggleStats";
+import { actionToggleViewMode } from "./actions/actionToggleViewMode";
+import { actionToggleZenMode } from "./actions/actionToggleZenMode";
 import {
   actionBringForward,
   actionBringToFront,
@@ -48,8 +64,9 @@ export type ContextMenuItem = typeof CONTEXT_MENU_SEPARATOR | Action;
 
 /**
  * Upstream `getContextMenuItems`, restricted to the actions Caliburn has
- * ported so far (export/style/frame/link menu entries arrive with their
- * actions). Order matches upstream.
+ * ported so far — the canvas-to-clipboard export entries (`copyAsPng`,
+ * `copyAsSvg`, `copyText`) and the crop editor are the only upstream items
+ * still missing. Order matches upstream.
  */
 const getContextMenuItems = (
   editor: CaliburnEditorComponent,
@@ -60,7 +77,12 @@ const getContextMenuItems = (
 
   if (type === "canvas") {
     if (editor.state.viewModeEnabled) {
-      return [];
+      return [
+        actionToggleGridMode,
+        actionToggleZenMode,
+        actionToggleViewMode,
+        actionToggleStats,
+      ];
     }
 
     return [
@@ -68,6 +90,14 @@ const getContextMenuItems = (
       CONTEXT_MENU_SEPARATOR,
       actionSelectAll,
       actionUnlockAllElements,
+      CONTEXT_MENU_SEPARATOR,
+      actionToggleGridMode,
+      actionToggleObjectsSnapMode,
+      actionToggleArrowBinding,
+      actionToggleMidpointSnapping,
+      actionToggleZenMode,
+      actionToggleViewMode,
+      actionToggleStats,
     ];
   }
 
@@ -90,9 +120,17 @@ const getContextMenuItems = (
       : [];
 
   return [
+    CONTEXT_MENU_SEPARATOR,
     actionCut,
     actionCopy,
     actionPaste,
+    CONTEXT_MENU_SEPARATOR,
+    actionSelectAllElementsInFrame,
+    actionRemoveAllElementsFromFrame,
+    actionWrapSelectionInFrame,
+    CONTEXT_MENU_SEPARATOR,
+    actionCopyStyles,
+    actionPasteStyles,
     CONTEXT_MENU_SEPARATOR,
     actionGroup,
     actionTextAutoResize,
@@ -100,12 +138,17 @@ const getContextMenuItems = (
     actionBindText,
     actionWrapTextInContainer,
     actionUngroup,
+    CONTEXT_MENU_SEPARATOR,
+    actionAddToLibrary,
     ...zIndexActions,
     CONTEXT_MENU_SEPARATOR,
     actionFlipHorizontal,
     actionFlipVertical,
     CONTEXT_MENU_SEPARATOR,
     actionToggleLinearEditor,
+    CONTEXT_MENU_SEPARATOR,
+    actionLink,
+    actionCopyElementLink,
     CONTEXT_MENU_SEPARATOR,
     actionDuplicateSelection,
     actionToggleElementLock,

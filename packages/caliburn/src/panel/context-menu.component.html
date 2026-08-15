@@ -17,8 +17,10 @@
         type="button"
         class="context-menu-item"
         [class.dangerous]="item.dangerous"
+        [class.checkmark]="item.checked"
       >
         <div class="context-menu-item__label">{{ item.label }}</div>
+        <kbd class="context-menu-item__shortcut">{{ item.shortcut }}</kbd>
       </button>
     </li>
     } }

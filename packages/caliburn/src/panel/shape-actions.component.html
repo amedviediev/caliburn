@@ -168,6 +168,7 @@
       data-testid="opacity"
       [value]="currentOpacity()"
       (input)="setOpacity($event)"
+      (change)="setOpacity($event)"
     />
   </fieldset>
   } @if (predicates().layers) {

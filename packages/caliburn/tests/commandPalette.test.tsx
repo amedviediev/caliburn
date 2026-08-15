@@ -122,11 +122,16 @@ describe("CommandPalette", () => {
     expect(labels()).toContain(t("buttons.exportImage"));
     expect(labels()).toContain(t("toolBar.library"));
 
-    for (const gated of [
+    for (const shown of [
       t("buttons.zenMode"),
       t("buttons.objectsSnapMode"),
       t("labels.toggleGrid"),
       t("stats.fullTitle"),
+    ]) {
+      expect(labels()).toContain(shown);
+    }
+
+    for (const gated of [
       t("labels.textToDiagram"),
       t("toolBar.mermaidToExcalidraw"),
       t("labels.shapeSwitch"),

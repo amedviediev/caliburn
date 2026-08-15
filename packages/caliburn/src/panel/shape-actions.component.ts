@@ -282,8 +282,17 @@ export class CaliburnShapeActionsComponent {
     this.execute(actionChangeFontFamily, { currentItemFontFamily: value });
   }
 
+  /**
+   * Bound to both `input` and `change` — React maps `onChange` on a range
+   * input onto the `input` event, so upstream's single handler answers
+   * either; the guard keeps a browser's `input`-then-`change` pair from
+   * running the action twice.
+   */
   setOpacity(event: Event) {
     const value = Number((event.target as HTMLInputElement).value);
+    if (value === this.currentOpacity()) {
+      return;
+    }
     this.execute(actionChangeOpacity, value);
   }
 }

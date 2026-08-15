@@ -1,7 +1,9 @@
 import { Component, forwardRef, inject } from "@angular/core";
 
+import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { t } from "@excalidraw/excalidraw/i18n";
 
+import type { ShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
 
@@ -15,7 +17,9 @@ interface RenderedItem {
   separator: boolean;
   action: Action | null;
   label: string;
+  shortcut: string;
   dangerous: boolean;
+  checked: boolean;
 }
 
 /**
@@ -74,7 +78,9 @@ export class CaliburnContextMenuComponent {
           separator: true,
           action: null,
           label: "",
+          shortcut: "",
           dangerous: false,
+          checked: false,
         });
         continue;
       }
@@ -98,7 +104,11 @@ export class CaliburnContextMenuComponent {
         separator: false,
         action: item,
         label,
+        shortcut: item.name
+          ? getShortcutFromShortcutName(item.name as ShortcutName)
+          : "",
         dangerous: item.name === "deleteSelectedElements",
+        checked: !!item.checked?.(editor.state),
       });
     }
 

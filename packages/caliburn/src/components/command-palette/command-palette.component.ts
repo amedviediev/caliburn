@@ -178,6 +178,25 @@ const getActionIconName = (
       return isDark ? "sunIcon" : "moonIcon";
     case "searchMenu":
       return "searchIcon";
+    case "copyStyles":
+    case "pasteStyles":
+      return "paintIcon";
+    case "gridMode":
+      return "gridIcon";
+    case "objectsSnapMode":
+      return "magnetIcon";
+    case "zenMode":
+      return "coffeeIcon";
+    case "viewMode":
+      return "eyeIcon";
+    case "stats":
+      return "abacusIcon";
+    case "hyperlink":
+      return "linkIcon";
+    case "copyElementLink":
+      return "copyIcon";
+    case "linkToElement":
+      return "elementLinkIcon";
     default:
       return undefined;
   }
@@ -551,6 +570,9 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
       actionManager.actions.cut,
       actionManager.actions.copy,
       actionManager.actions.deleteSelectedElements,
+      actionManager.actions.wrapSelectionInFrame,
+      actionManager.actions.copyStyles,
+      actionManager.actions.pasteStyles,
       actionManager.actions.bringToFront,
       actionManager.actions.bringForward,
       actionManager.actions.sendBackward,
@@ -563,6 +585,9 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
       actionManager.actions.increaseFontSize,
       actionManager.actions.decreaseFontSize,
       actionManager.actions.toggleLinearEditor,
+      actionManager.actions.hyperlink,
+      actionManager.actions.copyElementLink,
+      actionManager.actions.linkToElement,
     ].map((action: Action) =>
       actionToCommand(
         action,
@@ -584,10 +609,15 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
       actionManager.actions.zoomOut,
       actionManager.actions.resetZoom,
       actionManager.actions.zoomToFit,
+      actionManager.actions.zenMode,
+      actionManager.actions.viewMode,
+      actionManager.actions.gridMode,
+      actionManager.actions.objectsSnapMode,
       actionManager.actions.toggleShortcuts,
       actionManager.actions.selectAll,
       actionManager.actions.toggleElementLock,
       actionManager.actions.unlockAllElements,
+      actionManager.actions.stats,
     ].map((action) => actionToCommand(action, DEFAULT_CATEGORIES.editor));
 
     const exportCommands: CommandPaletteItem[] = [
