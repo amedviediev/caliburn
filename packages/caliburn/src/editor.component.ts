@@ -10,6 +10,7 @@ import {
 import {
   DEFAULT_IMAGE_OPTIONS,
   DEFAULT_UI_OPTIONS,
+  arrayToMap,
   ELEMENT_SHIFT_TRANSLATE_AMOUNT,
   ELEMENT_TRANSLATE_AMOUNT,
   Emitter,
@@ -27,6 +28,7 @@ import {
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
 import {
+  CaptureUpdateAction,
   Scene,
   Store,
   getFrameChildrenInsertionIndex,
@@ -46,6 +48,7 @@ import {
   dataURLToString,
   getDataURL_sync,
 } from "@excalidraw/excalidraw/data/blob";
+import { restoreElements } from "@excalidraw/excalidraw/data/restore";
 
 import { KEYS, isArrowKey } from "@excalidraw/common";
 
@@ -488,28 +491,53 @@ export class CaliburnEditorComponent
 
   private initializeScene() {
     const initialData = this.initialData();
-    if (initialData?.appState) {
-      this.setState(initialData.appState);
-    }
-    if (initialData?.elements) {
-      this.scene.replaceAllElements(syncInvalidIndices(initialData.elements));
-    }
 
+    const restoredElements = restoreElements(initialData?.elements, null, {
+      repairBindings: true,
+      deleteInvisibleElements: true,
+    });
+    let restoredAppState: Partial<AppState> = {
+      ...this.state,
+      ...(initialData?.appState || {}),
+    };
+
+    const viewportAppState = {
+      ...this.state,
+      ...restoredAppState,
+    } as AppState;
     const initialViewport = this.initialState()?.viewport;
+
     if (initialViewport) {
+      const restoredNonDeletedElements = restoredElements.filter(
+        (element) => !element.isDeleted,
+      );
       const initialViewportState = this.viewport.resolveInitialViewport(
         initialViewport,
-        this.scene.getNonDeletedElementsMap(),
-        this.state,
+        arrayToMap(restoredNonDeletedElements) as Parameters<
+          AppViewport["resolveInitialViewport"]
+        >[1],
+        viewportAppState,
       );
       if (initialViewportState) {
-        this.setState({ ...initialViewportState });
+        restoredAppState = {
+          ...restoredAppState,
+          ...initialViewportState,
+        };
       }
     } else if (initialData?.scrollToContent) {
-      this.setState(
-        getScrollToContentState(this.scene.getNonDeletedElements(), this.state),
-      );
+      restoredAppState = {
+        ...restoredAppState,
+        ...getScrollToContentState(restoredElements, viewportAppState),
+      };
     }
+
+    this.store.clear();
+    this.history.clear();
+    this.syncActionResult({
+      elements: restoredElements,
+      appState: restoredAppState as AppState,
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
   }
 
   private updateDOMRect() {
