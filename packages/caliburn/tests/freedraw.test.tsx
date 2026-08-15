@@ -52,8 +52,9 @@ describe("freedraw", () => {
     expect(drawn.type).toBe("freedraw");
     expect(drawn.points.length).toBeGreaterThanOrEqual(4);
     expect(h.state.newElement).toBeNull();
-    // the freedraw tool stays active for back-to-back strokes
-    expect(h.state.activeTool.type).toBe("freedraw");
+    // the harness presses ESC after the stroke, which deselects and reverts
+    // to the selection tool (upstream actionDeselect behavior)
+    expect(h.state.activeTool.type).toBe("selection");
     expect(h.state.selectedElementIds[drawn.id]).toBeFalsy();
   });
 });

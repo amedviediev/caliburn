@@ -62,6 +62,22 @@ import { getCurrentItemRoundness } from "./create-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 
+let IS_PLAIN_PASTE = false;
+let IS_PLAIN_PASTE_TIMER = 0;
+
+export const trackPlainPasteKeyDown = (event: KeyboardEvent) => {
+  if (event[KEYS.CTRL_OR_CMD] && event.key.toLowerCase() === KEYS.V) {
+    IS_PLAIN_PASTE = event.shiftKey;
+    clearTimeout(IS_PLAIN_PASTE_TIMER);
+    // reset (100ms to be safe that we it runs after the ensuing
+    // paste event). Though, technically unnecessary to reset since we
+    // (re)set the flag before each paste event.
+    IS_PLAIN_PASTE_TIMER = window.setTimeout(() => {
+      IS_PLAIN_PASTE = false;
+    }, 100);
+  }
+};
+
 export const insertEmbeddableElement = (
   editor: CaliburnEditorComponent,
   {
@@ -349,7 +365,7 @@ export const pasteFromClipboard = async (
     return;
   }
 
-  const isPlainPaste = false;
+  const isPlainPaste = !!IS_PLAIN_PASTE;
 
   // #686
   const target = document.activeElement;

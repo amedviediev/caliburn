@@ -136,7 +136,11 @@ export const maybeDragSelectedElements = (
 
   // prevent dragging even if we're no longer holding cmd/ctrl otherwise
   // it would have weird results (stuff jumping all over the screen)
-  if (selectedElements.length > 0 && !pointerDownState.withCmdOrCtrl) {
+  // (with cmd/ctrl held the pointer falls through to the marquee instead)
+  if (selectedElements.length === 0 || pointerDownState.withCmdOrCtrl) {
+    return false;
+  }
+  {
     const dragOffset = {
       x: pointerCoords.x - pointerDownState.drag.origin.x,
       y: pointerCoords.y - pointerDownState.drag.origin.y,

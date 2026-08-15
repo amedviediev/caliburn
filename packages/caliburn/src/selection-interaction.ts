@@ -1,6 +1,7 @@
 import {
   DEFAULT_COLLISION_THRESHOLD,
   DEFAULT_TRANSFORM_HANDLE_SPACING,
+  KEYS,
   distance,
   getStrokeWidthByKey,
   shouldMaintainAspectRatio,
@@ -10,6 +11,7 @@ import {
   LinearElementEditor,
   deepCopyElement,
   dragNewElement,
+  editGroupForSelectedElement,
   getCommonBounds,
   getElementsWithinSelection,
   hasBoundingBox,
@@ -28,6 +30,7 @@ import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
 import { originInGridFromEvent } from "./create-interaction";
 import { maybeDragSelectedElements } from "./drag-interaction";
+import { isEditingTextContent } from "./text-interaction";
 import {
   initialResizeState,
   maybeArmResizeOnPointerDown,
@@ -211,16 +214,26 @@ export const getElementAtPosition = (
   editor: CaliburnEditorComponent,
   x: number,
   y: number,
-  opts?: {
-    includeBoundTextElement?: boolean;
-    includeLockedElements?: boolean;
-    preferSelected?: boolean;
-  },
+  opts?:
+    | {
+        includeBoundTextElement?: boolean;
+        includeLockedElements?: boolean;
+        preferSelected?: boolean;
+      }
+    | {
+        allHitElements: NonDeleted<ExcalidrawElement>[];
+        preferSelected?: boolean;
+      },
 ): NonDeleted<ExcalidrawElement> | null => {
-  const allHitElements = getElementsAtPosition(editor, x, y, {
-    includeBoundTextElement: opts?.includeBoundTextElement,
-    includeLockedElements: opts?.includeLockedElements,
-  });
+  let allHitElements: NonDeleted<ExcalidrawElement>[];
+  if (opts && "allHitElements" in opts) {
+    allHitElements = opts?.allHitElements || [];
+  } else {
+    allHitElements = getElementsAtPosition(editor, x, y, {
+      includeBoundTextElement: opts?.includeBoundTextElement,
+      includeLockedElements: opts?.includeLockedElements,
+    });
+  }
 
   if (allHitElements.length > 1) {
     if (opts?.preferSelected) {
@@ -263,12 +276,45 @@ export const handleSelectionPointerDown = (
     return pointerDownState;
   }
 
-  const allHitElements = getElementsAtPosition(editor, origin.x, origin.y);
-  const hitElement = allHitElements.length
-    ? allHitElements[allHitElements.length - 1]
-    : null;
+  const allHitElements = getElementsAtPosition(editor, origin.x, origin.y, {
+    includeLockedElements: true,
+  });
+  const unlockedHitElements = allHitElements.filter((e) => !e.locked);
+
+  // Cannot set preferSelected in getElementAtPosition as we do in pointer move; consider:
+  // A & B: both unlocked, A selected, B on top, A & B overlaps in some way
+  // we want to select B when clicking on the overlapping area
+  const hitElementMightBeLocked = getElementAtPosition(
+    editor,
+    origin.x,
+    origin.y,
+    {
+      allHitElements,
+    },
+  );
+
+  if (
+    !hitElementMightBeLocked ||
+    hitElementMightBeLocked.id !== editor.state.activeLockedId
+  ) {
+    editor.setState({
+      activeLockedId: null,
+    });
+  }
+
+  let hitElement: NonDeleted<ExcalidrawElement> | null;
+  if (
+    hitElementMightBeLocked &&
+    hitElementMightBeLocked.locked &&
+    !unlockedHitElements.some((el) => editor.state.selectedElementIds[el.id])
+  ) {
+    hitElement = null;
+  } else {
+    hitElement = getElementAtPosition(editor, origin.x, origin.y);
+  }
+
   pointerDownState.hit.element = hitElement;
-  pointerDownState.hit.allHitElements = allHitElements;
+  pointerDownState.hit.allHitElements = unlockedHitElements;
 
   const someHitElementIsSelected = allHitElements.some(
     (element) => !!editor.state.selectedElementIds[element.id],
@@ -283,7 +329,19 @@ export const handleSelectionPointerDown = (
   }
 
   if (hitElement != null) {
-    if (
+    // == deep selection ==
+    // on CMD/CTRL, drill down to hit element regardless of groups etc.
+    if (event[KEYS.CTRL_OR_CMD]) {
+      if (!editor.state.selectedElementIds[hitElement.id]) {
+        pointerDownState.hit.wasAddedToSelection = true;
+      }
+      editor.setState((prevState) => ({
+        ...editGroupForSelectedElement(prevState, hitElement),
+        previousSelectedElementIds: editor.state.selectedElementIds,
+      }));
+      // the fall-through below creates the selection element so a
+      // cmd/ctrl-drag can marquee-select within the hit element
+    } else if (
       !editor.state.selectedElementIds[hitElement.id] &&
       !someHitElementIsSelected &&
       !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
@@ -304,9 +362,13 @@ export const handleSelectionPointerDown = (
         ),
       }));
     }
-  } else if (!pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements) {
-    createSelectionElementOnPointerDown(editor, pointerDownState);
   }
+
+  editor.setState({
+    previousSelectedElementIds: editor.state.selectedElementIds,
+  });
+
+  createSelectionElementOnPointerDown(editor, pointerDownState);
 
   return pointerDownState;
 };
@@ -351,12 +413,14 @@ export const handleSelectionPointerMove = (
     }
   }
 
+  if (maybeDragSelectedElements(editor, pointerDownState, event)) {
+    return;
+  }
+
   if (editor.state.selectionElement) {
     pointerDownState.boxSelection.hasOccurred = true;
     maybeDragNewGenericElement(editor, pointerDownState, event);
     updateBoxSelection(editor, pointerDownState, event);
-  } else {
-    maybeDragSelectedElements(editor, pointerDownState, event);
   }
 };
 
@@ -479,5 +543,59 @@ export const handleSelectionPointerUp = (
 ) => {
   if (editor.state.selectionElement) {
     editor.setState({ selectionElement: null });
+  }
+};
+
+export const updateActiveLockedIdOnPointerUp = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+  event: PointerEvent,
+) => {
+  // if current elements are still selected
+  // and the pointer is just over a locked element
+  // do not allow activeLockedId to be set
+
+  const hitElements = pointerDownState.hit.allHitElements;
+
+  const sceneCoords = viewportCoordsToSceneCoords(
+    { clientX: event.clientX, clientY: event.clientY },
+    editor.state,
+  );
+
+  if (
+    editor.state.activeTool.type === "selection" &&
+    !pointerDownState.boxSelection.hasOccurred &&
+    !pointerDownState.resize.isResizing &&
+    !hitElements.some((el) => editor.state.selectedElementIds[el.id])
+  ) {
+    const hitLockedElement = getElementAtPosition(
+      editor,
+      sceneCoords.x,
+      sceneCoords.y,
+      {
+        includeLockedElements: true,
+      },
+    );
+
+    if (!isEditingTextContent(editor)) {
+      editor.store.scheduleCapture();
+    }
+
+    if (hitLockedElement?.locked) {
+      editor.setState({
+        activeLockedId:
+          hitLockedElement.groupIds.length > 0
+            ? hitLockedElement.groupIds.at(-1) || ""
+            : hitLockedElement.id,
+      });
+    } else {
+      editor.setState({
+        activeLockedId: null,
+      });
+    }
+  } else {
+    editor.setState({
+      activeLockedId: null,
+    });
   }
 };

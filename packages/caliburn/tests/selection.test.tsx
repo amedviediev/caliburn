@@ -1,6 +1,6 @@
 import React from "react";
 
-import { ROUNDNESS, arrayToMap, reseed } from "@excalidraw/common";
+import { KEYS, ROUNDNESS, arrayToMap, reseed } from "@excalidraw/common";
 import {
   getElementBounds,
   getElementLineSegments,
@@ -8,14 +8,19 @@ import {
 } from "@excalidraw/element";
 import { pointFrom, pointRotateRads, type LocalPoint } from "@excalidraw/math";
 
+import { TOOLS } from "@excalidraw/excalidraw/components/Tools";
+
 import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { Keyboard, Pointer } from "./helpers/ui";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
 import {
+  act,
   render,
   fireEvent,
+  mockBoundingClientRect,
+  restoreOriginalGetBoundingClientRect,
   assertSelectedElements,
   unmountComponent,
 } from "./test-utils";
@@ -131,6 +136,57 @@ describe("box-selection", () => {
     mouse.up();
 
     assertSelectedElements([]);
+  });
+});
+
+// requires the lasso tool — a later slice's gate
+describe.skip("lasso reselection", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw />);
+  });
+
+  it("should allow ctrl+alt lasso reselection when starting inside the active common bounds", () => {
+    const rectA = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      backgroundColor: "red",
+      fillStyle: "solid",
+    });
+    const rectB = API.createElement({
+      type: "rectangle",
+      x: 220,
+      y: 0,
+      width: 100,
+      height: 100,
+      backgroundColor: "blue",
+      fillStyle: "solid",
+    });
+
+    API.setElements([rectA, rectB]);
+    mouse.select([rectA, rectB]);
+    act(() => {
+      h.app.setActiveTool({ type: "lasso" });
+    });
+
+    // NOTE: the lasso starts inside the common bounds of the selection, and
+    // encloses rectA only (the default box selection mode being "contain")
+    Keyboard.withModifierKeys({ ctrl: true, alt: true }, () => {
+      mouse.downAt(110, 50);
+      mouse.moveTo(110, -50);
+
+      expect((h.app as any).lassoTrail.hasCurrentTrail).toBe(true);
+
+      mouse.moveTo(-50, -50);
+      mouse.moveTo(-50, 150);
+      mouse.moveTo(110, 150);
+      mouse.moveTo(110, 50);
+      mouse.up();
+    });
+
+    assertSelectedElements([rectA.id]);
   });
 });
 
@@ -722,6 +778,289 @@ describe("box-selection overlap mode", () => {
   });
 });
 
+describe("inner box-selection", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw />);
+  });
+  it("selecting elements visually nested inside another", async () => {
+    const rect1 = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 300,
+      backgroundColor: "red",
+      fillStyle: "solid",
+    });
+    const rect2 = API.createElement({
+      type: "rectangle",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+    });
+    const rect3 = API.createElement({
+      type: "rectangle",
+      x: 150,
+      y: 150,
+      width: 50,
+      height: 50,
+    });
+    API.setElements([rect1, rect2, rect3]);
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(40, 40);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(290, 290);
+      mouse.up();
+
+      assertSelectedElements([rect2.id, rect3.id]);
+    });
+  });
+
+  it("selecting grouped elements visually nested inside another", async () => {
+    const rect1 = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 300,
+      backgroundColor: "red",
+      fillStyle: "solid",
+    });
+    const rect2 = API.createElement({
+      type: "rectangle",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["A"],
+    });
+    const rect3 = API.createElement({
+      type: "rectangle",
+      x: 150,
+      y: 150,
+      width: 50,
+      height: 50,
+      groupIds: ["A"],
+    });
+    API.setElements([rect1, rect2, rect3]);
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(40, 40);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(rect2.x + rect2.width + 10, rect2.y + rect2.height + 10);
+      mouse.up();
+
+      assertSelectedElements([rect1.id]);
+      expect(h.state.selectedGroupIds).toEqual({});
+    });
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(40, 40);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(rect3.x + rect3.width + 10, rect3.y + rect3.height + 10);
+      mouse.up();
+
+      assertSelectedElements([rect2.id, rect3.id]);
+      expect(h.state.selectedGroupIds).toEqual({ A: true });
+    });
+  });
+
+  it("does not select a nested outer group until all members are contained", async () => {
+    const innerRect1 = API.createElement({
+      type: "rectangle",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["inner", "outer"],
+    });
+    const innerRect2 = API.createElement({
+      type: "rectangle",
+      x: 120,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["inner", "outer"],
+    });
+    const outerRect = API.createElement({
+      type: "rectangle",
+      x: 190,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["outer"],
+    });
+    API.setElements([innerRect1, innerRect2, outerRect]);
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(0, 0);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(
+        innerRect2.x + innerRect2.width + 10,
+        innerRect2.y + innerRect2.height + 10,
+      );
+      mouse.up();
+
+      assertSelectedElements([]);
+      expect(h.state.selectedGroupIds).toEqual({});
+    });
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(0, 0);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(
+        outerRect.x + outerRect.width + 10,
+        outerRect.y + outerRect.height + 10,
+      );
+      mouse.up();
+
+      assertSelectedElements([innerRect1.id, innerRect2.id, outerRect.id]);
+      expect(h.state.selectedGroupIds).toEqual({ outer: true });
+    });
+  });
+
+  it.skip("checks nested containment against the current editing depth", async () => {
+    const innerRect1 = API.createElement({
+      type: "rectangle",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["inner", "outer"],
+    });
+    const innerRect2 = API.createElement({
+      type: "rectangle",
+      x: 120,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["inner", "outer"],
+    });
+    const outerRect = API.createElement({
+      type: "rectangle",
+      x: 190,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["outer"],
+    });
+    const selection = API.createElement({
+      type: "rectangle",
+      x: 40,
+      y: 40,
+      width: 140,
+      height: 70,
+    });
+    const elements = [innerRect1, innerRect2, outerRect];
+    const elementsMap = arrayToMap([...elements, selection]);
+
+    expect(
+      getElementsWithinSelection(
+        elements,
+        selection,
+        elementsMap,
+        false,
+        "contain",
+      ).map((element) => element.id),
+    ).toEqual([]);
+
+    expect(
+      getElementsWithinSelection(
+        elements,
+        selection,
+        elementsMap,
+        false,
+        "contain",
+        // "outer", /* editingGroupId - add as param once we implement nested group handling */
+      ).map((element) => element.id),
+    ).toEqual([innerRect1.id, innerRect2.id]);
+  });
+
+  it("ignores grouped bound text when checking box-selection containment", async () => {
+    const container = API.createElement({
+      type: "rectangle",
+      id: "container",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["A"],
+      boundElements: [{ type: "text", id: "bound-text" }],
+    });
+    const boundText = API.createElement({
+      type: "text",
+      id: "bound-text",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 20,
+      containerId: container.id,
+      groupIds: ["A"],
+    });
+    const rect = API.createElement({
+      type: "rectangle",
+      x: 150,
+      y: 150,
+      width: 50,
+      height: 50,
+      groupIds: ["A"],
+    });
+    API.setElements([container, boundText, rect]);
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(40, 40);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(rect.x + rect.width + 10, rect.y + rect.height + 10);
+      mouse.up();
+
+      expect(h.state.selectedElementIds[container.id]).toBe(true);
+      expect(h.state.selectedElementIds[rect.id]).toBe(true);
+      expect(h.state.selectedGroupIds).toEqual({ A: true });
+    });
+  });
+
+  it("selecting & deselecting grouped elements visually nested inside another", async () => {
+    const rect1 = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 300,
+      backgroundColor: "red",
+      fillStyle: "solid",
+    });
+    const rect2 = API.createElement({
+      type: "rectangle",
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      groupIds: ["A"],
+    });
+    const rect3 = API.createElement({
+      type: "rectangle",
+      x: 150,
+      y: 150,
+      width: 50,
+      height: 50,
+      groupIds: ["A"],
+    });
+    API.setElements([rect1, rect2, rect3]);
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(rect2.x - 20, rect2.y - 20);
+      mouse.move(-1000, -1000);
+      mouse.moveTo(rect3.x + rect3.width + 10, rect3.y + rect3.height + 10);
+      assertSelectedElements([rect2.id, rect3.id]);
+      expect(h.state.selectedGroupIds).toEqual({ A: true });
+      mouse.moveTo(rect2.x - 10, rect2.y - 10);
+      assertSelectedElements([rect1.id]);
+      expect(h.state.selectedGroupIds).toEqual({});
+      mouse.up();
+    });
+  });
+});
+
 describe("selection element", () => {
   it("create selection element on pointer down", async () => {
     const { getByToolName, container } = await render(<Excalidraw />);
@@ -779,6 +1118,225 @@ describe("selection element", () => {
   });
 });
 
+describe("select single element on the scene", () => {
+  beforeAll(() => {
+    mockBoundingClientRect();
+  });
+
+  afterAll(() => {
+    restoreOriginalGetBoundingClientRect();
+  });
+
+  it("rectangle", async () => {
+    const { getByToolName, container } = await render(
+      <Excalidraw handleKeyboardGlobally={true} />,
+    );
+    const canvas = container.querySelector("canvas.interactive")!;
+    {
+      // create element
+      const tool = getByToolName("rectangle");
+      fireEvent.click(tool);
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: -1000, clientY: -1000 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+      fireEvent.pointerUp(canvas);
+      fireEvent.keyDown(document, {
+        key: KEYS.ESCAPE,
+      });
+    }
+
+    const tool = getByToolName("selection");
+    fireEvent.click(tool);
+    // click on a line on the rectangle
+    fireEvent.pointerDown(canvas, { clientX: 45, clientY: 20 });
+    fireEvent.pointerUp(canvas);
+
+    expect(h.state.selectionElement).toBeNull();
+    expect(h.elements.length).toEqual(1);
+    expect(h.state.selectedElementIds[h.elements[0].id]).toBeTruthy();
+
+    h.elements.forEach((element) => expect(element).toMatchSnapshot());
+  });
+
+  it("diamond", async () => {
+    const { getByToolName, container } = await render(
+      <Excalidraw handleKeyboardGlobally={true} />,
+    );
+    const canvas = container.querySelector("canvas.interactive")!;
+    {
+      // create element
+      const tool = getByToolName("diamond");
+      fireEvent.click(tool);
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: -1000, clientY: -1000 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+      fireEvent.pointerUp(canvas);
+      fireEvent.keyDown(document, {
+        key: KEYS.ESCAPE,
+      });
+    }
+
+    const tool = getByToolName("selection");
+    fireEvent.click(tool);
+    // click on a line on the rectangle
+    fireEvent.pointerDown(canvas, { clientX: 45, clientY: 20 });
+    fireEvent.pointerUp(canvas);
+
+    expect(h.state.selectionElement).toBeNull();
+    expect(h.elements.length).toEqual(1);
+    expect(h.state.selectedElementIds[h.elements[0].id]).toBeTruthy();
+
+    h.elements.forEach((element) => expect(element).toMatchSnapshot());
+  });
+
+  it("ellipse", async () => {
+    const { getByToolName, container } = await render(
+      <Excalidraw handleKeyboardGlobally={true} />,
+    );
+    const canvas = container.querySelector("canvas.interactive")!;
+    {
+      // create element
+      const tool = getByToolName("ellipse");
+      fireEvent.click(tool);
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: -1000, clientY: -1000 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+      fireEvent.pointerUp(canvas);
+      fireEvent.keyDown(document, {
+        key: KEYS.ESCAPE,
+      });
+    }
+
+    const tool = getByToolName("selection");
+    fireEvent.click(tool);
+    // click on a line on the rectangle
+    fireEvent.pointerDown(canvas, { clientX: 45, clientY: 20 });
+    fireEvent.pointerUp(canvas);
+
+    expect(h.state.selectionElement).toBeNull();
+    expect(h.elements.length).toEqual(1);
+    expect(h.state.selectedElementIds[h.elements[0].id]).toBeTruthy();
+
+    h.elements.forEach((element) => expect(element).toMatchSnapshot());
+  });
+
+  it("arrow", async () => {
+    const { getByToolName, container } = await render(
+      <Excalidraw handleKeyboardGlobally={true} />,
+    );
+    const canvas = container.querySelector("canvas.interactive")!;
+    {
+      // create element
+      const tool = getByToolName("arrow");
+      fireEvent.click(tool);
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: -1000, clientY: -1000 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+      fireEvent.pointerUp(canvas);
+      fireEvent.keyDown(document, {
+        key: KEYS.ESCAPE,
+      });
+    }
+
+    /*
+        1 2 3 4 5 6 7 8 9
+      1
+      2     x
+      3
+      4       .
+      5
+      6
+      7           x
+      8
+      9
+    */
+
+    const tool = getByToolName("selection");
+    fireEvent.click(tool);
+    // click on a line on the arrow
+    fireEvent.pointerDown(canvas, { clientX: 40, clientY: 40 });
+    fireEvent.pointerUp(canvas);
+
+    expect(h.state.selectionElement).toBeNull();
+    expect(h.elements.length).toEqual(1);
+    expect(h.state.selectedElementIds[h.elements[0].id]).toBeTruthy();
+    h.elements.forEach((element) => expect(element).toMatchSnapshot());
+  });
+
+  it("arrow escape", async () => {
+    const { getByToolName, container } = await render(
+      <Excalidraw handleKeyboardGlobally={true} />,
+    );
+    const canvas = container.querySelector("canvas.interactive")!;
+    {
+      // create element
+      const tool = getByToolName("line");
+      fireEvent.click(tool);
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: -1000, clientY: -1000 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+      fireEvent.pointerUp(canvas);
+      fireEvent.keyDown(document, {
+        key: KEYS.ESCAPE,
+      });
+    }
+
+    /*
+        1 2 3 4 5 6 7 8 9
+      1
+      2     x
+      3
+      4       .
+      5
+      6
+      7           x
+      8
+      9
+    */
+
+    const tool = getByToolName("selection");
+    fireEvent.click(tool);
+    // click on a line on the arrow
+    fireEvent.pointerDown(canvas, { clientX: 40, clientY: 40 });
+    fireEvent.pointerUp(canvas);
+
+    expect(h.state.selectionElement).toBeNull();
+    expect(h.elements.length).toEqual(1);
+    expect(h.state.selectedElementIds[h.elements[0].id]).toBeTruthy();
+
+    h.elements.forEach((element) => expect(element).toMatchSnapshot());
+  });
+});
+
+describe("tool locking & selection", () => {
+  it("should not select newly created element while tool is locked", async () => {
+    await render(<Excalidraw />);
+
+    UI.clickTool("lock");
+    expect(h.state.activeTool.locked).toBe(true);
+
+    for (const value of Object.keys(TOOLS) as (keyof typeof TOOLS)[]) {
+      if (
+        value !== "image" &&
+        value !== "selection" &&
+        value !== "lasso" &&
+        value !== "eraser" &&
+        value !== "arrow" &&
+        value !== "hand" &&
+        value !== "laser" &&
+        // no top-level toolbar button (rendered in the extra-tools dropdown)
+        value !== "frame" &&
+        value !== "embeddable" &&
+        value !== "autoshape" &&
+        value !== "bucketfill"
+      ) {
+        const element = UI.createElement(value);
+        expect(h.state.selectedElementIds[element.id]).not.toBe(true);
+      }
+    }
+  });
+});
+
 describe("selectedElementIds stability", () => {
   beforeEach(async () => {
     await render(<Excalidraw />);
@@ -820,5 +1378,60 @@ describe("selectedElementIds stability", () => {
     mouse.up();
 
     expect(h.state.selectedElementIds).toBe(selectedElementIds_2);
+  });
+});
+
+describe("deselecting", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+  });
+
+  it("esc unwinds nested group editing before deselecting", () => {
+    const rectA = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      groupIds: ["inner", "outer"],
+    });
+    const rectB = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 0,
+      groupIds: ["outer"],
+    });
+    const rectC = API.createElement({
+      type: "rectangle",
+      x: 200,
+      y: 0,
+      groupIds: ["inner", "outer"],
+    });
+
+    API.setElements([rectA, rectB, rectC]);
+
+    mouse.select(rectA);
+    assertSelectedElements(rectA, rectB, rectC);
+    expect(h.state.editingGroupId).toBeNull();
+
+    mouse.doubleClickOn(rectA);
+    assertSelectedElements(rectA, rectC);
+    expect(h.state.editingGroupId).toBe("outer");
+
+    mouse.doubleClickOn(rectA);
+    assertSelectedElements(rectA);
+    expect(h.state.editingGroupId).toBe("inner");
+
+    Keyboard.keyPress(KEYS.ESCAPE);
+    assertSelectedElements(rectA, rectC);
+    expect(h.state.editingGroupId).toBe("outer");
+
+    Keyboard.keyPress(KEYS.ESCAPE);
+    assertSelectedElements(rectA, rectB, rectC);
+    expect(h.state.editingGroupId).toBeNull();
+    expect(h.state.selectedGroupIds).toEqual({ outer: true });
+
+    Keyboard.keyPress(KEYS.ESCAPE);
+    expect(API.getSelectedElements()).toEqual([]);
+    expect(h.state.editingGroupId).toBeNull();
+    expect(h.state.selectedGroupIds).toEqual({});
   });
 });

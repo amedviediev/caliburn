@@ -1,10 +1,10 @@
 import { MIME_TYPES, randomId, reseed } from "@excalidraw/common";
 
-import type { FileId } from "@excalidraw/element/types";
-
 import * as blobModule from "@excalidraw/excalidraw/data/blob";
 import * as filesystemModule from "@excalidraw/excalidraw/data/filesystem";
 import { createPasteEvent } from "@excalidraw/excalidraw/clipboard";
+
+import type { FileId } from "@excalidraw/element/types";
 
 import type { ExcalidrawProps } from "@excalidraw/excalidraw/types";
 

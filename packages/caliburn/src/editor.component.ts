@@ -10,7 +10,6 @@ import {
 import {
   DEFAULT_IMAGE_OPTIONS,
   DEFAULT_UI_OPTIONS,
-  IMAGE_MIME_TYPES,
   ELEMENT_SHIFT_TRANSLATE_AMOUNT,
   ELEMENT_TRANSLATE_AMOUNT,
   Emitter,
@@ -60,7 +59,7 @@ import {
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import { Renderer } from "@excalidraw/excalidraw/scene/Renderer";
 
-import type { EditorInterface } from "@excalidraw/common";
+import type { EditorInterface, IMAGE_MIME_TYPES } from "@excalidraw/common";
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
@@ -86,6 +85,11 @@ import {
 } from "./actions/actionBoundText";
 import { canvasActions } from "./actions/actionCanvas";
 import { actionDeleteSelected } from "./actions/actionDeleteSelected";
+import { actionDeselect } from "./actions/actionDeselect";
+import {
+  actionToggleElementLock,
+  actionUnlockAllElements,
+} from "./actions/actionElementLock";
 import {
   actionDecreaseFontSize,
   actionIncreaseFontSize,
@@ -97,6 +101,7 @@ import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
 import {
   handleAppOnDrop,
   pasteFromClipboard as pasteFromClipboardIntoEditor,
+  trackPlainPasteKeyDown,
 } from "./clipboard-interaction";
 import {
   addNewImagesToImageCache,
@@ -160,6 +165,7 @@ import {
   handleSelectionPointerMove,
   handleSelectionPointerUp,
   initialPointerDownState,
+  updateActiveLockedIdOnPointerUp,
 } from "./selection-interaction";
 
 import type { ElementRef } from "@angular/core";
@@ -382,6 +388,7 @@ export class CaliburnEditorComponent
   constructor() {
     this.actionManager.registerAll([
       ...canvasActions,
+      actionDeselect,
       actionFinalize,
       actionSelectAll,
       actionDeleteSelected,
@@ -398,7 +405,9 @@ export class CaliburnEditorComponent
       actionUnbindText,
       actionWrapTextInContainer,
       actionTextAutoResize,
+      actionToggleElementLock,
       actionToggleLinearEditor,
+      actionUnlockAllElements,
       actionDecreaseFontSize,
       actionIncreaseFontSize,
       createUndoAction(this.history),
@@ -536,6 +545,8 @@ export class CaliburnEditorComponent
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
+    trackPlainPasteKeyDown(event);
+
     // bail if
     if (
       // inside an input
@@ -1101,6 +1112,7 @@ export class CaliburnEditorComponent
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleSelectionPointerUp(this, this.pointerDownState);
+        updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
         if (
           maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
