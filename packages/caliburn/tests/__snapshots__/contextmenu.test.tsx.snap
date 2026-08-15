@@ -80,6 +80,65 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
       },
       "separator",
       {
+        "keywords": [
+          "image",
+          "crop",
+        ],
+        "label": "helpDialog.cropStart",
+        "name": "cropEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      "separator",
+      {
+        "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "keyTest": [Function],
         "label": "labels.copyStyles",
         "name": "copyStyles",
@@ -244,6 +303,7 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
       },
       "separator",
       {
+        "category": "Elements",
         "keywords": [
           "line",
         ],
@@ -4195,6 +4255,65 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
       },
       "separator",
       {
+        "keywords": [
+          "image",
+          "crop",
+        ],
+        "label": "helpDialog.cropStart",
+        "name": "cropEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      "separator",
+      {
+        "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "keyTest": [Function],
         "label": "labels.copyStyles",
         "name": "copyStyles",
@@ -4359,6 +4478,7 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
       },
       "separator",
       {
+        "category": "Elements",
         "keywords": [
           "line",
         ],
@@ -4832,6 +4952,65 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
       },
       "separator",
       {
+        "keywords": [
+          "image",
+          "crop",
+        ],
+        "label": "helpDialog.cropStart",
+        "name": "cropEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      "separator",
+      {
+        "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "keyTest": [Function],
         "label": "labels.copyStyles",
         "name": "copyStyles",
@@ -4996,6 +5175,7 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
       },
       "separator",
       {
+        "category": "Elements",
         "keywords": [
           "line",
         ],
@@ -5474,6 +5654,50 @@ exports[`contextMenu element > shows context menu for canvas > [end of test] app
       "separator",
       {
         "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
+        "keyTest": [Function],
         "label": "labels.selectAll",
         "name": "selectAll",
         "perform": [Function],
@@ -5779,6 +6003,65 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
       },
       "separator",
       {
+        "keywords": [
+          "image",
+          "crop",
+        ],
+        "label": "helpDialog.cropStart",
+        "name": "cropEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      "separator",
+      {
+        "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "keyTest": [Function],
         "label": "labels.copyStyles",
         "name": "copyStyles",
@@ -5943,6 +6226,7 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
       },
       "separator",
       {
+        "category": "Elements",
         "keywords": [
           "line",
         ],
@@ -6192,6 +6476,65 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
       },
       "separator",
       {
+        "keywords": [
+          "image",
+          "crop",
+        ],
+        "label": "helpDialog.cropStart",
+        "name": "cropEditor",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "menu",
+        },
+        "viewMode": true,
+      },
+      "separator",
+      {
+        "keyTest": [Function],
+        "keywords": [
+          "png",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsPng",
+        "name": "copyAsPng",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "svg",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyAsSvg",
+        "name": "copyAsSvg",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "keywords": [
+          "text",
+          "clipboard",
+          "copy",
+        ],
+        "label": "labels.copyText",
+        "name": "copyText",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "keyTest": [Function],
         "label": "labels.copyStyles",
         "name": "copyStyles",
@@ -6356,6 +6699,7 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
       },
       "separator",
       {
+        "category": "Elements",
         "keywords": [
           "line",
         ],

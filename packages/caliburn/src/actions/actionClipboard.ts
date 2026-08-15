@@ -1,11 +1,22 @@
-import { KEYS, isFirefox } from "@excalidraw/common";
-import { CaptureUpdateAction } from "@excalidraw/element";
+import { CODES, KEYS, isFirefox } from "@excalidraw/common";
+import {
+  CaptureUpdateAction,
+  getTextFromElements,
+  isTextElement,
+} from "@excalidraw/element";
 
 import {
+  copyTextToSystemClipboard,
   copyToClipboard,
   createPasteEvent,
+  probablySupportsClipboardBlob,
+  probablySupportsClipboardWriteText,
   readSystemClipboard,
 } from "@excalidraw/excalidraw/clipboard";
+import {
+  exportCanvas,
+  prepareElementsForExport,
+} from "@excalidraw/excalidraw/data";
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import { actionDeleteSelected } from "./actionDeleteSelected";
@@ -108,4 +119,165 @@ export const actionCut = register<ClipboardEvent | null>({
     return actionDeleteSelected.perform(elements, appState, null, app);
   },
   keyTest: (event) => event[KEYS.CTRL_OR_CMD] && event.key === KEYS.X,
+});
+
+export const actionCopyAsSvg = register({
+  name: "copyAsSvg",
+  label: "labels.copyAsSvg",
+  trackEvent: { category: "element" },
+  perform: async (elements, appState, _data, app) => {
+    if (!app.canvas) {
+      return {
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    }
+
+    const { exportedElements, exportingFrame } = prepareElementsForExport(
+      elements,
+      appState,
+      true,
+    );
+
+    try {
+      await exportCanvas(
+        "clipboard-svg",
+        exportedElements,
+        appState,
+        app.files,
+        {
+          ...appState,
+          exportingFrame,
+          name: app.getName(),
+        },
+      );
+
+      const selectedElements = app.scene.getSelectedElements({
+        selectedElementIds: appState.selectedElementIds,
+        includeBoundTextElement: true,
+        includeElementsInFrames: true,
+      });
+
+      return {
+        appState: {
+          toast: {
+            message: t("toast.copyToClipboardAsSvg", {
+              exportSelection: selectedElements.length
+                ? t("toast.selection")
+                : t("toast.canvas"),
+              exportColorScheme: appState.exportWithDarkMode
+                ? t("buttons.darkMode")
+                : t("buttons.lightMode"),
+            }),
+          },
+        },
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    } catch (error: any) {
+      console.error(error);
+      return {
+        appState: {
+          errorMessage: error.message,
+        },
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    }
+  },
+  predicate: (elements) => {
+    return probablySupportsClipboardWriteText && elements.length > 0;
+  },
+  keywords: ["svg", "clipboard", "copy"],
+});
+
+export const actionCopyAsPng = register({
+  name: "copyAsPng",
+  label: "labels.copyAsPng",
+  trackEvent: { category: "element" },
+  perform: async (elements, appState, _data, app) => {
+    if (!app.canvas) {
+      return {
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    }
+    const selectedElements = app.scene.getSelectedElements({
+      selectedElementIds: appState.selectedElementIds,
+      includeBoundTextElement: true,
+      includeElementsInFrames: true,
+    });
+
+    const { exportedElements, exportingFrame } = prepareElementsForExport(
+      elements,
+      appState,
+      true,
+    );
+    try {
+      await exportCanvas("clipboard", exportedElements, appState, app.files, {
+        ...appState,
+        exportingFrame,
+        name: app.getName(),
+      });
+      return {
+        appState: {
+          ...appState,
+          toast: {
+            message: t("toast.copyToClipboardAsPng", {
+              exportSelection: selectedElements.length
+                ? t("toast.selection")
+                : t("toast.canvas"),
+              exportColorScheme: appState.exportWithDarkMode
+                ? t("buttons.darkMode")
+                : t("buttons.lightMode"),
+            }),
+          },
+        },
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    } catch (error: any) {
+      console.error(error);
+      return {
+        appState: {
+          ...appState,
+          errorMessage: error.message,
+        },
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    }
+  },
+  predicate: (elements) => {
+    return probablySupportsClipboardBlob && elements.length > 0;
+  },
+  keyTest: (event) => event.code === CODES.C && event.altKey && event.shiftKey,
+  keywords: ["png", "clipboard", "copy"],
+});
+
+export const copyText = register({
+  name: "copyText",
+  label: "labels.copyText",
+  trackEvent: { category: "element" },
+  perform: (elements, appState, _, app) => {
+    const selectedElements = app.scene.getSelectedElements({
+      selectedElementIds: appState.selectedElementIds,
+      includeBoundTextElement: true,
+    });
+
+    try {
+      copyTextToSystemClipboard(getTextFromElements(selectedElements));
+    } catch (e) {
+      throw new Error(t("errors.copyToSystemClipboardFailed"));
+    }
+    return {
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+  predicate: (elements, appState, _, app) => {
+    return (
+      probablySupportsClipboardWriteText &&
+      app.scene
+        .getSelectedElements({
+          selectedElementIds: appState.selectedElementIds,
+          includeBoundTextElement: true,
+        })
+        .some(isTextElement)
+    );
+  },
+  keywords: ["text", "clipboard", "copy"],
 });

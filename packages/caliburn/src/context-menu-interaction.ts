@@ -18,7 +18,15 @@ import {
   actionUnbindText,
   actionWrapTextInContainer,
 } from "./actions/actionBoundText";
-import { actionCopy, actionCut, actionPaste } from "./actions/actionClipboard";
+import {
+  actionCopy,
+  actionCopyAsPng,
+  actionCopyAsSvg,
+  actionCut,
+  actionPaste,
+  copyText,
+} from "./actions/actionClipboard";
+import { actionToggleCropEditor } from "./actions/actionCropEditor";
 import { actionDeleteSelected } from "./actions/actionDeleteSelected";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import {
@@ -62,22 +70,22 @@ export const CONTEXT_MENU_SEPARATOR = "separator" as const;
 
 export type ContextMenuItem = typeof CONTEXT_MENU_SEPARATOR | Action;
 
-/**
- * Upstream `getContextMenuItems`, restricted to the actions Caliburn has
- * ported so far — the canvas-to-clipboard export entries (`copyAsPng`,
- * `copyAsSvg`, `copyText`) and the crop editor are the only upstream items
- * still missing. Order matches upstream.
- */
+/** Upstream `App.getContextMenuItems`. */
 const getContextMenuItems = (
   editor: CaliburnEditorComponent,
   type: "canvas" | "element",
 ): ContextMenuItem[] => {
+  const options: ContextMenuItem[] = [];
+
+  options.push(actionCopyAsPng, actionCopyAsSvg);
+
   // canvas contextMenu
   // ---------------------------------------------------------------------------
 
   if (type === "canvas") {
     if (editor.state.viewModeEnabled) {
       return [
+        ...options,
         actionToggleGridMode,
         actionToggleZenMode,
         actionToggleViewMode,
@@ -87,6 +95,10 @@ const getContextMenuItems = (
 
     return [
       actionPaste,
+      CONTEXT_MENU_SEPARATOR,
+      actionCopyAsPng,
+      actionCopyAsSvg,
+      copyText,
       CONTEXT_MENU_SEPARATOR,
       actionSelectAll,
       actionUnlockAllElements,
@@ -104,8 +116,10 @@ const getContextMenuItems = (
   // element contextMenu
   // ---------------------------------------------------------------------------
 
+  options.push(copyText);
+
   if (editor.state.viewModeEnabled) {
-    return [actionCopy];
+    return [actionCopy, ...options];
   }
 
   const zIndexActions: ContextMenuItem[] =
@@ -128,6 +142,10 @@ const getContextMenuItems = (
     actionSelectAllElementsInFrame,
     actionRemoveAllElementsFromFrame,
     actionWrapSelectionInFrame,
+    CONTEXT_MENU_SEPARATOR,
+    actionToggleCropEditor,
+    CONTEXT_MENU_SEPARATOR,
+    ...options,
     CONTEXT_MENU_SEPARATOR,
     actionCopyStyles,
     actionPasteStyles,

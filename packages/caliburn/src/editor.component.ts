@@ -227,7 +227,15 @@ import { CaliburnHyperlinkComponent } from "./components/hyperlink/hyperlink.com
 import { CaliburnLayerUIComponent } from "./components/layer-ui.component";
 import { CaliburnContextMenuComponent } from "./panel/context-menu.component";
 import { handleCanvasContextMenu } from "./context-menu-interaction";
-import { actionCopy, actionCut, actionPaste } from "./actions/actionClipboard";
+import {
+  actionCopy,
+  actionCopyAsPng,
+  actionCopyAsSvg,
+  actionCut,
+  actionPaste,
+  copyText,
+} from "./actions/actionClipboard";
+import { actionToggleCropEditor } from "./actions/actionCropEditor";
 
 import { createTestHook } from "./test-hook";
 import {
@@ -913,6 +921,10 @@ export class CaliburnEditorComponent
       actionCopy,
       actionCut,
       actionPaste,
+      actionCopyAsPng,
+      actionCopyAsSvg,
+      copyText,
+      actionToggleCropEditor,
       actionCopyStyles,
       actionPasteStyles,
       actionAddToLibrary,

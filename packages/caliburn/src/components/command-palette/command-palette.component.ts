@@ -58,6 +58,8 @@ import { CaliburnLibraryItemIconComponent } from "../library/library-item-icon.c
 import { CaliburnTextFieldComponent } from "../text-field.component";
 import { TOOL_ICONS } from "../tools";
 
+import { DEFAULT_CATEGORIES } from "./categories";
+
 import type { CommandPaletteItem } from "./types";
 import type { CaliburnEditorComponent } from "../../editor.component";
 import type { OnDestroy } from "@angular/core";
@@ -67,16 +69,6 @@ import type { OnDestroy } from "@angular/core";
  * outlives the palette's own mount — a module-level signal is the same scope.
  */
 const lastUsedPaletteItem = signal<CommandPaletteItem | null>(null);
-
-export const DEFAULT_CATEGORIES = {
-  app: "App",
-  export: "Export",
-  tools: "Tools",
-  editor: "Editor",
-  elements: "Elements",
-  links: "Links",
-  library: "Library",
-};
 
 const getCategoryOrder = (category: string) => {
   switch (category) {
@@ -585,6 +577,7 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
       actionManager.actions.increaseFontSize,
       actionManager.actions.decreaseFontSize,
       actionManager.actions.toggleLinearEditor,
+      actionManager.actions.cropEditor,
       actionManager.actions.hyperlink,
       actionManager.actions.copyElementLink,
       actionManager.actions.linkToElement,
@@ -623,6 +616,8 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
     const exportCommands: CommandPaletteItem[] = [
       actionManager.actions.saveToActiveFile,
       actionManager.actions.saveFileToDisk,
+      actionManager.actions.copyAsPng,
+      actionManager.actions.copyAsSvg,
     ].map((action) => actionToCommand(action, DEFAULT_CATEGORIES.export));
 
     const commandsFromActions: CommandPaletteItem[] = [

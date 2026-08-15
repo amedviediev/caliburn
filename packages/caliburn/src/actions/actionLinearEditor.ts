@@ -7,10 +7,13 @@ import {
 
 import type { ExcalidrawLinearElement } from "@excalidraw/element/types";
 
+import { DEFAULT_CATEGORIES } from "../components/command-palette/categories";
+
 import { register } from "./register";
 
 export const actionToggleLinearEditor = register({
   name: "toggleLinearEditor",
+  category: DEFAULT_CATEGORIES.elements,
   label: (elements, appState, app) => {
     const selectedElement = app.scene.getSelectedElements({
       selectedElementIds: appState.selectedElementIds,

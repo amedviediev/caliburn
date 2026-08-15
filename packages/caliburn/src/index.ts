@@ -55,7 +55,7 @@ export { CaliburnWelcomeScreenMenuComponent } from "./components/welcome-screen/
 export { CaliburnWelcomeScreenToolbarHintComponent } from "./components/welcome-screen/toolbar-hint.component";
 export { openConfirmModal } from "./components/overwrite-confirm/overwrite-confirm-state";
 export { provideCaliburnIcons } from "./components/icons";
-export { DEFAULT_CATEGORIES } from "./components/command-palette/command-palette.component";
+export { DEFAULT_CATEGORIES } from "./components/command-palette/categories";
 export type { CommandPaletteItem } from "./components/command-palette/types";
 
 export interface ExcalidrawCompatProps {
