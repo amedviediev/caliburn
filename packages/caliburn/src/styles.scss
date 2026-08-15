@@ -22,6 +22,16 @@
 @use "../../excalidraw/components/HintViewer.scss";
 @use "../../excalidraw/components/LayerUI.scss";
 @use "../../excalidraw/components/Toolbar.scss";
+@use "../../excalidraw/components/main-menu/DefaultItems.scss";
+@use "../../excalidraw/components/ConfirmDialog.scss";
+@use "../../excalidraw/components/DialogActionButton.scss";
+@use "../../excalidraw/components/HelpDialog.scss";
+@use "../../excalidraw/components/Card.scss";
+@use "../../excalidraw/components/ExportDialog.scss";
+@use "../../excalidraw/components/ImageExportDialog.scss";
+@use "../../excalidraw/components/Switch.scss";
+@use "../../excalidraw/components/TextInput.scss";
+@use "../../excalidraw/components/ProjectName.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
 // These four host-bound primitives (`packages/caliburn/src/components/`)
@@ -33,7 +43,8 @@
 caliburn-island,
 .dropdown-menu-group,
 caliburn-button-separator,
-caliburn-dropdown-menu-separator {
+caliburn-dropdown-menu-separator,
+caliburn-switch {
   display: block;
 }
 
@@ -51,6 +62,24 @@ caliburn-hint-viewer,
 caliburn-layer-ui,
 caliburn-footer,
 caliburn-toolbar,
-caliburn-dropdown-menu-content {
+caliburn-dropdown-menu-content,
+caliburn-main-menu,
+caliburn-default-main-menu,
+caliburn-menu-load-scene,
+caliburn-menu-save-to-active-file,
+caliburn-menu-save-as-image,
+caliburn-menu-search,
+caliburn-menu-help,
+caliburn-menu-clear-canvas,
+caliburn-menu-toggle-theme,
+caliburn-menu-change-canvas-background,
+caliburn-menu-export,
+caliburn-menu-live-collaboration-trigger,
+caliburn-active-confirm-dialog,
+caliburn-confirm-dialog,
+caliburn-error-dialog,
+caliburn-help-dialog,
+caliburn-image-export-dialog,
+caliburn-json-export-dialog {
   display: contents;
 }
