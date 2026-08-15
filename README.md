@@ -6,7 +6,7 @@ The name is Excalibur's older form — Latin _Caliburnus_, from the Welsh _Caled
 
 ## Status
 
-The editor's interaction core is ported and green against the upstream test suite. What is in this repository today is Excalidraw's source at the pinned commit alongside `packages/caliburn`, the Angular editor being built against it. Nothing is published to npm yet; the planned package name is `caliburn-ng`.
+The editor's interaction core is ported and green against the upstream test suite. What is in this repository today is Excalidraw's source at the pinned commit alongside `packages/caliburn`, the Angular editor being built against it. Nothing is published to npm yet; the planned package name is `ngx-caliburn`.
 
 - [x] Repository setup: README, license, brand assets, font licenses
 - [x] Delete the React code that will never be used; measure what remains — after the cut, the editor package holds 44,408 lines of `.tsx` and 30,462 lines of `.ts` outside tests, and 1,733 upstream tests still pass

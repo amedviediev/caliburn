@@ -1,5 +1,5 @@
 {
-  "name": "caliburn-ng",
+  "name": "ngx-caliburn",
   "version": "0.1.0",
   "description": "Hand-drawn style infinite canvas for Angular, built on Excalidraw's element engine",
   "license": "MIT",
