@@ -83,12 +83,14 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     activeTool,
     zenModeEnabled,
     gridModeEnabled,
+    libraryReturnUrl,
     theme,
     name,
     renderCustomStats,
     onPaste,
     detectScroll = true,
     handleKeyboardGlobally = false,
+    onLibraryChange,
     autoFocus = false,
     generateIdForFile,
     onLinkOpen,
@@ -220,6 +222,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
         activeTool={activeTool}
         zenModeEnabled={zenModeEnabled}
         gridModeEnabled={gridModeEnabled}
+        libraryReturnUrl={libraryReturnUrl}
         theme={theme}
         name={name}
         renderCustomStats={renderCustomStats}
@@ -227,6 +230,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
         onPaste={onPaste}
         detectScroll={detectScroll}
         handleKeyboardGlobally={handleKeyboardGlobally}
+        onLibraryChange={onLibraryChange}
         autoFocus={autoFocus}
         generateIdForFile={generateIdForFile}
         onLinkOpen={onLinkOpen}
@@ -420,6 +424,7 @@ export {
   loadSceneOrLibraryFromBlob,
   loadLibraryFromBlob,
 } from "./data/blob";
+export { mergeLibraryItems, getLibraryItemsHash } from "./data/library";
 export { isLinearElement } from "@excalidraw/element";
 
 export {
@@ -443,6 +448,8 @@ export {
 } from "@excalidraw/element";
 
 export { CaptureUpdateAction } from "@excalidraw/element";
+
+export { parseLibraryTokensFromUrl, useHandleLibrary } from "./data/library";
 
 export { Sidebar } from "./components/Sidebar/Sidebar";
 export { Button } from "./components/Button";

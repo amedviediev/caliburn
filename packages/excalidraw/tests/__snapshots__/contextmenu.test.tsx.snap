@@ -441,6 +441,14 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
         },
       },
       "separator",
+      {
+        "label": "labels.addToLibrary",
+        "name": "addToLibrary",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
       "separator",
       {
         "PanelComponent": [Function],
@@ -1070,6 +1078,224 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
 exports[`contextMenu element > right-clicking on a group should select whole group > [end of test] redo stack 1`] = `[]`;
 
 exports[`contextMenu element > right-clicking on a group should select whole group > [end of test] undo stack 1`] = `[]`;
+
+exports[`contextMenu element > selecting 'Add to library' in context menu adds element to library > [end of test] appState 1`] = `
+{
+  "activeEmbeddable": null,
+  "activeLockedId": null,
+  "activeTool": {
+    "customType": null,
+    "fromSelection": false,
+    "lastActiveTool": null,
+    "locked": false,
+    "type": "selection",
+  },
+  "bindMode": "orbit",
+  "bindingPreference": "enabled",
+  "boxSelectionMode": "contain",
+  "collaborators": Map {},
+  "colorTopPicks": {
+    "bucketFill": null,
+    "elementBackground": null,
+    "elementStroke": null,
+  },
+  "contextMenu": null,
+  "croppingElementId": null,
+  "currentHoveredFontFamily": null,
+  "currentItemArrowType": "round",
+  "currentItemBackgroundColor": "transparent",
+  "currentItemEndArrowhead": "arrow",
+  "currentItemFillStyle": "solid",
+  "currentItemFontFamily": 5,
+  "currentItemFontSize": 20,
+  "currentItemOpacity": 100,
+  "currentItemRoughness": 1,
+  "currentItemRoundness": "sharp",
+  "currentItemStartArrowhead": null,
+  "currentItemStrokeColor": "#1e1e1e",
+  "currentItemStrokeStyle": "solid",
+  "currentItemStrokeVariability": "constant",
+  "currentItemStrokeWidthKey": "medium",
+  "currentItemTextAlign": "left",
+  "cursorButton": "up",
+  "defaultSidebarDockedPreference": false,
+  "editingFrame": null,
+  "editingGroupId": null,
+  "editingTextElement": null,
+  "elementsToHighlight": null,
+  "errorMessage": null,
+  "exportBackground": true,
+  "exportEmbedScene": false,
+  "exportScale": 1,
+  "exportWithDarkMode": false,
+  "fileHandle": null,
+  "frameRendering": {
+    "clip": true,
+    "enabled": true,
+    "name": true,
+    "outline": true,
+  },
+  "frameToHighlight": null,
+  "gridModeEnabled": false,
+  "gridSize": 20,
+  "gridStep": 5,
+  "height": 100,
+  "hoveredArrowTextAnchor": null,
+  "hoveredElementIds": {},
+  "isBindingEnabled": true,
+  "isCropping": false,
+  "isLoading": false,
+  "isMidpointSnappingEnabled": true,
+  "isResizing": false,
+  "isRotating": false,
+  "lastPointerDownWith": "mouse",
+  "lockedMultiSelections": {},
+  "multiElement": null,
+  "name": "Untitled-201933152653",
+  "newElement": null,
+  "objectsSnapModeEnabled": false,
+  "offsetLeft": 20,
+  "offsetTop": 10,
+  "openDialog": null,
+  "openMenu": null,
+  "openPopup": null,
+  "openSidebar": null,
+  "originSnapOffset": null,
+  "penDetected": false,
+  "penMode": false,
+  "preferredSelectionTool": {
+    "initialized": true,
+    "type": "selection",
+  },
+  "previousSelectedElementIds": {},
+  "resizingElement": null,
+  "scrollConstraints": null,
+  "scrollX": 0,
+  "scrollY": 0,
+  "scrolledOutside": true,
+  "searchMatches": null,
+  "selectedElementIds": {
+    "id0": true,
+  },
+  "selectedElementsAreBeingDragged": false,
+  "selectedGroupIds": {},
+  "selectedLinearElement": null,
+  "selectionElement": null,
+  "shouldCacheIgnoreZoom": false,
+  "showHyperlinkPopup": false,
+  "showWelcomeScreen": true,
+  "snapLines": [],
+  "stats": {
+    "open": false,
+    "panels": 3,
+  },
+  "suggestedBinding": null,
+  "theme": "light",
+  "toast": {
+    "message": "Added to library",
+  },
+  "viewBackgroundColor": "#ffffff",
+  "viewModeEnabled": false,
+  "width": 200,
+  "zenModeEnabled": false,
+  "zoom": {
+    "value": 1,
+  },
+}
+`;
+
+exports[`contextMenu element > selecting 'Add to library' in context menu adds element to library > [end of test] element 0 1`] = `
+{
+  "angle": 0,
+  "backgroundColor": "transparent",
+  "boundElements": null,
+  "customData": undefined,
+  "fillStyle": "solid",
+  "frameId": null,
+  "groupIds": [],
+  "height": 10,
+  "id": "id0",
+  "index": "a0",
+  "isDeleted": false,
+  "link": null,
+  "locked": false,
+  "opacity": 100,
+  "roughness": 1,
+  "roundness": null,
+  "seed": 1278240551,
+  "strokeColor": "#1e1e1e",
+  "strokeStyle": "solid",
+  "strokeWidth": 2,
+  "type": "rectangle",
+  "updated": 1,
+  "version": 3,
+  "versionNonce": 401146281,
+  "width": 10,
+  "x": -20,
+  "y": -10,
+}
+`;
+
+exports[`contextMenu element > selecting 'Add to library' in context menu adds element to library > [end of test] number of elements 1`] = `1`;
+
+exports[`contextMenu element > selecting 'Add to library' in context menu adds element to library > [end of test] redo stack 1`] = `[]`;
+
+exports[`contextMenu element > selecting 'Add to library' in context menu adds element to library > [end of test] undo stack 1`] = `
+[
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {
+          "selectedElementIds": {
+            "id0": true,
+          },
+        },
+        "inserted": {
+          "selectedElementIds": {},
+        },
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {
+        "id0": {
+          "deleted": {
+            "angle": 0,
+            "backgroundColor": "transparent",
+            "boundElements": null,
+            "customData": undefined,
+            "fillStyle": "solid",
+            "frameId": null,
+            "groupIds": [],
+            "height": 10,
+            "index": "a0",
+            "isDeleted": false,
+            "link": null,
+            "locked": false,
+            "opacity": 100,
+            "roughness": 1,
+            "roundness": null,
+            "strokeColor": "#1e1e1e",
+            "strokeStyle": "solid",
+            "strokeWidth": 2,
+            "type": "rectangle",
+            "version": 3,
+            "width": 10,
+            "x": -20,
+            "y": -10,
+          },
+          "inserted": {
+            "isDeleted": true,
+            "version": 2,
+          },
+        },
+      },
+      "updated": {},
+    },
+    "id": "id2",
+  },
+]
+`;
 
 exports[`contextMenu element > selecting 'Bring forward' in context menu brings element forward > [end of test] appState 1`] = `
 {
@@ -2385,14 +2611,14 @@ exports[`contextMenu element > selecting 'Duplicate' in context menu duplicates 
   "opacity": 100,
   "roughness": 1,
   "roundness": null,
-  "seed": 1116226695,
+  "seed": 1014066025,
   "strokeColor": "#1e1e1e",
   "strokeStyle": "solid",
   "strokeWidth": 2,
   "type": "rectangle",
   "updated": 1,
   "version": 5,
-  "versionNonce": 238820263,
+  "versionNonce": 400692809,
   "width": 10,
   "x": -10,
   "y": 0,
@@ -4936,6 +5162,14 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
         },
       },
       "separator",
+      {
+        "label": "labels.addToLibrary",
+        "name": "addToLibrary",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
       "separator",
       {
         "PanelComponent": [Function],
@@ -6151,6 +6385,14 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
         },
       },
       "separator",
+      {
+        "label": "labels.addToLibrary",
+        "name": "addToLibrary",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
       "separator",
       {
         "PanelComponent": [Function],
@@ -8112,6 +8354,14 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
         },
       },
       "separator",
+      {
+        "label": "labels.addToLibrary",
+        "name": "addToLibrary",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
       "separator",
       {
         "PanelComponent": [Function],
@@ -9101,6 +9351,14 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
         },
       },
       "separator",
+      {
+        "label": "labels.addToLibrary",
+        "name": "addToLibrary",
+        "perform": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
       "separator",
       {
         "PanelComponent": [Function],

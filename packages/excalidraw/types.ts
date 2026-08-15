@@ -56,6 +56,7 @@ import type { Action } from "./actions/types";
 import type { Spreadsheet } from "./charts";
 import type { ClipboardData } from "./clipboard";
 import type App from "./components/App";
+import type Library from "./data/library";
 import type { ContextMenuItems } from "./components/ContextMenu";
 import type { SnapLine } from "./snapping";
 import type { ImportedDataState } from "./data/types";
@@ -621,6 +622,12 @@ export type LibraryItem = {
 };
 export type LibraryItems = readonly LibraryItem[];
 export type LibraryItems_anyVersion = LibraryItems | LibraryItems_v1;
+
+export type LibraryItemsSource =
+  | ((
+      currentLibraryItems: LibraryItems,
+    ) => MaybePromise<LibraryItems_anyVersion | Blob>)
+  | MaybePromise<LibraryItems_anyVersion | Blob>;
 // -----------------------------------------------------------------------------
 
 export type ExcalidrawInitialDataState = Merge<
@@ -903,6 +910,7 @@ export interface ExcalidrawProps {
   zenModeEnabled?: boolean;
   gridModeEnabled?: boolean;
   objectsSnapModeEnabled?: boolean;
+  libraryReturnUrl?: string;
   theme?: Theme;
   // @TODO come with better API before v0.18.0
   name?: string;
@@ -917,6 +925,7 @@ export interface ExcalidrawProps {
   imageOptions?: ImageOptions;
   detectScroll?: boolean;
   handleKeyboardGlobally?: boolean;
+  onLibraryChange?: (libraryItems: LibraryItems) => void | Promise<any>;
   autoFocus?: boolean;
   generateIdForFile?: (file: File) => string | Promise<string>;
   generateLinkForSelection?: (id: string, type: "element" | "group") => string;
@@ -1088,6 +1097,7 @@ export type AppClassProperties = {
   /** static canvas */
   canvas: HTMLCanvasElement;
   focusContainer(): void;
+  library: Library;
   imageCache: Map<
     FileId,
     {
@@ -1241,6 +1251,7 @@ export interface ExcalidrawImperativeAPI {
   updateScene: InstanceType<typeof App>["updateScene"];
   applyDeltas: InstanceType<typeof App>["applyDeltas"];
   mutateElement: InstanceType<typeof App>["mutateElement"];
+  updateLibrary: InstanceType<typeof Library>["updateLibrary"];
   resetScene: InstanceType<typeof App>["resetScene"];
   getSceneElementsIncludingDeleted: InstanceType<
     typeof App
