@@ -18,6 +18,10 @@
 @use "../../excalidraw/components/Dialog.scss";
 @use "../../excalidraw/components/Tooltip.scss";
 @use "../../excalidraw/components/dropdownMenu/DropdownMenu.scss";
+@use "../../excalidraw/components/Actions.scss";
+@use "../../excalidraw/components/HintViewer.scss";
+@use "../../excalidraw/components/LayerUI.scss";
+@use "../../excalidraw/components/Toolbar.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
 // These four host-bound primitives (`packages/caliburn/src/components/`)
@@ -31,4 +35,22 @@ caliburn-island,
 caliburn-button-separator,
 caliburn-dropdown-menu-separator {
   display: block;
+}
+
+// Angular components always render their own host element, where upstream
+// renders a React fragment / nothing at all — `display: contents` keeps
+// these transparent to layout so their children sit where upstream's do
+// (the toolbar island's own children, and the footer/toolbar sections).
+// Angular components always render their own host element, where upstream
+// renders a React fragment / nothing at all — `display: contents` keeps
+// these transparent to layout so their children sit where upstream's do.
+// `caliburn-dropdown-menu-content` is in the list because its host carries
+// the consumer's `class` (e.g. `.App-toolbar__extra-tools-dropdown`, which
+// sets a `min-width`) while the menu itself only renders while open.
+caliburn-hint-viewer,
+caliburn-layer-ui,
+caliburn-footer,
+caliburn-toolbar,
+caliburn-dropdown-menu-content {
+  display: contents;
 }

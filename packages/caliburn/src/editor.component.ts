@@ -21,7 +21,6 @@ import {
   MIN_ZOOM,
   POINTER_BUTTON,
   POINTER_EVENTS,
-  TOOL_TYPE,
   ZOOM_STEP,
   debounce,
   getStrokeWidthByKey,
@@ -155,8 +154,9 @@ import {
   actionChangeVerticalAlign,
 } from "./actions/actionProperties";
 import { ActionManager } from "./actions/manager";
+import { provideCaliburnIcons } from "./components/icons";
+import { CaliburnLayerUIComponent } from "./components/layer-ui.component";
 import { CaliburnContextMenuComponent } from "./panel/context-menu.component";
-import { CaliburnShapeActionsComponent } from "./panel/shape-actions.component";
 import { handleCanvasContextMenu } from "./context-menu-interaction";
 import { actionCopy, actionCut, actionPaste } from "./actions/actionClipboard";
 
@@ -258,8 +258,6 @@ type SetStateArg =
   | ((prevState: AppState) => Partial<AppState> | null)
   | null;
 
-export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
-
 /**
  * The editor shell the harness mounts. It carries the real element engine
  * (Scene, Store, History) and the upstream AppState shape; the editor
@@ -268,7 +266,8 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
 @Component({
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnContextMenuComponent, CaliburnShapeActionsComponent],
+  imports: [CaliburnContextMenuComponent, CaliburnLayerUIComponent],
+  providers: [provideCaliburnIcons()],
   template: `
     <div
       #container
@@ -291,46 +290,7 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
       (drop)="handleAppOnDrop($event)"
       (dragover)="handleAppOnDragOver($event)"
     >
-      <div class="App-toolbar">
-        @for (tool of toolbarTools; track tool) {
-        <button
-          type="button"
-          [attr.data-testid]="'toolbar-' + tool"
-          [attr.aria-label]="tool"
-          (click)="setActiveTool({ type: tool })"
-        >
-          {{ tool }}
-        </button>
-        }
-        <button
-          type="button"
-          data-testid="toolbar-lock"
-          aria-label="lock"
-          (click)="toggleToolLock()"
-        >
-          lock
-        </button>
-        @if (!state.viewModeEnabled) {
-        <button
-          type="button"
-          data-testid="button-undo"
-          aria-label="Undo"
-          [disabled]="history.isUndoStackEmpty"
-          (click)="actionManager.executeAction(undoAction)"
-        >
-          undo
-        </button>
-        <button
-          type="button"
-          data-testid="button-redo"
-          aria-label="Redo"
-          [disabled]="history.isRedoStackEmpty"
-          (click)="actionManager.executeAction(redoAction)"
-        >
-          redo
-        </button>
-        }
-      </div>
+      <caliburn-layer-ui />
       <canvas #staticCanvas class="excalidraw__canvas static"></canvas>
       <canvas
         #newElementCanvas
@@ -351,7 +311,6 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         <svg #svgLayer></svg>
       </div>
       <div class="excalidraw-textEditorContainer"></div>
-      <caliburn-shape-actions />
       <caliburn-context-menu />
     </div>
   `,
@@ -408,8 +367,6 @@ export class CaliburnEditorComponent
     viewChild<ElementRef<HTMLCanvasElement>>("newElementCanvas");
   readonly interactiveCanvasRef =
     viewChild<ElementRef<HTMLCanvasElement>>("interactiveCanvas");
-
-  readonly toolbarTools = TOOLBAR_TOOLS;
 
   /**
    * Bumped on every commit so child views (the panels) that read it are
