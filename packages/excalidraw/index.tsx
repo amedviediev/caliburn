@@ -19,7 +19,9 @@ import App, {
   ExcalidrawAPISetContext,
 } from "./components/App";
 import Footer from "./components/footer/FooterCenter";
+import LiveCollaborationTrigger from "./components/live-collaboration/LiveCollaborationTrigger";
 import MainMenu from "./components/main-menu/MainMenu";
+import WelcomeScreen from "./components/welcome-screen/WelcomeScreen";
 import {
   useAppStateValue as _useAppStateValue,
   useOnAppStateChange as _useOnAppStateChange,
@@ -463,6 +465,8 @@ export {
   ExcalidrawAPIContext,
 } from "./components/App";
 
+export { WelcomeScreen };
+export { LiveCollaborationTrigger };
 export { Stats } from "./components/Stats";
 
 export { DefaultSidebar } from "./components/DefaultSidebar";
@@ -479,6 +483,7 @@ export {
 
 export { elementsOverlappingBBox } from "@excalidraw/element";
 
+export { DiagramToCodePlugin } from "./components/DiagramToCodePlugin/DiagramToCodePlugin";
 export { getDataURL } from "./data/blob";
 export { isElementLink } from "@excalidraw/element";
 
