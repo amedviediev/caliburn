@@ -184,11 +184,9 @@ export class CaliburnTopPicksComponent implements AfterViewInit, OnDestroy {
       return;
     }
     event.preventDefault();
-    const rect = this.host.nativeElement.getBoundingClientRect();
-    this.contextMenuPosition.set({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    });
+    // fixed-positioned at the pointer — upstream's radix menu is portaled
+    // out of the strip and popper-positioned instead
+    this.contextMenuPosition.set({ x: event.clientX, y: event.clientY });
     this.contextMenuOpen.set(true);
   }
 

@@ -11,7 +11,7 @@
       [open]="generalStatsOpen()"
       (openTrigger)="toggleGeneralStats()"
     >
-      <h3 collapsibleLabel>{{ labels.generalStats }}</h3>
+      <h3 ngProjectAs="[collapsibleLabel]">{{ labels.generalStats }}</h3>
       <div class="exc-stats__rows">
         <div
           class="exc-stats__row exc-stats__row--heading"
@@ -47,7 +47,7 @@
         [open]="elementPropertiesOpen()"
         (openTrigger)="toggleElementProperties()"
       >
-        <h3 collapsibleLabel>{{ labels.elementProperties }}</h3>
+        <h3 ngProjectAs="[collapsibleLabel]">{{ labels.elementProperties }}</h3>
         <div class="exc-stats__rows">
           @if (singleElement(); as element) {
           <div

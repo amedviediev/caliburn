@@ -19,7 +19,7 @@
 } @if (contextMenuOpen()) {
 <div
   class="color-picker__context-menu"
-  style="z-index: var(--zIndex-ui-styles-popup)"
+  style="position: fixed; z-index: var(--zIndex-ui-styles-popup)"
   [style.left.px]="contextMenuPosition().x"
   [style.top.px]="contextMenuPosition().y"
 >
