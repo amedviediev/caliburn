@@ -112,11 +112,6 @@ export class CaliburnContextMenuComponent {
       });
     }
 
-    // drop a trailing separator
-    while (rendered.length && rendered[rendered.length - 1].separator) {
-      rendered.pop();
-    }
-
     return rendered;
   }
 

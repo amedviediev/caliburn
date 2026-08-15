@@ -103,7 +103,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
     imageCache: editor.imageCache,
     isExporting: false,
     renderGrid: isGridModeEnabled(editor as any),
-    renderLinks: true,
+    renderLinks: editor.isLinksEnabled(),
     canvasBackgroundColor: editor.state.viewBackgroundColor,
     embedsValidationStatus: editor.embedsValidationStatus,
     elementsPendingErasure: editor.elementsPendingErasure,
