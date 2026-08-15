@@ -1814,6 +1814,26 @@ export class CaliburnEditorComponent
     }
   }
 
+  /**
+   * Commits immediately even inside `batchCommits` — the equivalent of
+   * React's `flushSync`, for the few upstream sites that force a store
+   * commit mid-handler (e.g. capturing a linear element's points before
+   * the uncommitted trailing point is added).
+   */
+  flushCommits() {
+    const batchDepth = this.batchDepth;
+    this.batchDepth = 0;
+    this.commitPending = false;
+    try {
+      this.commit();
+      if (!this.unmounted) {
+        this.cdr.detectChanges();
+      }
+    } finally {
+      this.batchDepth = batchDepth;
+    }
+  }
+
   private commit() {
     if (this.batchDepth > 0) {
       this.commitPending = true;

@@ -427,6 +427,9 @@ export const handleMultiElementPointerMove = (
           },
         },
       });
+      // upstream wraps the setState above in `flushSync` so the scheduled
+      // capture commits before the uncommitted trailing point is added
+      editor.flushCommits();
       editor.scene.mutateElement(
         multiElement,
         {
