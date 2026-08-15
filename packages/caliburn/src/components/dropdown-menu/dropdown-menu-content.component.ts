@@ -81,7 +81,9 @@ export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
 
   /** fires on outside click or Escape, mirroring upstream's `onClickOutside`. */
   readonly closeOutside = output<void>();
-  /** fires when any descendant item is selected, mirroring upstream's `onSelect`. */
+  /** fires when any descendant item is selected, mirroring upstream's
+   * `onSelect`. Fed by the bubbling `DROPDOWN_MENU_ITEM_SELECT_EVENT` the
+   * items raise (the template binds that event name literally). */
   readonly itemSelected = output<Event>();
 
   onItemSelect(event: CustomEvent<Event>) {
