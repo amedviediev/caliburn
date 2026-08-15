@@ -1423,6 +1423,14 @@ export class CaliburnEditorComponent
   private handleCanvasPointerDownImpl(event: PointerEvent) {
     this.lastPointerDownEvent = event;
 
+    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
+    if (!event.ctrlKey) {
+      const preferenceEnabled = this.state.bindingPreference === "enabled";
+      if (this.state.isBindingEnabled !== preferenceEnabled) {
+        this.setState({ isBindingEnabled: preferenceEnabled });
+      }
+    }
+
     // since contextMenu options are potentially evaluated on each render,
     // and an contextMenu action may depend on selection state, we must
     // close the contextMenu before we update the selection on pointerDown
@@ -1522,14 +1530,6 @@ export class CaliburnEditorComponent
       return;
     }
 
-    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
-    if (!event.ctrlKey) {
-      const preferenceEnabled = this.state.bindingPreference === "enabled";
-      if (this.state.isBindingEnabled !== preferenceEnabled) {
-        this.setState({ isBindingEnabled: preferenceEnabled });
-      }
-    }
-
     if (this.pointerDownState) {
       const coords = viewportCoordsToSceneCoords(event, this.state);
       this.pointerDownState.lastCoords = coords;
@@ -1596,6 +1596,15 @@ export class CaliburnEditorComponent
 
   private handleCanvasPointerUpImpl(event: PointerEvent) {
     removePointer(this, event);
+
+    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
+    if (!event.ctrlKey) {
+      const preferenceEnabled = this.state.bindingPreference === "enabled";
+      if (this.state.isBindingEnabled !== preferenceEnabled) {
+        this.setState({ isBindingEnabled: preferenceEnabled });
+      }
+    }
+
     if (this.pointerDownState) {
       this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
       if (this.state.activeTool.type === "custom") {
@@ -1613,8 +1622,8 @@ export class CaliburnEditorComponent
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleLinearEditorPointerUp(this, this.pointerDownState, event);
-        handleSelectionPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
+        handleSelectionPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
         if (
           maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
