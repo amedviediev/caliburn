@@ -8,14 +8,17 @@ import {
   getStrokeWidthByKey,
   invariant,
   isTransparent,
+  reduceToCommonValue,
 } from "@excalidraw/common";
 import {
   CaptureUpdateAction,
   canBecomePolygon,
   getBoundTextElement,
+  getNonDeletedElements,
   hasStrokeColor,
   isElbowArrow,
   isLineElement,
+  isSomeElementSelected,
   isTextElement,
   isUsingAdaptiveRadius,
   newElementWith,
@@ -41,10 +44,56 @@ import type {
   TextAlign,
   VerticalAlign,
 } from "@excalidraw/element/types";
-import type { AppState } from "@excalidraw/excalidraw/types";
+import type { AppState, Primitive } from "@excalidraw/excalidraw/types";
 
 import { changeFontSize, changeProperty } from "./actionFontSize";
 import { register } from "./register";
+
+import type { CaliburnEditorComponent } from "../editor.component";
+
+export const getFormValue = function <T extends Primitive>(
+  elements: readonly ExcalidrawElement[],
+  app: CaliburnEditorComponent,
+  /**
+   * input value (usually the element attribute value,
+   * but depends on what the action's PanelComponent input expects)
+   */
+  getValue: (element: ExcalidrawElement) => T,
+  elementPredicate: true | ((element: ExcalidrawElement) => boolean),
+  defaultValue: T | ((isSomeElementSelected: boolean) => T),
+): T {
+  const editingTextElement = app.state.editingTextElement;
+  const nonDeletedElements = getNonDeletedElements(elements);
+
+  let ret: T | null = null;
+
+  if (editingTextElement) {
+    ret = getValue(editingTextElement);
+  }
+
+  if (!ret) {
+    const hasSelection = isSomeElementSelected(nonDeletedElements, app.state);
+
+    if (hasSelection) {
+      const selectedElements = app.scene.getSelectedElements(app.state);
+      const targetElements =
+        elementPredicate === true
+          ? selectedElements
+          : selectedElements.filter((el) => elementPredicate(el));
+
+      ret =
+        reduceToCommonValue(targetElements, getValue) ??
+        (typeof defaultValue === "function"
+          ? defaultValue(true)
+          : defaultValue);
+    } else {
+      ret =
+        typeof defaultValue === "function" ? defaultValue(false) : defaultValue;
+    }
+  }
+
+  return ret;
+};
 
 export const actionChangeStrokeColor = register<
   Pick<AppState, "currentItemStrokeColor">
@@ -131,6 +180,26 @@ export const actionChangeBackgroundColor = register<
         ...value,
       },
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+});
+
+export const actionChangeBucketFillBackgroundColor = register<
+  Pick<AppState, "currentItemBackgroundColor">
+>({
+  name: "changeBucketFillBackgroundColor",
+  label: "labels.changeBackground",
+  trackEvent: false,
+  // the bucket fill tool has no element to mutate; it shares
+  // `currentItemBackgroundColor` but hides `transparent` (an invisible fill
+  // would be a no-op) and shows the effective fallback color instead
+  perform: (elements, appState, value) => {
+    return {
+      appState: {
+        ...appState,
+        ...value,
+      },
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
 });

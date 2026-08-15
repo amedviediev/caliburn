@@ -1,27 +1,45 @@
 import { Component, forwardRef, inject } from "@angular/core";
 
 import {
+  BUCKET_FILL_BACKGROUND_PICKS,
   CLASSES,
+  COLOR_PALETTE,
   DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE,
   DEFAULT_ELEMENT_BACKGROUND_PICKS,
   DEFAULT_ELEMENT_STROKE_COLOR_PALETTE,
   DEFAULT_ELEMENT_STROKE_PICKS,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
   FONT_FAMILY,
   FONT_SIZES,
+  ROUNDNESS,
   VERTICAL_ALIGN,
 } from "@excalidraw/common";
-import { getTargetElements } from "@excalidraw/element";
+import {
+  getBoundTextElement,
+  getTargetElements,
+  isArrowElement,
+  isTextElement,
+} from "@excalidraw/element";
 
 import { getShapeActionPredicates } from "@excalidraw/excalidraw/components/shapeActionPredicates";
 import { t } from "@excalidraw/excalidraw/i18n";
+import { getSelectedElements } from "@excalidraw/excalidraw/scene";
+import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
 
+import type {
+  ExcalidrawElement,
+  ExcalidrawTextElement,
+} from "@excalidraw/element/types";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
+import type { Primitive } from "@excalidraw/excalidraw/types";
 
 import { actionDeleteSelected } from "../actions/actionDeleteSelected";
 import { actionDuplicateSelection } from "../actions/actionDuplicateSelection";
 import { actionGroup, actionUngroup } from "../actions/actionGroup";
 import {
   actionChangeBackgroundColor,
+  actionChangeBucketFillBackgroundColor,
   actionChangeFillStyle,
   actionChangeFontFamily,
   actionChangeFontSize,
@@ -33,6 +51,8 @@ import {
   actionChangeStrokeWidth,
   actionChangeTextAlign,
   actionChangeVerticalAlign,
+  getFormValue,
+  getStrokeWidthKeyForElement,
 } from "../actions/actionProperties";
 import {
   actionBringForward,
@@ -93,16 +113,30 @@ export class CaliburnShapeActionsComponent {
   readonly backgroundPalette = DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
   readonly strokeTopPicks = DEFAULT_ELEMENT_STROKE_PICKS;
   readonly backgroundTopPicks = DEFAULT_ELEMENT_BACKGROUND_PICKS;
+  readonly bucketFillTopPicks = BUCKET_FILL_BACKGROUND_PICKS;
+  /** hidden rather than removed from the palette so the remaining colors
+   * keep their usual hotkeys (w for white etc.) */
+  readonly bucketFillExcludedColors = [COLOR_PALETTE.transparent];
 
-  readonly fillOptions: RadioOption[] = [
-    { value: "hachure", text: t("labels.hachure"), testId: "fill-hachure" },
-    {
-      value: "cross-hatch",
-      text: t("labels.crossHatch"),
-      testId: "fill-cross-hatch",
-    },
-    { value: "solid", text: t("labels.solid"), testId: "fill-solid" },
-  ];
+  private readonly hachureSuffix = ` (${getShortcutKey("Alt-Click")})`;
+
+  fillOptions(): RadioOption[] {
+    return [
+      {
+        value: "hachure",
+        text: `${
+          this.allElementsZigZag() ? t("labels.zigzag") : t("labels.hachure")
+        }${this.hachureSuffix}`,
+        testId: "fill-hachure",
+      },
+      {
+        value: "cross-hatch",
+        text: t("labels.crossHatch"),
+        testId: "fill-cross-hatch",
+      },
+      { value: "solid", text: t("labels.solid"), testId: "fill-solid" },
+    ];
+  }
 
   readonly strokeWidthOptions: RadioOption[] = [
     { value: "thin", text: t("labels.thin"), testId: "strokeWidth-thin" },
@@ -219,6 +253,179 @@ export class CaliburnShapeActionsComponent {
     );
   }
 
+  /** the `elements` an upstream `PanelComponent` is handed (`manager.tsx`) */
+  private elements() {
+    return this.editor().scene.getElementsIncludingDeleted();
+  }
+
+  private formValue<T extends Primitive>(
+    getValue: (element: ExcalidrawElement) => T,
+    elementPredicate: true | ((element: ExcalidrawElement) => boolean),
+    defaultValue: T | ((isSomeElementSelected: boolean) => T),
+  ): T {
+    return getFormValue(
+      this.elements(),
+      this.editor(),
+      getValue,
+      elementPredicate,
+      defaultValue,
+    );
+  }
+
+  allElementsZigZag() {
+    const editor = this.editor();
+    const selectedElements = getSelectedElements(this.elements(), editor.state);
+    return (
+      selectedElements.length > 0 &&
+      selectedElements.every((el) => el.fillStyle === "zigzag")
+    );
+  }
+
+  fillStyleValue() {
+    return this.formValue(
+      (element) => element.fillStyle,
+      (element) => element.hasOwnProperty("fillStyle"),
+      (hasSelection) =>
+        hasSelection ? null : this.editor().state.currentItemFillStyle,
+    );
+  }
+
+  /** upstream's `active` override: zigzag lights the hachure entry up */
+  fillStyleActive(option: RadioOption) {
+    if (option.value === "hachure" && this.allElementsZigZag()) {
+      return true;
+    }
+    return this.fillStyleValue() === option.value;
+  }
+
+  setFillStyle(option: RadioOption, event: MouseEvent) {
+    const selectedElements = getSelectedElements(
+      this.elements(),
+      this.editor().state,
+    );
+    const nextValue =
+      event.altKey &&
+      option.value === "hachure" &&
+      selectedElements.every((el) => el.fillStyle === "hachure")
+        ? "zigzag"
+        : option.value;
+
+    this.execute(this.fillStyleAction, nextValue);
+  }
+
+  strokeWidthValue() {
+    return this.formValue(
+      getStrokeWidthKeyForElement,
+      (element) => element.hasOwnProperty("strokeWidth"),
+      (hasSelection) =>
+        hasSelection ? null : this.editor().state.currentItemStrokeWidthKey,
+    );
+  }
+
+  strokeStyleValue() {
+    return this.formValue(
+      (element) => element.strokeStyle,
+      (element) => element.hasOwnProperty("strokeStyle"),
+      (hasSelection) =>
+        hasSelection ? null : this.editor().state.currentItemStrokeStyle,
+    );
+  }
+
+  sloppinessValue() {
+    return this.formValue(
+      (element) => element.roughness,
+      (element) => element.hasOwnProperty("roughness"),
+      (hasSelection) =>
+        hasSelection ? null : this.editor().state.currentItemRoughness,
+    );
+  }
+
+  roundnessValue() {
+    const hasLegacyRoundness = this.targetElements().some(
+      (el) => el.roundness?.type === ROUNDNESS.LEGACY,
+    );
+
+    return this.formValue<"sharp" | "round" | null>(
+      (element) =>
+        hasLegacyRoundness ? null : element.roundness ? "round" : "sharp",
+      (element) =>
+        !isArrowElement(element) && element.hasOwnProperty("roundness"),
+      (hasSelection) =>
+        hasSelection ? null : this.editor().state.currentItemRoundness,
+    );
+  }
+
+  private boundTextValue<T extends Primitive>(
+    fromText: (element: ExcalidrawTextElement) => T,
+    defaultValue: T | ((isSomeElementSelected: boolean) => T),
+  ): T {
+    const elementsMap = this.editor().scene.getNonDeletedElementsMap();
+    return this.formValue(
+      (element) => {
+        if (isTextElement(element)) {
+          return fromText(element);
+        }
+        const boundTextElement = getBoundTextElement(element, elementsMap);
+        if (boundTextElement) {
+          return fromText(boundTextElement);
+        }
+        return null as T;
+      },
+      (element) =>
+        isTextElement(element) ||
+        getBoundTextElement(element, elementsMap) !== null,
+      defaultValue,
+    );
+  }
+
+  fontFamilyValue() {
+    return this.boundTextValue(
+      (element) => element.fontFamily,
+      (hasSelection) =>
+        hasSelection
+          ? null
+          : this.editor().state.currentItemFontFamily || DEFAULT_FONT_FAMILY,
+    );
+  }
+
+  fontSizeValue() {
+    return this.boundTextValue(
+      (element) => element.fontSize,
+      (hasSelection) =>
+        hasSelection
+          ? null
+          : this.editor().state.currentItemFontSize || DEFAULT_FONT_SIZE,
+    );
+  }
+
+  textAlignValue() {
+    return this.boundTextValue(
+      (element) => element.textAlign,
+      (hasSelection) =>
+        hasSelection ? null : this.editor().state.currentItemTextAlign,
+    );
+  }
+
+  verticalAlignValue() {
+    const elementsMap = this.editor().scene.getNonDeletedElementsMap();
+    return this.formValue(
+      (element) => {
+        if (isTextElement(element) && element.containerId) {
+          return element.verticalAlign;
+        }
+        const boundTextElement = getBoundTextElement(element, elementsMap);
+        if (boundTextElement) {
+          return boundTextElement.verticalAlign;
+        }
+        return null;
+      },
+      (element) =>
+        isTextElement(element) ||
+        getBoundTextElement(element, elementsMap) !== null,
+      (hasSelection) => (hasSelection ? null : VERTICAL_ALIGN.MIDDLE),
+    );
+  }
+
   predicates() {
     const editor = this.editor();
     return getShapeActionPredicates(
@@ -242,6 +449,30 @@ export class CaliburnShapeActionsComponent {
         activeToolType !== "laser" &&
         activeToolType !== "lasso")
     );
+  }
+
+  /** upstream's bucket-fill branch of `SelectedShapeActions` (Actions.tsx):
+   * the tool configures only the fill it creates — color, fill style and
+   * opacity (shared `currentItem*` values; no stroke properties) */
+  isBucketFillTool() {
+    return this.editor().state.activeTool.type === "bucketfill";
+  }
+
+  bucketFillBackgroundColor() {
+    const editor = this.editor();
+    return editor.bucketFill.getBucketFillBackgroundColor(
+      editor.state.currentItemBackgroundColor,
+    );
+  }
+
+  readonly updateBucketFillBackgroundColor = (formData?: any) => {
+    this.execute(actionChangeBucketFillBackgroundColor, formData);
+  };
+
+  setBucketFillBackgroundColor(color: string) {
+    this.updateBucketFillBackgroundColor({
+      currentItemBackgroundColor: color,
+    });
   }
 
   currentStrokeColor() {
