@@ -12,9 +12,11 @@ The editor's interaction core is ported and green against the upstream test suit
 - [x] Delete the React code that will never be used; measure what remains — after the cut, the editor package holds 44,408 lines of `.tsx` and 30,462 lines of `.ts` outside tests, and 1,733 upstream tests still pass
 - [x] Port the test harness so the upstream test suite drives the port — `render()` mounts the Angular editor (Angular 22, zoneless, AOT under vitest) and `window.h` exposes its state through the real element engine
 - [x] Port the editor in slices: selection and viewport; rectangle, ellipse, diamond; arrows and binding; text and the wysiwyg editor; freehand; images, frames and groups; clipboard paste and drag-and-drop; element locking; undo/redo and the core actions — 319 ported upstream tests pass against the Angular editor, and the creation-flow snapshots are byte-identical to upstream's
-- [ ] Canvas rendering (the static/interactive renderers are vendored and framework-free; wiring them into the Angular component is next)
-- [ ] Properties panel, context menu and the remaining chrome — 64 upstream tests that drive those UIs are skipped in place as their gates
-- [ ] Imperative API (`excalidrawAPI`) and the remaining upstream gates (`tool.test`, `viewMode.test`, the parked history suite at 37/64)
+- [x] Canvas rendering — the vendored static/new-element/interactive renderers drive three stacked canvases from the editor's commit path, with the rough hand-drawn pass and Excalifont text
+- [x] Runnable demo app — `yarn demo` starts a vite dev server with the editor full-screen (`apps/demo`)
+- [x] Properties panel, context menu, lasso selection — Angular ports of the upstream React surfaces, driven unchanged by the upstream tests that gate them
+- [x] Imperative API (`onExcalidrawAPI`), host-forced tool, view mode, and per-event commit batching mirroring React's update coalescing — `tool.test` and `viewMode.test` gates green
+- [ ] Remaining tail: the parked history suite at 58/64 (multiplayer delta conflicts, one linear-editor capture), the non-interactive `interaction` prop, frame-name editing, arrow endpoint labels, export dialogs — each with its upstream tests skipped in place as gates
 
 ## Why a port
 
