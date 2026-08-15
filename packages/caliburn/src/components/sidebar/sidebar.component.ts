@@ -1,101 +1,126 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   computed,
   effect,
   forwardRef,
   inject,
   input,
   output,
+  viewChild,
 } from "@angular/core";
 
 import { CLASSES, EVENT, KEYS, isDevEnv } from "@excalidraw/common";
 
 import clsx from "clsx";
 
+import type { AppState } from "@excalidraw/excalidraw/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { isSidebarDocked } from "./common";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
-import type { OnDestroy, OnInit } from "@angular/core";
+import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
 
 /**
  * Angular port of upstream `Sidebar/Sidebar.tsx` (`Sidebar` + `SidebarInner`).
  *
- * Upstream's outer component gates the render on
- * `appState.openSidebar?.name === props.name`; here that gate lives in the
- * consumer's template (`default-sidebar.component.html`'s `@if`), so this
- * component only exists while the sidebar is open — which is also what makes
- * `ngOnInit`/`ngOnDestroy` the equivalent of upstream's mount effects.
- *
- * The host element IS upstream's `<Island class="sidebar">` — `.sidebar` is
- * absolutely positioned against the `.excalidraw` container and `> .Island`
- * combinators depend on there being no intervening node (see
- * `island.component.ts`).
+ * Like upstream, the component itself gates on
+ * `appState.openSidebar?.name === name`, so a host app can drop it into the
+ * editor's `sidebar` slot and let the editor decide when it shows. An Angular
+ * component can't remove its own host element, so the `<div class="Island
+ * sidebar">` upstream renders is written inside the template and the
+ * `caliburn-sidebar` element around it is `display: contents` (see
+ * `styles.scss`) — `.sidebar` is absolutely positioned against the
+ * `.excalidraw` container, which stays its offset parent.
  *
  * Upstream's `SidebarPropsContext` and the `mounted` render-deferral (a
- * fallback-vs-host-sidebar concern; caliburn renders only the default
- * sidebar) have no port — see `common.ts`.
+ * fallback-vs-host-sidebar concern, resolved here by the host slot being a
+ * plain input) have no port — see `common.ts`.
  */
 @Component({
   selector: "caliburn-sidebar",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    "[class]": "hostClass()",
-    "[attr.data-viewport-ui]": "viewportUi",
-    "[attr.data-viewport-ui-name]": "viewportUiName",
-  },
   templateUrl: "./sidebar.component.html",
 })
 export class CaliburnSidebarComponent implements OnInit, OnDestroy {
   private readonly editor = inject<CaliburnEditorComponent>(
     forwardRef(() => CaliburnEditorComponentToken),
   );
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly name = input.required<string>();
   readonly docked = input<boolean | undefined>(undefined);
-  readonly extraClass = input<string>("", { alias: "class" });
-  /** upstream's `onDock` presence + `docked != null` — the two together are
-   * what make the sidebar user-dockable (`SidebarHeader.tsx`) */
-  readonly dockable = input(false);
+  /** upstream's `className`, applied to the `.sidebar` island */
+  readonly sidebarClass = input<string>("");
+  /** upstream's `onDock` — supplying it (together with `docked`) is what
+   * makes the sidebar user-dockable (`SidebarHeader.tsx`) */
+  readonly onDock = input<((docked: boolean) => void) | undefined>(undefined);
 
-  readonly dockToggle = output<boolean>();
+  /** upstream's `onStateChange`: this sidebar's `appState.openSidebar` slice */
+  readonly stateChange = output<AppState["openSidebar"]>();
+
+  private readonly island = viewChild<ElementRef<HTMLDivElement>>("island");
 
   private readonly isPhone = this.editor.editorInterface.formFactor === "phone";
 
   readonly viewportUi = this.isPhone ? null : "side";
   readonly viewportUiName = this.isPhone ? null : "sidebar";
 
+  readonly isOpen = computed(() => {
+    this.editor.changeGeneration();
+    return this.editor.state.openSidebar?.name === this.name();
+  });
+
   readonly shouldRenderDockButton = computed(
-    () => this.editor.editorInterface.canFitSidebar && this.dockable(),
+    () =>
+      this.editor.editorInterface.canFitSidebar &&
+      !!this.onDock() &&
+      this.docked() != null,
   );
 
-  readonly hostClass = computed(() =>
+  readonly islandClass = computed(() =>
     clsx(
       "Island",
       CLASSES.SIDEBAR,
       { "sidebar--docked": this.docked() },
-      this.extraClass(),
+      this.sidebarClass(),
     ),
   );
 
   private readonly reportDocked = effect(() => {
-    isSidebarDocked.set(!!this.docked());
+    isSidebarDocked.set(this.isOpen() && !!this.docked());
+  });
+
+  private previousOpenSidebar: AppState["openSidebar"] = null;
+
+  private readonly reportStateChange = effect(() => {
+    this.editor.changeGeneration();
+    const openSidebar = this.editor.state.openSidebar;
+    const previous = this.previousOpenSidebar;
+    const name = this.name();
+
+    if (
+      ((!openSidebar && previous?.name === name) ||
+        (openSidebar?.name === name && previous?.name !== name) ||
+        previous?.name === name) &&
+      openSidebar !== previous
+    ) {
+      this.stateChange.emit(openSidebar?.name !== name ? null : openSidebar);
+    }
+    this.previousOpenSidebar = openSidebar;
   });
 
   onCloseRequest() {
     this.editor.batchCommits(() => this.editor.setState({ openSidebar: null }));
   }
 
-  onDock(docked: boolean) {
-    this.dockToggle.emit(docked);
+  handleDock(docked: boolean) {
+    this.onDock()?.(docked);
   }
 
   ngOnInit() {
-    if (isDevEnv() && this.dockable() && this.docked() == null) {
+    if (isDevEnv() && this.onDock() && this.docked() == null) {
       console.warn(
         "Sidebar: `docked` must be set when `onDock` is supplied for the sidebar to be user-dockable. To hide this message, either pass `docked` or remove `onDock`",
       );
@@ -125,6 +150,7 @@ export class CaliburnSidebarComponent implements OnInit, OnDestroy {
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (
+      this.isOpen() &&
       event.key === KEYS.ESCAPE &&
       (!this.docked() || !this.editor.editorInterface.canFitSidebar)
     ) {
@@ -133,10 +159,10 @@ export class CaliburnSidebarComponent implements OnInit, OnDestroy {
   };
 
   private readonly onOutsideClick = (event: Event) => {
-    const node = this.host.nativeElement;
+    const node = this.island()?.nativeElement;
     const target = event.target as Element | null;
 
-    if (!target) {
+    if (!node || !target || !this.isOpen()) {
       return;
     }
 

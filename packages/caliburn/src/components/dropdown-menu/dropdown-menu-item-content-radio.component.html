@@ -1,0 +1,21 @@
+<div class="dropdown-menu-item-base dropdown-menu-item-bare">
+  <label
+    class="dropdown-menu-item__text"
+    style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap"
+  >
+    <ng-content />
+  </label>
+  <caliburn-radio-group
+    [name]="name()"
+    [value]="value()"
+    [choices]="choices()"
+    (valueChange)="valueChange.emit($event)"
+  />
+</div>
+@if (shortcut() && !mobile()) {
+  <div
+    class="dropdown-menu-item__shortcut dropdown-menu-item__shortcut--orphaned"
+  >
+    {{ shortcut() }}
+  </div>
+}

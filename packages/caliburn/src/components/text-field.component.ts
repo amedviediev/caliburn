@@ -66,10 +66,22 @@ export class CaliburnTextFieldComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
-    if (this.selectOnRender()) {
-      // focusing first is needed because vitest/jsdom
+    if (!this.selectOnRender()) {
+      return;
+    }
+    // focusing first is needed because vitest/jsdom
+    const select = () => {
       this.inputElement.focus();
       this.inputElement.select();
+    };
+    // React's `useLayoutEffect` always runs with the node in the document;
+    // `ngAfterViewInit` can run before content projected into a conditional
+    // block is attached (the sidebar projects its tabs into one), and
+    // focusing a detached node is a no-op — so retry once it is in place.
+    if (this.inputElement.isConnected) {
+      select();
+    } else {
+      queueMicrotask(select);
     }
   }
 

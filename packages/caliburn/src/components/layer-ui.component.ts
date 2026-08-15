@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from "@angular/common";
 import {
   ChangeDetectionStrategy,
   Component,
@@ -55,15 +56,14 @@ let nextLayerUIId = 0;
  * Angular port of upstream `LayerUI.tsx`'s desktop layout: the dialogs, the
  * top fixed side container (canvas actions / shape actions column, the shapes
  * toolbar, the top-right column with the sidebar trigger), the footer, the
- * welcome screen and the sidebars. Surfaces owned by later slices — stats and
- * the host-render props — are left as their (empty) upstream containers
- * rather than stubbed.
+ * welcome screen and the sidebars.
  *
- * The welcome screen's default center content (`<WelcomeScreen />`'s own
- * fallback children) is composed here directly from the
- * `welcome-screen/` primitives, mirroring upstream's
- * `WelcomeScreen.Center`'s default branch — caliburn has no host-app
- * composition API to swap it out yet (see `center.component.ts`).
+ * The host app's own chrome arrives two ways, mirroring upstream: plain
+ * children (upstream's `{children}`, rendered first here through
+ * `<ng-content>`) and the editor's host-composition slots, which stand in
+ * for the LayerUI tunnels — each outlet below renders the host's template
+ * when one was supplied and the built-in default otherwise (upstream's
+ * `withInternalFallback`). See `editor.component.ts`.
  *
  * Upstream nests the shapes `<Section>`'s heading inside the toolbar island
  * via `Section`'s render-function form; the caliburn `Section` primitive
@@ -72,13 +72,14 @@ let nextLayerUIId = 0;
  * upstream DOM (`aria-labelledby` → the island's `<h2>`).
  *
  * Upstream tunnels the default sidebar's trigger from `DefaultSidebar.tsx`
- * into `.layer-ui__wrapper__top-right`; caliburn has no host-app sidebar API,
- * so the trigger is written where the tunnel outlet is.
+ * into `.layer-ui__wrapper__top-right`; caliburn's default sidebar has no
+ * trigger of its own, so the trigger is written where the tunnel outlet is.
  */
 @Component({
   selector: "caliburn-layer-ui",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     CaliburnActiveConfirmDialogComponent,
     CaliburnCommandPaletteComponent,
     CaliburnDefaultMainMenuComponent,
@@ -123,6 +124,15 @@ export class CaliburnLayerUIComponent {
   protected readonly welcomeScreenHeading = t(
     "welcomeScreen.defaults.center_heading",
   );
+
+  protected readonly mainMenu = this.editor.mainMenu;
+  protected readonly welcomeScreenCenter = this.editor.welcomeScreenCenter;
+  protected readonly welcomeScreenMenuHint = this.editor.welcomeScreenMenuHint;
+  protected readonly welcomeScreenToolbarHint =
+    this.editor.welcomeScreenToolbarHint;
+  protected readonly topRightUI = this.editor.topRightUI;
+  protected readonly sidebar = this.editor.sidebar;
+  protected readonly hostDefaultSidebars = this.editor.hostDefaultSidebars;
 
   protected state() {
     this.editor.changeGeneration();

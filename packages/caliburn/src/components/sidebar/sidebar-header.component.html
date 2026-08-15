@@ -8,7 +8,7 @@
         [selected]="!!sidebar.docked()"
         [testId]="'sidebar-dock'"
         [ariaLabel]="lockLabel"
-        (select)="sidebar.onDock(!sidebar.docked())"
+        (select)="sidebar.handleDock(!sidebar.docked())"
       >
         <ng-icon name="pinIcon" />
       </button>

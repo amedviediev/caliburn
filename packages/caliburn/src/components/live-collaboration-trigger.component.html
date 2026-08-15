@@ -1,0 +1,18 @@
+<button
+  caliburn-button
+  class="collab-button"
+  [class.active]="isCollaborating()"
+  [style.position]="'relative'"
+  [style.width]="showIconOnly() ? null : 'auto'"
+  [title]="title"
+  (select)="select.emit()"
+>
+  @if (showIconOnly()) {
+    <ng-icon name="share" />
+  } @else {
+    {{ shareLabel }}
+  }
+  @if (collaboratorCount() > 0) {
+    <div class="CollabButton-collaborators">{{ collaboratorCount() }}</div>
+  }
+</button>

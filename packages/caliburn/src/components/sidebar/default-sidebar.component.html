@@ -1,32 +1,29 @@
-@if (isOpen()) {
-  <caliburn-sidebar
-    class="default-sidebar"
-    [name]="name"
-    [docked]="docked()"
-    [dockable]="dockable()"
-    (dockToggle)="onDock($event)"
-  >
-    <caliburn-sidebar-tabs>
-      <caliburn-sidebar-header>
-        <caliburn-sidebar-tab-triggers>
-          <button caliburn-sidebar-tab-trigger [tab]="searchTab">
-            <ng-icon name="searchIcon" />
-          </button>
-          <button caliburn-sidebar-tab-trigger [tab]="libraryTab">
-            <ng-icon name="libraryIcon" />
-          </button>
-        </caliburn-sidebar-tab-triggers>
-      </caliburn-sidebar-header>
-      @if (activeTab() === libraryTab) {
-        <caliburn-sidebar-tab [tab]="libraryTab">
-          <caliburn-library-menu />
-        </caliburn-sidebar-tab>
-      }
-      @if (activeTab() === searchTab) {
-        <caliburn-sidebar-tab [tab]="searchTab">
-          <caliburn-search-menu />
-        </caliburn-sidebar-tab>
-      }
-    </caliburn-sidebar-tabs>
-  </caliburn-sidebar>
-}
+<caliburn-sidebar
+  sidebarClass="default-sidebar"
+  [name]="name"
+  [docked]="isDocked()"
+  [onDock]="isUserDockable() ? handleDock : undefined"
+>
+  <caliburn-sidebar-tabs>
+    <caliburn-sidebar-header>
+      <caliburn-sidebar-tab-triggers>
+        <button caliburn-sidebar-tab-trigger [tab]="searchTab">
+          <ng-icon name="searchIcon" />
+        </button>
+        <button caliburn-sidebar-tab-trigger [tab]="libraryTab">
+          <ng-icon name="libraryIcon" />
+        </button>
+      </caliburn-sidebar-tab-triggers>
+    </caliburn-sidebar-header>
+    @if (activeTab() === libraryTab) {
+      <caliburn-sidebar-tab [tab]="libraryTab">
+        <caliburn-library-menu />
+      </caliburn-sidebar-tab>
+    }
+    @if (activeTab() === searchTab) {
+      <caliburn-sidebar-tab [tab]="searchTab">
+        <caliburn-search-menu />
+      </caliburn-sidebar-tab>
+    }
+  </caliburn-sidebar-tabs>
+</caliburn-sidebar>

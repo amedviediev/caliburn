@@ -1,12 +1,23 @@
 @if (enabled()) {
-<button
-  caliburn-dropdown-menu-item
-  [icon]="isDark() ? 'sunIcon' : 'moonIcon'"
-  testId="toggle-dark-mode"
-  [shortcut]="shortcut"
-  [ariaLabel]="label()"
-  (select)="handleSelect($event)"
->
-  {{ label() }}
-</button>
+  @if (allowSystemTheme()) {
+    <caliburn-dropdown-menu-item-content-radio
+      name="theme"
+      [value]="theme()"
+      [choices]="themeChoices"
+      [mobile]="isMobile"
+      (valueChange)="setTheme($event)"
+      >{{ themeLabel }}</caliburn-dropdown-menu-item-content-radio
+    >
+  } @else {
+    <button
+      caliburn-dropdown-menu-item
+      [icon]="isDark() ? 'sunIcon' : 'moonIcon'"
+      testId="toggle-dark-mode"
+      [shortcut]="shortcut"
+      [ariaLabel]="label()"
+      (select)="handleSelect($event)"
+    >
+      {{ label() }}
+    </button>
+  }
 }

@@ -1,3 +1,4 @@
+<ng-content />
 @if (state().errorMessage) {
   <caliburn-error-dialog (close)="clearErrorMessage()">{{
     state().errorMessage
@@ -26,26 +27,38 @@
   "
 >
   @if (renderWelcomeScreen()) {
-    <caliburn-welcome-screen-center>
-      <caliburn-welcome-screen-logo />
-      <caliburn-welcome-screen-heading>{{
-        welcomeScreenHeading
-      }}</caliburn-welcome-screen-heading>
-      <caliburn-welcome-screen-menu>
-        <caliburn-welcome-screen-menu-item-load-scene />
-        <caliburn-welcome-screen-menu-item-help />
-      </caliburn-welcome-screen-menu>
-    </caliburn-welcome-screen-center>
+    @if (welcomeScreenCenter(); as center) {
+      <ng-container *ngTemplateOutlet="center" />
+    } @else {
+      <caliburn-welcome-screen-center>
+        <caliburn-welcome-screen-logo />
+        <caliburn-welcome-screen-heading>{{
+          welcomeScreenHeading
+        }}</caliburn-welcome-screen-heading>
+        <caliburn-welcome-screen-menu>
+          <caliburn-welcome-screen-menu-item-load-scene />
+          <caliburn-welcome-screen-menu-item-help />
+        </caliburn-welcome-screen-menu>
+      </caliburn-welcome-screen-center>
+    }
   }
   <caliburn-fixed-side-container side="top">
     <div class="App-menu App-menu_top">
       <caliburn-stack-col [gap]="6" class="App-menu_top__left">
         <div style="position: relative">
           <div class="excalidraw-ui-top-left">
-            <caliburn-default-main-menu />
+            @if (mainMenu(); as menu) {
+              <ng-container *ngTemplateOutlet="menu" />
+            } @else {
+              <caliburn-default-main-menu />
+            }
           </div>
           @if (renderWelcomeScreen()) {
-            <caliburn-welcome-screen-menu-hint />
+            @if (welcomeScreenMenuHint(); as menuHint) {
+              <ng-container *ngTemplateOutlet="menuHint" />
+            } @else {
+              <caliburn-welcome-screen-menu-hint />
+            }
           }
         </div>
         <div class="selected-shape-actions-container">
@@ -56,7 +69,11 @@
         <section class="shapes-section" [attr.aria-labelledby]="headingId">
           <div style="position: relative">
             @if (renderWelcomeScreen()) {
-              <caliburn-welcome-screen-toolbar-hint />
+              @if (welcomeScreenToolbarHint(); as toolbarHint) {
+                <ng-container *ngTemplateOutlet="toolbarHint" />
+              } @else {
+                <caliburn-welcome-screen-toolbar-hint />
+              }
             }
             <caliburn-stack-col [gap]="4" align="start">
               <caliburn-stack-row
@@ -74,6 +91,9 @@
         class="layer-ui__wrapper__top-right zen-mode-transition"
         [class.transition-right]="state().zenModeEnabled"
       >
+        @if (topRightUI(); as topRight) {
+          <ng-container *ngTemplateOutlet="topRight" />
+        }
         @if (showSidebarTrigger()) {
           <button
             caliburn-sidebar-trigger
@@ -103,4 +123,9 @@
     </div>
   }
 </div>
-<caliburn-default-sidebar />
+@if (sidebar(); as hostSidebar) {
+  <ng-container *ngTemplateOutlet="hostSidebar" />
+}
+@if (!hostDefaultSidebars()) {
+  <caliburn-default-sidebar [fallback]="true" />
+}

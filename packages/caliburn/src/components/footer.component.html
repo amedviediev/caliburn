@@ -75,10 +75,17 @@
       </section>
     </caliburn-stack-col>
   </div>
+  @if (footerCenter(); as center) {
+    <ng-container *ngTemplateOutlet="center" />
+  }
   <div class="layer-ui__wrapper__footer-right zen-mode-transition">
     <div style="position: relative">
       @if (renderWelcomeScreen()) {
-        <caliburn-welcome-screen-help-hint />
+        @if (welcomeScreenHelpHint(); as helpHint) {
+          <ng-container *ngTemplateOutlet="helpHint" />
+        } @else {
+          <caliburn-welcome-screen-help-hint />
+        }
       }
       <caliburn-help-button [onClick]="showHelp" />
     </div>

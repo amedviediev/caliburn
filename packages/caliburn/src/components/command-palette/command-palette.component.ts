@@ -231,9 +231,9 @@ export class CaliburnCommandShortcutHintComponent {
  * inputs upstream's effect depends on (the query, the built commands and the
  * recent item), not from every appState change.
  *
- * Upstream's `customCommandPaletteItems` prop and its `defaultItems` static
- * (upstream's `defaultCommandPaletteItems.ts` is an empty module) have no
- * caliburn host API to hang off yet and are not ported.
+ * Upstream's `customCommandPaletteItems` prop is the editor's input of the
+ * same name; its `defaultItems` static (upstream's
+ * `defaultCommandPaletteItems.ts` is an empty module) is not ported.
  */
 @Component({
   selector: "caliburn-command-palette-inner",
@@ -783,16 +783,18 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
       },
     ];
 
-    this.allCommands = [...commandsFromActions, ...additionalCommands].map(
-      (command) => ({
-        ...command,
-        icon: command.icon || "boltIcon",
-        order: command.order ?? getCategoryOrder(command.category),
-        haystack: `${deburr(command.label.toLocaleLowerCase())} ${
-          command.keywords?.join(" ") || ""
-        }`,
-      }),
-    );
+    this.allCommands = [
+      ...commandsFromActions,
+      ...additionalCommands,
+      ...this.editor.customCommandPaletteItems(),
+    ].map((command) => ({
+      ...command,
+      icon: command.icon || "boltIcon",
+      order: command.order ?? getCategoryOrder(command.category),
+      haystack: `${deburr(command.label.toLocaleLowerCase())} ${
+        command.keywords?.join(" ") || ""
+      }`,
+    }));
 
     const lastUsed = this.lastUsed();
     lastUsedPaletteItem.set(

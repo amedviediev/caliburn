@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from "@angular/common";
 import {
   ChangeDetectionStrategy,
   Component,
@@ -37,16 +38,18 @@ import type { CaliburnEditorComponent } from "../editor.component";
  * Upstream renders those two through `actionManager.renderAction`, which
  * mounts each action's React `PanelComponent`; caliburn's actions carry no
  * component, so the buttons are declared here and dispatch through
- * `actionManager.executeAction`. The footer-center tunnel and the
- * exit-zen-mode button are omitted — each needs a surface that has no
- * caliburn equivalent yet. The welcome screen's `HelpHint` is mounted at its
- * upstream tunnel spot (`layer-ui__wrapper__footer-right`'s
- * `position: relative` box, sibling to the `HelpButton`).
+ * `actionManager.executeAction`. The exit-zen-mode button
+ * is omitted — it needs a surface that has no caliburn equivalent yet. The
+ * welcome screen's `HelpHint` is mounted at its upstream tunnel spot
+ * (`layer-ui__wrapper__footer-right`'s `position: relative` box, sibling to
+ * the `HelpButton`), and the footer-center outlet renders the host's
+ * `footerCenter` slot (see `editor.component.ts`).
  */
 @Component({
   selector: "caliburn-footer",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     CaliburnHelpButtonComponent,
     CaliburnIconButtonComponent,
     CaliburnSectionComponent,
@@ -61,6 +64,9 @@ export class CaliburnFooterComponent {
   private readonly editor = inject<CaliburnEditorComponent>(
     forwardRef(() => CaliburnEditorComponentToken),
   );
+
+  protected readonly footerCenter = this.editor.footerCenter;
+  protected readonly welcomeScreenHelpHint = this.editor.welcomeScreenHelpHint;
 
   protected readonly MIN_ZOOM = MIN_ZOOM;
   protected readonly MAX_ZOOM = MAX_ZOOM;

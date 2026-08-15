@@ -283,8 +283,9 @@ import {
 
 import type { RoughCanvas } from "roughjs/bin/canvas";
 
-import type { ElementRef } from "@angular/core";
+import type { ElementRef, TemplateRef } from "@angular/core";
 
+import type { CommandPaletteItem } from "./components/command-palette/types";
 import type { CursorHintView } from "./components/cursor-hints";
 import type { EyeDropperProperties } from "./components/eye-dropper";
 import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
@@ -406,6 +407,42 @@ export class CaliburnEditorComponent
   readonly initialState = input<{
     viewport?: Omit<SetViewportOptions, "animation">;
   } | null>(null);
+  readonly onThemeChange = input<
+    ((theme: AppState["theme"] | "system") => void) | null
+  >(null);
+  /** upstream's `<CommandPalette customCommandPaletteItems>` (the palette is
+   * a host-rendered child upstream; caliburn's LayerUI renders it) */
+  readonly customCommandPaletteItems = input<CommandPaletteItem[]>([]);
+
+  /**
+   * Host-composition slots — the Angular equivalent of upstream's LayerUI
+   * tunnels (`context/tunnels.ts`): a host app hands the editor one
+   * `TemplateRef` per outlet and LayerUI renders it where upstream renders
+   * that tunnel's `Out`, in place of the built-in default. Upstream reaches
+   * the outlets from arbitrary depth in the host's tree (tunnel-rat portals
+   * + `withInternalFallback` to suppress the default); Angular renders a
+   * template only where it's instantiated, so the template comes in as an
+   * input instead — which also makes "did the host supply one?" a plain
+   * read rather than a mount-counting heuristic.
+   *
+   * `topRightUI` is upstream's `renderTopRightUI` render prop (its one
+   * non-tunnel outlet), spelled the same way for consistency.
+   */
+  readonly mainMenu = input<TemplateRef<unknown> | null>(null);
+  readonly welcomeScreenCenter = input<TemplateRef<unknown> | null>(null);
+  readonly welcomeScreenMenuHint = input<TemplateRef<unknown> | null>(null);
+  readonly welcomeScreenToolbarHint = input<TemplateRef<unknown> | null>(null);
+  readonly welcomeScreenHelpHint = input<TemplateRef<unknown> | null>(null);
+  readonly footerCenter = input<TemplateRef<unknown> | null>(null);
+  readonly topRightUI = input<TemplateRef<unknown> | null>(null);
+  readonly sidebar = input<TemplateRef<unknown> | null>(null);
+
+  /**
+   * Number of host-rendered `caliburn-default-sidebar`s, standing in for
+   * upstream's `withInternalFallback` mount counter: LayerUI's own default
+   * sidebar renders only while this is 0.
+   */
+  readonly hostDefaultSidebars = signal(0);
 
   readonly containerRef = viewChild<ElementRef<HTMLDivElement>>("container");
   readonly staticCanvasRef =
@@ -501,7 +538,7 @@ export class CaliburnEditorComponent
     onDuplicate: undefined as unknown,
     theme: undefined as Theme | undefined,
     onThemeChange: undefined as
-      | ((theme: AppState["theme"]) => void)
+      | ((theme: AppState["theme"] | "system") => void)
       | undefined,
     onLibraryChange: undefined as
       | ((libraryItems: LibraryItems) => void)
@@ -942,16 +979,16 @@ export class CaliburnEditorComponent
 
     const theme = this.theme();
     this.props.theme = theme;
+    this.props.onThemeChange = this.onThemeChange() ?? undefined;
     if (theme) {
       this.state = { ...this.state, theme };
     }
     // upstream normalizes `UIOptions.canvasActions.toggleTheme` from its
-    // `null` default to `true` whenever the host controls no theme
-    // (`index.tsx`); caliburn has no `onThemeChange` prop, so a host-supplied
-    // `theme` leaves the toggle off
+    // `null` default to `true` whenever the host controls no theme, or
+    // controls it but listens for changes (`index.tsx`)
     if (
       this.props.UIOptions.canvasActions.toggleTheme === null &&
-      theme == null
+      (theme == null || this.props.onThemeChange)
     ) {
       this.props.UIOptions.canvasActions.toggleTheme = true;
     }

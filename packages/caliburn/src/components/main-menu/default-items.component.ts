@@ -14,6 +14,8 @@ import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shor
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 
+import type { Theme } from "@excalidraw/element/types";
+
 import {
   actionChangeViewBackgroundColor,
   actionClearCanvas,
@@ -27,11 +29,13 @@ import { actionShortcuts } from "../../actions/actionMenu";
 import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnColorPickerComponent } from "../color-picker/color-picker.component";
+import { CaliburnDropdownMenuItemContentRadioComponent } from "../dropdown-menu/dropdown-menu-item-content-radio.component";
 import { CaliburnDropdownMenuItemLinkComponent } from "../dropdown-menu/dropdown-menu-item-link.component";
 import { CaliburnDropdownMenuItemComponent } from "../dropdown-menu/dropdown-menu-item.component";
 import { openConfirmModal } from "../overwrite-confirm/overwrite-confirm-state";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
+import type { RadioGroupChoice } from "../radio-group.component";
 
 /**
  * Angular ports of upstream `main-menu/DefaultItems.tsx` — the composable
@@ -207,22 +211,60 @@ export class CaliburnMenuClearCanvasComponent {
 }
 
 /**
- * Upstream's `allowSystemTheme` variant (a `DropdownMenuItemContentRadio` of
- * light/dark/system driven by `props.onThemeChange`) is not ported: caliburn
- * exposes no theme prop and the radio item is not among the dropdown-menu
- * primitives that landed. This is the `allowSystemTheme: false` branch, the
- * one the built-in menu uses.
+ * Upstream's two branches: `allowSystemTheme` renders a light/dark/system
+ * `DropdownMenuItemContentRadio` driven by `props.onThemeChange` (what the
+ * app's menu uses), anything else the plain toggle item the built-in menu
+ * uses. `theme` is the host's own theme setting, which may be `"system"`
+ * while the editor's resolved `appState.theme` is light or dark.
  */
 @Component({
   selector: "caliburn-menu-toggle-theme",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnDropdownMenuItemComponent],
+  imports: [
+    CaliburnDropdownMenuItemComponent,
+    CaliburnDropdownMenuItemContentRadioComponent,
+  ],
   templateUrl: "./menu-toggle-theme.component.html",
 })
 export class CaliburnMenuToggleThemeComponent {
   private readonly editor = injectEditor();
 
+  readonly allowSystemTheme = input(false);
+  readonly theme = input<Theme | "system">(THEME.LIGHT);
+
   protected readonly shortcut = getShortcutFromShortcutName("toggleTheme");
+  protected readonly themeLabel = t("labels.theme");
+  protected readonly isMobile =
+    this.editor.editorInterface.formFactor === "phone";
+
+  protected readonly themeChoices: RadioGroupChoice<Theme | "system">[] = [
+    {
+      value: THEME.LIGHT,
+      icon: "sunIcon",
+      ariaLabel: `${t("buttons.lightMode")} - ${this.shortcut}`,
+    },
+    {
+      value: THEME.DARK,
+      icon: "moonIcon",
+      ariaLabel: `${t("buttons.darkMode")} - ${this.shortcut}`,
+    },
+    {
+      value: "system",
+      icon: "deviceDesktopIcon",
+      ariaLabel: t("buttons.systemMode"),
+    },
+  ];
+
+  protected setTheme(theme: Theme | "system") {
+    const onThemeChange = this.editor.props.onThemeChange;
+    if (onThemeChange) {
+      onThemeChange(theme);
+      return;
+    }
+    console.warn(
+      "MainMenu.DefaultItems.ToggleTheme: `<caliburn-editor/> onThemeChange` must be defined to use system theme selection.",
+    );
+  }
 
   protected isDark() {
     this.editor.changeGeneration();

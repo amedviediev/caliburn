@@ -50,6 +50,8 @@
 @use "../../excalidraw/components/hyperlink/Hyperlink.scss";
 @use "../../excalidraw/components/Stats/Stats.scss";
 @use "../../excalidraw/components/Stats/DragInput.scss";
+@use "../../excalidraw/components/footer/FooterCenter.scss";
+@use "../../excalidraw/components/live-collaboration/LiveCollaborationTrigger.scss";
 @use "../../excalidraw/components/Toast.scss";
 @use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
 
@@ -161,6 +163,7 @@ caliburn-stats-multi-font-size,
 caliburn-stats-multi-position,
 caliburn-stats-position,
 caliburn-help-button,
+caliburn-live-collaboration-trigger,
 caliburn-color-picker,
 caliburn-color-input,
 caliburn-layer-ui,
@@ -169,6 +172,7 @@ caliburn-command-palette-inner,
 caliburn-footer,
 caliburn-toolbar,
 caliburn-dropdown-menu-content,
+caliburn-dropdown-menu-item-content-radio,
 caliburn-dialog,
 caliburn-main-menu,
 caliburn-default-main-menu,
@@ -190,6 +194,7 @@ caliburn-welcome-screen-menu-item-live-collaboration-trigger,
 caliburn-active-confirm-dialog,
 caliburn-confirm-dialog,
 caliburn-default-sidebar,
+caliburn-sidebar,
 caliburn-error-dialog,
 caliburn-help-dialog,
 caliburn-image-export-dialog,
