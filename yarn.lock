@@ -2219,6 +2219,13 @@
   dependencies:
     "@tybys/wasm-util" "^0.10.3"
 
+"@ng-icons/core@35.0.1":
+  version "35.0.1"
+  resolved "https://registry.yarnpkg.com/@ng-icons/core/-/core-35.0.1.tgz#e29d30375511dbafdf29999ad3bb9809d357af47"
+  integrity sha512-xdqbEAArNRtxeEkdVRK0jrr9KmMdBpfEdMeSzO3+XiEdXNCTNF32TvgCOGsU8w+Bo3Hb7IBf8CgT2lwa8ZbIPQ==
+  dependencies:
+    tslib "^2.3.0"
+
 "@nicolo-ribaudo/eslint-scope-5-internals@5.1.1-v1":
   version "5.1.1-v1"
   resolved "https://registry.yarnpkg.com/@nicolo-ribaudo/eslint-scope-5-internals/-/eslint-scope-5-internals-5.1.1-v1.tgz#dbf733a965ca47b1973177dc0bb6c889edcfb129"
