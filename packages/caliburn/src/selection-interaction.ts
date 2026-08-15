@@ -332,6 +332,17 @@ export const handleSelectionPointerDown = (
     // == deep selection ==
     // on CMD/CTRL, drill down to hit element regardless of groups etc.
     if (event[KEYS.CTRL_OR_CMD]) {
+      if (event.altKey) {
+        // ctrl + alt means we're lasso selecting - start lasso trail and
+        // switch to lasso tool
+        editor.lassoTrail.startPath(
+          pointerDownState.origin.x,
+          pointerDownState.origin.y,
+          event.shiftKey,
+        );
+        editor.setActiveTool({ type: "lasso", fromSelection: true });
+        return pointerDownState;
+      }
       if (!editor.state.selectedElementIds[hitElement.id]) {
         pointerDownState.hit.wasAddedToSelection = true;
       }
@@ -368,9 +379,45 @@ export const handleSelectionPointerDown = (
     previousSelectedElementIds: editor.state.selectedElementIds,
   });
 
-  createSelectionElementOnPointerDown(editor, pointerDownState);
+  if (editor.state.activeTool.type !== "lasso") {
+    createSelectionElementOnPointerDown(editor, pointerDownState);
+  }
 
   return pointerDownState;
+};
+
+export const handleLassoPointerDown = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+  pointerDownState: PointerDownState,
+) => {
+  const hitSelectedElement =
+    pointerDownState.hit.element &&
+    !!editor.state.selectedElementIds[pointerDownState.hit.element.id];
+  const shouldForceLassoReselect =
+    event.altKey &&
+    event[KEYS.CTRL_OR_CMD] &&
+    !pointerDownState.resize.handleType;
+  const shouldStartLassoSelection =
+    shouldForceLassoReselect ||
+    (!pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements &&
+      !pointerDownState.resize.handleType &&
+      !hitSelectedElement);
+
+  if (shouldStartLassoSelection) {
+    if (!editor.lassoTrail.hasCurrentTrail) {
+      editor.lassoTrail.startPath(
+        pointerDownState.origin.x,
+        pointerDownState.origin.y,
+        event.shiftKey,
+      );
+    }
+
+    // block dragging after lasso selection on PCs until the next pointer down
+    // (on mobile or tablet, we want to allow user to drag immediately)
+    pointerDownState.drag.blockDragging =
+      editor.editorInterface.formFactor === "desktop";
+  }
 };
 
 const createSelectionElementOnPointerDown = (
@@ -418,9 +465,38 @@ export const handleSelectionPointerMove = (
   }
 
   if (editor.state.selectionElement) {
+    if (event.altKey) {
+      editor.setActiveTool(
+        { type: "lasso", fromSelection: true },
+        { keepSelection: event.shiftKey },
+      );
+      editor.lassoTrail.startPath(
+        pointerDownState.origin.x,
+        pointerDownState.origin.y,
+        event.shiftKey,
+      );
+      editor.setState({
+        selectionElement: null,
+      });
+      return;
+    }
     pointerDownState.boxSelection.hasOccurred = true;
     maybeDragNewGenericElement(editor, pointerDownState, event);
     updateBoxSelection(editor, pointerDownState, event);
+  } else if (editor.state.activeTool.type === "lasso") {
+    if (!event.altKey && editor.state.activeTool.fromSelection) {
+      editor.setActiveTool({ type: "selection" });
+      createSelectionElementOnPointerDown(editor, pointerDownState);
+      pointerDownState.boxSelection.hasOccurred = true;
+      maybeDragNewGenericElement(editor, pointerDownState, event);
+      editor.lassoTrail.endPath();
+    } else {
+      editor.lassoTrail.addPointToPath(
+        pointerDownState.lastCoords.x,
+        pointerDownState.lastCoords.y,
+        event.shiftKey,
+      );
+    }
   }
 };
 

@@ -115,7 +115,8 @@ export const maybeDragSelectedElements = (
     !(
       hasHitASelectedElement ||
       pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
-    )
+    ) ||
+    pointerDownState.drag.blockDragging
   ) {
     return false;
   }
@@ -350,6 +351,18 @@ export const cleanupAfterDragOnPointerUp = (
       ))
   ) {
     editor.store.scheduleCapture();
+  }
+
+  // just in case, tool changes mid drag, always clean up
+  editor.lassoTrail.endPath();
+
+  // a lasso session that grew out of the selection tool reverts to it
+  if (
+    editor.state.activeTool.type === "lasso" &&
+    editor.state.activeTool.fromSelection &&
+    !editor.isToolLocked()
+  ) {
+    editor.setActiveTool({ type: editor.state.preferredSelectionTool.type });
   }
 
   editor.setState((prevState) => ({

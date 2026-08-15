@@ -92,6 +92,8 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
     frameToHighlight: editor.state.frameToHighlight,
   });
 
+  editor.visibleElements = visibleElements;
+
   const allElementsMap = editor.scene.getNonDeletedElementsMap();
 
   sizeCanvas(staticCanvas, editor.state.width, editor.state.height, scale);

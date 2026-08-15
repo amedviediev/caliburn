@@ -139,8 +139,7 @@ describe("box-selection", () => {
   });
 });
 
-// requires the lasso tool — a later slice's gate
-describe.skip("lasso reselection", () => {
+describe("lasso reselection", () => {
   beforeEach(async () => {
     await render(<Excalidraw />);
   });

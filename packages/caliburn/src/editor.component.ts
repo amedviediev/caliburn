@@ -55,6 +55,7 @@ import { KEYS, isArrowKey } from "@excalidraw/common";
 
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
+import { LassoTrail } from "@excalidraw/excalidraw/lasso";
 import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
 import { History } from "@excalidraw/excalidraw/history";
 import {
@@ -73,6 +74,7 @@ import type {
   ExcalidrawElement,
   FileId,
   NonDeleted,
+  NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
@@ -189,6 +191,7 @@ import {
   maybeStartTextEditingOnPointerUp,
 } from "./text-interaction";
 import {
+  handleLassoPointerDown,
   handleSelectionPointerDown,
   handleSelectionPointerMove,
   handleSelectionPointerUp,
@@ -262,6 +265,9 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         (contextmenu)="handleCanvasContextMenu($event)"
         (wheel)="handleWheel($event)"
       ></canvas>
+      <div class="SVGLayer">
+        <svg #svgLayer></svg>
+      </div>
       <div class="excalidraw-textEditorContainer"></div>
       <caliburn-shape-actions />
       <caliburn-context-menu />
@@ -289,6 +295,7 @@ export class CaliburnEditorComponent
   readonly containerRef = viewChild<ElementRef<HTMLDivElement>>("container");
   readonly staticCanvasRef =
     viewChild<ElementRef<HTMLCanvasElement>>("staticCanvas");
+  readonly svgLayerRef = viewChild<ElementRef<SVGSVGElement>>("svgLayer");
   readonly newElementCanvasRef =
     viewChild<ElementRef<HTMLCanvasElement>>("newElementCanvas");
   readonly interactiveCanvasRef =
@@ -331,6 +338,9 @@ export class CaliburnEditorComponent
   readonly store = new Store(this as any);
   readonly history = new History(this.store);
   readonly fonts = new Fonts(this.scene);
+  readonly lassoTrail = new LassoTrail(this as any);
+
+  visibleElements: readonly NonDeletedExcalidrawElement[] = [];
 
   readonly editorInterface: EditorInterface = {
     formFactor: "desktop",
@@ -557,6 +567,10 @@ export class CaliburnEditorComponent
     if (staticCanvas) {
       this.rc = rough.canvas(staticCanvas);
     }
+    const svgLayer = this.svgLayerRef()?.nativeElement;
+    if (svgLayer) {
+      this.lassoTrail.start(svgLayer);
+    }
     this.updateDOMRect();
     this.initializeScene();
     if (this.autoFocus()) {
@@ -567,6 +581,7 @@ export class CaliburnEditorComponent
 
   ngOnDestroy() {
     this.unmounted = true;
+    this.lassoTrail.stop();
     resetGesture();
     document.removeEventListener("keydown", this.onKeyDown);
     document.removeEventListener("paste", this.pasteFromClipboard);
@@ -1195,8 +1210,11 @@ export class CaliburnEditorComponent
     }
 
     const activeToolType = this.state.activeTool.type;
-    if (activeToolType === "selection") {
+    if (activeToolType === "selection" || activeToolType === "lasso") {
       this.pointerDownState = handleSelectionPointerDown(this, event);
+      if (this.state.activeTool.type === "lasso") {
+        handleLassoPointerDown(this, event, this.pointerDownState);
+      }
     } else if (
       activeToolType === "rectangle" ||
       activeToolType === "diamond" ||
