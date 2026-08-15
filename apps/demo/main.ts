@@ -1,5 +1,6 @@
 import "@excalidraw/excalidraw/css/app.scss";
 import "@excalidraw/excalidraw/css/styles.scss";
+import "../../packages/caliburn/src/styles.scss";
 
 import { Component, provideZonelessChangeDetection } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";

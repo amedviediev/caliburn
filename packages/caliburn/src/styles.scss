@@ -1,0 +1,20 @@
+// Caliburn styles entry: upstream per-component SCSS partials that upstream
+// itself imports directly from each `.tsx` file (`import "./Foo.scss"`).
+// Since caliburn's Angular components don't import those `.tsx` modules,
+// their styles never reach the bundle through `@excalidraw/excalidraw/css/
+// app.scss` / `styles.scss` alone — pull them in here instead. Caliburn-side
+// only; nothing under `packages/excalidraw` is edited. Consumers import this
+// file once, after the upstream `app.scss/styles.scss` pair (see
+// `apps/demo/main.ts`).
+@use "../../excalidraw/components/Island.scss";
+@use "../../excalidraw/components/Stack.scss";
+@use "../../excalidraw/components/FixedSideContainer.scss";
+@use "../../excalidraw/components/ToolIcon.scss";
+@use "../../excalidraw/components/Spinner.scss";
+@use "../../excalidraw/components/Button.scss";
+@use "../../excalidraw/components/FilledButton.scss";
+@use "../../excalidraw/components/RadioGroup.scss";
+@use "../../excalidraw/components/Modal.scss";
+@use "../../excalidraw/components/Dialog.scss";
+@use "../../excalidraw/components/Tooltip.scss";
+@use "../../excalidraw/components/dropdownMenu/DropdownMenu.scss";
