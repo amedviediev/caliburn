@@ -55,14 +55,18 @@ caliburn-switch {
 // Angular components always render their own host element, where upstream
 // renders a React fragment / nothing at all — `display: contents` keeps
 // these transparent to layout so their children sit where upstream's do.
-// `caliburn-dropdown-menu-content` is in the list because its host carries
-// the consumer's `class` (e.g. `.App-toolbar__extra-tools-dropdown`, which
-// sets a `min-width`) while the menu itself only renders while open.
+// `caliburn-dropdown-menu-content` and `caliburn-dialog` are in the list
+// because their hosts carry the consumer's `class` (e.g.
+// `.App-toolbar__extra-tools-dropdown`'s `min-width`, or `.HelpDialog`),
+// which Angular applies to the custom element as well as routing it to the
+// aliased `class` input that puts it on the real `.dropdown-menu`/`.Modal`
+// root — `display: contents` keeps the duplicate inert.
 caliburn-hint-viewer,
 caliburn-layer-ui,
 caliburn-footer,
 caliburn-toolbar,
 caliburn-dropdown-menu-content,
+caliburn-dialog,
 caliburn-main-menu,
 caliburn-default-main-menu,
 caliburn-menu-load-scene,

@@ -1,13 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   inject,
   input,
   output,
 } from "@angular/core";
 
-import { getDropdownMenuItemClassName } from "./common";
+import {
+  DROPDOWN_MENU_ITEM_SELECT_EVENT,
+  getDropdownMenuItemClassName,
+} from "./common";
 import { CaliburnDropdownMenuContentComponent } from "./dropdown-menu-content.component";
 import { CaliburnDropdownMenuItemContentComponent } from "./dropdown-menu-item-content.component";
 
@@ -49,6 +53,7 @@ export class CaliburnDropdownMenuItemLinkComponent {
   protected readonly content = inject(CaliburnDropdownMenuContentComponent, {
     optional: true,
   });
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly href = input.required<string>();
   readonly icon = input<string>();
@@ -69,7 +74,12 @@ export class CaliburnDropdownMenuItemLinkComponent {
   handleSelect(event: Event) {
     this.select.emit(event);
     if (!event.defaultPrevented) {
-      this.content?.itemSelected.emit(event);
+      this.host.nativeElement.dispatchEvent(
+        new CustomEvent(DROPDOWN_MENU_ITEM_SELECT_EVENT, {
+          bubbles: true,
+          detail: event,
+        }),
+      );
     }
   }
 }

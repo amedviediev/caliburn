@@ -53,6 +53,7 @@ import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
         [style.top.px]="positionTop()"
         [style.right.px]="positionRight()"
         [style.left.px]="positionLeft()"
+        (caliburn-dropdown-menu-item-select)="onItemSelect($any($event))"
         #menuRoot
       >
         @if (mobile()) {
@@ -82,6 +83,10 @@ export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
   readonly closeOutside = output<void>();
   /** fires when any descendant item is selected, mirroring upstream's `onSelect`. */
   readonly itemSelected = output<Event>();
+
+  onItemSelect(event: CustomEvent<Event>) {
+    this.itemSelected.emit(event.detail);
+  }
 
   private readonly menuRoot = viewChild<ElementRef<HTMLElement>>("menuRoot");
 
