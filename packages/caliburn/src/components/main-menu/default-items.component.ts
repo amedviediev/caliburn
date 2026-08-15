@@ -8,7 +8,13 @@ import {
   output,
 } from "@angular/core";
 
-import { DEFAULT_CANVAS_BACKGROUND_PICKS, THEME } from "@excalidraw/common";
+import {
+  COLOR_OUTLINE_CONTRAST_THRESHOLD,
+  DEFAULT_CANVAS_BACKGROUND_PICKS,
+  THEME,
+  applyDarkModeFilter,
+  isColorDark,
+} from "@excalidraw/common";
 
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -308,15 +314,18 @@ export class CaliburnMenuToggleThemeComponent {
       </div>
       <div style="padding: 0 0.625rem">
         <div class="color-picker__top-picks">
-          @for (color of topPicks; track color) {
+          @for (pick of picks(); track pick.color; let index = $index) {
           <button
             type="button"
             class="color-picker__button"
-            [class.active]="color === currentColor()"
-            [attr.title]="color"
-            [attr.data-testid]="'color-top-pick-' + color"
-            [style.--swatch-color]="color"
-            (click)="setColor(color)"
+            [class.active]="pick.color === currentColor()"
+            [class.is-transparent]="pick.isTransparent"
+            [class.has-outline]="pick.hasOutline"
+            [attr.title]="pick.color"
+            [attr.data-testid]="'color-top-pick-' + pick.color"
+            [attr.data-top-pick-index]="index"
+            [style.--swatch-color]="pick.displayColor"
+            (click)="setColor(pick.color)"
           >
             <div class="color-picker__button-outline"></div>
           </button>
@@ -331,7 +340,20 @@ export class CaliburnMenuChangeCanvasBackgroundComponent {
   private readonly editor = injectEditor();
 
   protected readonly label = t("labels.canvasBackground");
-  protected readonly topPicks = DEFAULT_CANVAS_BACKGROUND_PICKS;
+
+  /** the per-swatch contract of upstream `ColorPicker/TopPicks.tsx` minus its
+   * drag-and-drop classes (`is-dnd-*`), which belong to the unported
+   * `useColorPickerDnD` hook */
+  protected picks() {
+    this.editor.changeGeneration();
+    const dark = this.editor.state.theme === THEME.DARK;
+    return DEFAULT_CANVAS_BACKGROUND_PICKS.map((color) => ({
+      color,
+      displayColor: applyDarkModeFilter(color, dark),
+      isTransparent: color === "transparent" || !color,
+      hasOutline: !isColorDark(color, COLOR_OUTLINE_CONTRAST_THRESHOLD),
+    }));
+  }
 
   protected visible() {
     this.editor.changeGeneration();
