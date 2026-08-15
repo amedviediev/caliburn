@@ -11,6 +11,7 @@ import { DEFAULT_SIDEBAR, capitalizeString } from "@excalidraw/common";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
+import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
@@ -124,6 +125,9 @@ export class CaliburnLayerUIComponent {
   protected readonly welcomeScreenHeading = t(
     "welcomeScreen.defaults.center_heading",
   );
+  protected readonly scrollBackToContentLabel = t(
+    "buttons.scrollBackToContent",
+  );
 
   protected readonly mainMenu = this.editor.mainMenu;
   protected readonly welcomeScreenCenter = this.editor.welcomeScreenCenter;
@@ -204,5 +208,16 @@ export class CaliburnLayerUIComponent {
 
   protected clearToast() {
     this.editor.batchCommits(() => this.editor.setState({ toast: null }));
+  }
+
+  protected scrollBackToContent() {
+    this.editor.batchCommits(() =>
+      this.editor.setState((state) => ({
+        ...getScrollToContentState(
+          this.editor.scene.getNonDeletedElements(),
+          state,
+        ),
+      })),
+    );
   }
 }

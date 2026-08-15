@@ -93,6 +93,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
   });
 
   editor.visibleElements = visibleElements;
+  editor.hasRenderableElements = renderableElementsMap.size > 0;
 
   const allElementsMap = editor.scene.getNonDeletedElementsMap();
 

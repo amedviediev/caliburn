@@ -112,14 +112,25 @@
     </div>
   </caliburn-fixed-side-container>
   <caliburn-footer />
-  @if (state().toast; as toast) {
+  @if (state().toast || state().scrolledOutside) {
     <div class="floating-status-stack">
-      <caliburn-toast
-        [message]="toast.message"
-        [closable]="!!toast.closable"
-        [duration]="toast.duration ?? defaultToastDuration"
-        (close)="clearToast()"
-      />
+      @if (state().toast; as toast) {
+        <caliburn-toast
+          [message]="toast.message"
+          [closable]="!!toast.closable"
+          [duration]="toast.duration ?? defaultToastDuration"
+          (close)="clearToast()"
+        />
+      }
+      @if (!state().toast && state().scrolledOutside) {
+        <button
+          type="button"
+          class="scroll-back-to-content"
+          (click)="scrollBackToContent()"
+        >
+          {{ scrollBackToContentLabel }}
+        </button>
+      }
     </div>
   }
 </div>

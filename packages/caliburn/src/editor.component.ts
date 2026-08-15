@@ -514,6 +514,8 @@ export class CaliburnEditorComponent
 
   visibleElements: readonly NonDeletedExcalidrawElement[] = [];
 
+  hasRenderableElements = false;
+
   readonly editorInterface: EditorInterface = {
     formFactor: "desktop",
     desktopUIMode: "full",
@@ -2864,6 +2866,21 @@ export class CaliburnEditorComponent
     );
     if (!this.unmounted) {
       renderEditor(this);
+    }
+    // Forced false while a viewport animation runs — the scroll-back-to-content
+    // button must not render mid-animation (clicking it would fight the
+    // animation, which overwrites the viewport every frame). The animation's
+    // final commit lands after the animation is unregistered, settling this
+    // on the target viewport. Assigned rather than `setState`d for the same
+    // reason as the two flags above; upstream's `setState` here likewise only
+    // reaches the store on the following commit.
+    const scrolledOutside =
+      // hide when editing text
+      this.state.editingTextElement || this.viewport.isAnimating
+        ? false
+        : !this.visibleElements.length && this.hasRenderableElements;
+    if (this.state.scrolledOutside !== scrolledOutside) {
+      this.state = { ...this.state, scrolledOutside };
     }
   }
 }
