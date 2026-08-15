@@ -35,6 +35,14 @@ import {
   DEFAULT_TOAST_TIMEOUT,
 } from "./toast.component";
 import { CaliburnToolbarComponent } from "./toolbar.component";
+import { CaliburnWelcomeScreenCenterComponent } from "./welcome-screen/center.component";
+import { CaliburnWelcomeScreenHeadingComponent } from "./welcome-screen/heading.component";
+import { CaliburnWelcomeScreenLogoComponent } from "./welcome-screen/logo.component";
+import { CaliburnWelcomeScreenMenuHintComponent } from "./welcome-screen/menu-hint.component";
+import { CaliburnWelcomeScreenMenuItemHelpComponent } from "./welcome-screen/menu-item-help.component";
+import { CaliburnWelcomeScreenMenuItemLoadSceneComponent } from "./welcome-screen/menu-item-load-scene.component";
+import { CaliburnWelcomeScreenMenuComponent } from "./welcome-screen/menu.component";
+import { CaliburnWelcomeScreenToolbarHintComponent } from "./welcome-screen/toolbar-hint.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
 
@@ -43,10 +51,16 @@ let nextLayerUIId = 0;
 /**
  * Angular port of upstream `LayerUI.tsx`'s desktop layout: the dialogs, the
  * top fixed side container (canvas actions / shape actions column, the shapes
- * toolbar, the top-right column with the sidebar trigger), the footer and the
- * sidebars. Surfaces owned by later slices — the welcome screen, stats and
+ * toolbar, the top-right column with the sidebar trigger), the footer, the
+ * welcome screen and the sidebars. Surfaces owned by later slices — stats and
  * the host-render props — are left as their (empty) upstream containers
  * rather than stubbed.
+ *
+ * The welcome screen's default center content (`<WelcomeScreen />`'s own
+ * fallback children) is composed here directly from the
+ * `welcome-screen/` primitives, mirroring upstream's
+ * `WelcomeScreen.Center`'s default branch — caliburn has no host-app
+ * composition API to swap it out yet (see `center.component.ts`).
  *
  * Upstream nests the shapes `<Section>`'s heading inside the toolbar island
  * via `Section`'s render-function form; the caliburn `Section` primitive
@@ -78,6 +92,14 @@ let nextLayerUIId = 0;
     CaliburnStackRowComponent,
     CaliburnToastComponent,
     CaliburnToolbarComponent,
+    CaliburnWelcomeScreenCenterComponent,
+    CaliburnWelcomeScreenHeadingComponent,
+    CaliburnWelcomeScreenLogoComponent,
+    CaliburnWelcomeScreenMenuComponent,
+    CaliburnWelcomeScreenMenuHintComponent,
+    CaliburnWelcomeScreenMenuItemHelpComponent,
+    CaliburnWelcomeScreenMenuItemLoadSceneComponent,
+    CaliburnWelcomeScreenToolbarHintComponent,
   ],
   templateUrl: "./layer-ui.component.html",
 })
@@ -92,11 +114,19 @@ export class CaliburnLayerUIComponent {
   protected readonly defaultSidebarName = DEFAULT_SIDEBAR.name;
   protected readonly defaultSidebarTab = DEFAULT_SIDEBAR.defaultTab;
   protected readonly libraryTitle = capitalizeString(t("toolBar.library"));
+  protected readonly welcomeScreenHeading = t(
+    "welcomeScreen.defaults.center_heading",
+  );
 
   protected state() {
     this.editor.changeGeneration();
     return this.editor.state;
   }
+
+  protected readonly renderWelcomeScreen = computed(() => {
+    this.state();
+    return this.editor.renderWelcomeScreen();
+  });
 
   protected readonly isSidebarDockedAndFits = computed(
     () =>

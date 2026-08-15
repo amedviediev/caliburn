@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
 } from "@angular/core";
@@ -24,6 +25,7 @@ import {
   CaliburnStackRowComponent,
 } from "./stack.component";
 import { CaliburnTooltipComponent } from "./tooltip.component";
+import { CaliburnWelcomeScreenHelpHintComponent } from "./welcome-screen/help-hint.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
 
@@ -35,7 +37,9 @@ import type { CaliburnEditorComponent } from "../editor.component";
  * component, so the buttons are declared here and dispatch through
  * `actionManager.executeAction`. The footer-center tunnel, the help button
  * and the exit-zen-mode button are omitted — each needs a surface that has
- * no caliburn equivalent yet.
+ * no caliburn equivalent yet. The welcome screen's `HelpHint` is mounted at
+ * its upstream tunnel spot (`layer-ui__wrapper__footer-right`'s
+ * `position: relative` box, sibling to the omitted `HelpButton`).
  */
 @Component({
   selector: "caliburn-footer",
@@ -46,6 +50,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
     CaliburnStackColComponent,
     CaliburnStackRowComponent,
     CaliburnTooltipComponent,
+    CaliburnWelcomeScreenHelpHintComponent,
   ],
   templateUrl: "./footer.component.html",
 })
@@ -71,6 +76,11 @@ export class CaliburnFooterComponent {
     this.editor.changeGeneration();
     return this.editor.state;
   }
+
+  protected readonly renderWelcomeScreen = computed(() => {
+    this.state();
+    return this.editor.renderWelcomeScreen();
+  });
 
   protected isNavigationEnabled() {
     return this.editor.isNavigationEnabled();

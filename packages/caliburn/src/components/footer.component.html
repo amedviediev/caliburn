@@ -76,6 +76,10 @@
     </caliburn-stack-col>
   </div>
   <div class="layer-ui__wrapper__footer-right zen-mode-transition">
-    <div style="position: relative"></div>
+    <div style="position: relative">
+      @if (renderWelcomeScreen()) {
+        <caliburn-welcome-screen-help-hint />
+      }
+    </div>
   </div>
 </footer>

@@ -43,6 +43,7 @@
 @use "../../excalidraw/components/LibraryUnit.scss";
 @use "../../excalidraw/components/CommandPalette/CommandPalette.scss";
 @use "../../excalidraw/components/Toast.scss";
+@use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
 // These host-bound primitives (`packages/caliburn/src/components/`)
@@ -138,6 +139,10 @@ caliburn-menu-toggle-theme,
 caliburn-menu-change-canvas-background,
 caliburn-menu-export,
 caliburn-menu-live-collaboration-trigger,
+caliburn-menu-socials,
+caliburn-welcome-screen-menu-item-help,
+caliburn-welcome-screen-menu-item-load-scene,
+caliburn-welcome-screen-menu-item-live-collaboration-trigger,
 caliburn-active-confirm-dialog,
 caliburn-confirm-dialog,
 caliburn-default-sidebar,

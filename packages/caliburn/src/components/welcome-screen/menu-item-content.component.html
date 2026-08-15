@@ -1,0 +1,11 @@
+<div class="welcome-screen-menu-item__icon">
+  @if (icon()) {
+    <ng-icon [name]="icon()!" />
+  }
+</div>
+<div class="welcome-screen-menu-item__text">
+  <ng-content />
+</div>
+@if (showShortcut()) {
+  <div class="welcome-screen-menu-item__shortcut">{{ shortcut() }}</div>
+}

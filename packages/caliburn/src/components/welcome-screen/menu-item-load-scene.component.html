@@ -1,0 +1,11 @@
+@if (!state().viewModeEnabled) {
+  <button
+    caliburn-welcome-screen-menu-item
+    icon="loadIcon"
+    [shortcut]="shortcut"
+    [mobile]="isMobile()"
+    (select)="handleSelect()"
+  >
+    {{ label }}
+  </button>
+}

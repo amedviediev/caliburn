@@ -653,6 +653,22 @@ export class CaliburnEditorComponent
     return false;
   }
 
+  /**
+   * Mirrors upstream `App.tsx`'s `renderWelcomeScreen` prop passed to
+   * `LayerUI`/`Footer`: the welcome screen shows on an empty, idle scene —
+   * not while loading, not once the user has left the selection tool, not in
+   * zen mode, and not once any element (including deleted ones) exists.
+   */
+  renderWelcomeScreen(): boolean {
+    return (
+      !this.state.isLoading &&
+      this.state.showWelcomeScreen &&
+      this.state.activeTool.type === this.state.preferredSelectionTool.type &&
+      !this.state.zenModeEnabled &&
+      !this.scene.getElementsIncludingDeleted().length
+    );
+  }
+
   get uiPointerEvents() {
     const shouldBlockPointerEvents =
       // default back to `--ui-pointerEvents` flow if setPointerCapture

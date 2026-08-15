@@ -21,6 +21,18 @@
     isSidebarDockedAndFits() ? 'calc(100% - var(--right-sidebar-width))' : null
   "
 >
+  @if (renderWelcomeScreen()) {
+    <caliburn-welcome-screen-center>
+      <caliburn-welcome-screen-logo />
+      <caliburn-welcome-screen-heading>{{
+        welcomeScreenHeading
+      }}</caliburn-welcome-screen-heading>
+      <caliburn-welcome-screen-menu>
+        <caliburn-welcome-screen-menu-item-load-scene />
+        <caliburn-welcome-screen-menu-item-help />
+      </caliburn-welcome-screen-menu>
+    </caliburn-welcome-screen-center>
+  }
   <caliburn-fixed-side-container side="top">
     <div class="App-menu App-menu_top">
       <caliburn-stack-col [gap]="6" class="App-menu_top__left">
@@ -28,6 +40,9 @@
           <div class="excalidraw-ui-top-left">
             <caliburn-default-main-menu />
           </div>
+          @if (renderWelcomeScreen()) {
+            <caliburn-welcome-screen-menu-hint />
+          }
         </div>
         <div class="selected-shape-actions-container">
           <caliburn-shape-actions />
@@ -36,6 +51,9 @@
       @if (!state().viewModeEnabled) {
         <section class="shapes-section" [attr.aria-labelledby]="headingId">
           <div style="position: relative">
+            @if (renderWelcomeScreen()) {
+              <caliburn-welcome-screen-toolbar-hint />
+            }
             <caliburn-stack-col [gap]="4" align="start">
               <caliburn-stack-row
                 [gap]="1"
