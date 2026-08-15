@@ -748,3 +748,181 @@ describe("freedraw", () => {
     await checkRotatedVerticalFlip(expectedAngle);
   });
 });
+
+//image
+//TODO: currently there is no test for pixel colors at flipped positions.
+describe("image", () => {
+  beforeEach(() => {
+    // it's necessary to specify the height in order to calculate natural dimensions of the image
+    h.state.height = 1000;
+  });
+
+  beforeAll(() => {
+    mockHTMLImageElement(
+      SMILEY_IMAGE_DIMENSIONS.width,
+      SMILEY_IMAGE_DIMENSIONS.height,
+    );
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+    h.state.height = 0;
+  });
+
+  const createImage = async () => {
+    const sendPasteEvent = (file?: File) => {
+      const clipboardEvent = createPasteEvent({ files: file ? [file] : [] });
+      document.dispatchEvent(clipboardEvent);
+    };
+
+    sendPasteEvent(await API.loadFile("./fixtures/smiley_embedded_v2.png"));
+  };
+
+  it("flips an unrotated image horizontally correctly", async () => {
+    //paste image
+    await createImage();
+    await waitFor(() => {
+      expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, 1]);
+      expect(API.getSelectedElements().length).toBeGreaterThan(0);
+      expect(API.getSelectedElements()[0].type).toEqual("image");
+      expect(h.app.files.fileId).toBeDefined();
+    });
+    await checkHorizontalFlip();
+    expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([-1, 1]);
+    expect(h.elements[0].angle).toBeCloseTo(0);
+  });
+
+  it("flips an unrotated image vertically correctly", async () => {
+    //paste image
+    await createImage();
+    await waitFor(() => {
+      expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, 1]);
+      expect(API.getSelectedElements().length).toBeGreaterThan(0);
+      expect(API.getSelectedElements()[0].type).toEqual("image");
+      expect(h.app.files.fileId).toBeDefined();
+    });
+
+    await checkVerticalFlip();
+    expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, -1]);
+    expect(h.elements[0].angle).toBeCloseTo(0);
+  });
+
+  it("flips an rotated image horizontally correctly", async () => {
+    const originalAngle = (Math.PI / 4) as Radians;
+    const expectedAngle = ((7 * Math.PI) / 4) as Radians;
+    //paste image
+    await createImage();
+    await waitFor(() => {
+      expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, 1]);
+      expect(API.getSelectedElements().length).toBeGreaterThan(0);
+      expect(API.getSelectedElements()[0].type).toEqual("image");
+      expect(h.app.files.fileId).toBeDefined();
+    });
+    API.updateElement(h.elements[0], {
+      angle: originalAngle,
+    });
+    await checkRotatedHorizontalFlip(expectedAngle);
+    expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([-1, 1]);
+  });
+
+  it("flips an rotated image vertically correctly", async () => {
+    const originalAngle = (Math.PI / 4) as Radians;
+    const expectedAngle = ((7 * Math.PI) / 4) as Radians;
+    //paste image
+    await createImage();
+    await waitFor(() => {
+      expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, 1]);
+      expect(h.elements[0].angle).toEqual(0);
+      expect(API.getSelectedElements().length).toBeGreaterThan(0);
+      expect(API.getSelectedElements()[0].type).toEqual("image");
+      expect(h.app.files.fileId).toBeDefined();
+    });
+    API.updateElement(h.elements[0], {
+      angle: originalAngle,
+    });
+
+    await checkRotatedVerticalFlip(expectedAngle);
+    expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, -1]);
+    expect(h.elements[0].angle).toBeCloseTo(expectedAngle);
+  });
+
+  it("flips an image both vertically & horizontally", async () => {
+    //paste image
+    await createImage();
+    await waitFor(() => {
+      expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([1, 1]);
+      expect(API.getSelectedElements().length).toBeGreaterThan(0);
+      expect(API.getSelectedElements()[0].type).toEqual("image");
+      expect(h.app.files.fileId).toBeDefined();
+    });
+
+    await checkVerticalHorizontalFlip();
+    expect((h.elements[0] as ExcalidrawImageElement).scale).toEqual([-1, -1]);
+    expect(h.elements[0].angle).toBeCloseTo(0);
+  });
+});
+
+describe("mutliple elements", () => {
+  // requires the properties panel / context menu UI — a later slice's gate
+  it.skip("with bound text flip correctly", async () => {
+    UI.clickTool("arrow");
+    fireEvent.click(screen.getByTitle("Architect"));
+    const arrow = UI.createElement("arrow", {
+      x: 0,
+      y: 0,
+      width: 180,
+      height: 80,
+    });
+
+    Keyboard.keyPress(KEYS.ENTER);
+    let editor = await getTextEditor();
+    fireEvent.input(editor, { target: { value: "arrow" } });
+    Keyboard.exitTextEditor(editor);
+
+    const rectangle = UI.createElement("rectangle", {
+      x: 0,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    Keyboard.keyPress(KEYS.ENTER);
+    editor = await getTextEditor();
+    fireEvent.input(editor, { target: { value: "rect\ntext" } });
+    Keyboard.exitTextEditor(editor);
+
+    mouse.select([arrow, rectangle]);
+    API.executeAction(actionFlipHorizontal);
+    API.executeAction(actionFlipVertical);
+
+    const arrowText = h.elements[1] as ExcalidrawTextElementWithContainer;
+    const arrowTextPos = getBoundTextElementPosition(
+      arrow.get(),
+      arrowText,
+      arrayToMap(h.elements),
+    )!;
+    const rectText = h.elements[3] as ExcalidrawTextElementWithContainer;
+
+    expect(arrow.x).toBeCloseTo(180);
+    expect(arrow.y).toBeCloseTo(200);
+    expect(arrow.points[1][0]).toBeCloseTo(-180);
+    expect(arrow.points[1][1]).toBeCloseTo(-80);
+
+    expect(arrowTextPos.x - (arrow.x - arrow.width)).toBeCloseTo(
+      arrow.x - (arrowTextPos.x + arrowText.width),
+    );
+    expect(arrowTextPos.y - (arrow.y - arrow.height)).toBeCloseTo(
+      arrow.y - (arrowTextPos.y + arrowText.height),
+    );
+
+    expect(rectangle.x).toBeCloseTo(80);
+    expect(rectangle.y).toBeCloseTo(0);
+
+    expect(rectText.x - rectangle.x).toBeCloseTo(
+      rectangle.x + rectangle.width - (rectText.x + rectText.width),
+    );
+    expect(rectText.y - rectangle.y).toBeCloseTo(
+      rectangle.y + rectangle.height - (rectText.y + rectText.height),
+    );
+  });
+});

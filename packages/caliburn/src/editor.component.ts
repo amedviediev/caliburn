@@ -8,10 +8,13 @@ import {
 } from "@angular/core";
 
 import {
+  DEFAULT_IMAGE_OPTIONS,
   DEFAULT_UI_OPTIONS,
+  IMAGE_MIME_TYPES,
   ELEMENT_SHIFT_TRANSLATE_AMOUNT,
   ELEMENT_TRANSLATE_AMOUNT,
   Emitter,
+  MIME_TYPES,
   MIN_ZOOM,
   POINTER_BUTTON,
   TOOL_TYPE,
@@ -19,6 +22,7 @@ import {
   debounce,
   getStrokeWidthByKey,
   isInputLike,
+  isSelectionLikeTool,
   isWritableElement,
   updateActiveTool,
   viewportCoordsToSceneCoords,
@@ -26,15 +30,23 @@ import {
 import {
   Scene,
   Store,
+  getFrameChildrenInsertionIndex,
   getObservedAppState,
   isElementInGroup,
   isBindingElement,
+  isFrameLikeElement,
   isLinearElement,
   isTextElement,
   makeNextSelectedElementIds,
+  normalizeSVG,
   syncInvalidIndices,
   updateBoundElements,
 } from "@excalidraw/element";
+
+import {
+  dataURLToString,
+  getDataURL_sync,
+} from "@excalidraw/excalidraw/data/blob";
 
 import { KEYS, isArrowKey } from "@excalidraw/common";
 
@@ -46,17 +58,20 @@ import {
   getViewportForZoomWithScrollConstraints,
 } from "@excalidraw/excalidraw/viewport";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
+import { Renderer } from "@excalidraw/excalidraw/scene/Renderer";
 
 import type { EditorInterface } from "@excalidraw/common";
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
+  FileId,
   NonDeleted,
 } from "@excalidraw/element/types";
-import type { Mutable } from "@excalidraw/common/utility-types";
+import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
 import type {
   AppState,
+  BinaryFileData,
   BinaryFiles,
   SceneData,
   ToolType,
@@ -78,7 +93,15 @@ import {
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
 import { actionTextAutoResize } from "./actions/actionTextAutoResize";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
-import { actionFinalize } from "./actions/actionFinalize";
+import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
+import {
+  handleAppOnDrop,
+  pasteFromClipboard as pasteFromClipboardIntoEditor,
+} from "./clipboard-interaction";
+import {
+  addNewImagesToImageCache,
+  onImageToolbarButtonClick,
+} from "./image-interaction";
 import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
 import { actionGroup, actionUngroup } from "./actions/actionGroup";
 import { createRedoAction, createUndoAction } from "./actions/actionHistory";
@@ -105,6 +128,11 @@ import {
   maybeSuggestBindingOnHover,
 } from "./linear-interaction";
 import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
+import {
+  maybeUpdateFrameToHighlightOnPointerMove,
+  updateFrameMembershipOnPointerUp,
+  updateFrameToHighlight,
+} from "./frame-interaction";
 import {
   finalizeFreeDrawOnPointerUp,
   handleFreeDrawElementOnPointerDown,
@@ -156,7 +184,13 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div #container class="excalidraw excalidraw-container">
+    <div
+      #container
+      class="excalidraw excalidraw-container"
+      tabindex="0"
+      (drop)="handleAppOnDrop($event)"
+      (dragover)="handleAppOnDragOver($event)"
+    >
       <div class="App-toolbar">
         @for (tool of toolbarTools; track tool) {
         <button
@@ -190,6 +224,11 @@ export class CaliburnEditorComponent
   implements OnInit, AfterViewInit, OnDestroy
 {
   readonly handleKeyboardGlobally = input(false);
+  readonly autoFocus = input(false);
+  readonly imageOptions = input<{
+    maxWidthOrHeight?: number;
+    maxFileSizeBytes?: number;
+  } | null>(null);
   readonly initialData = input<{
     elements?: readonly ExcalidrawElement[];
     appState?: Partial<AppState>;
@@ -218,6 +257,7 @@ export class CaliburnEditorComponent
   };
 
   readonly scene = new Scene();
+  readonly renderer = new Renderer(this.scene);
   readonly store = new Store(this as any);
   readonly history = new History(this.store);
 
@@ -241,7 +281,18 @@ export class CaliburnEditorComponent
   readonly props = {
     UIOptions: DEFAULT_UI_OPTIONS,
     onDuplicate: undefined as unknown,
+    imageOptions: { ...DEFAULT_IMAGE_OPTIONS },
   };
+
+  imageCache: Map<
+    FileId,
+    {
+      image: HTMLImageElement | Promise<HTMLImageElement>;
+      mimeType: ValueOf<typeof IMAGE_MIME_TYPES>;
+    }
+  > = new Map();
+
+  lastPointerDownEvent: PointerEvent | null = null;
 
   readonly flowchart = { isCreatingChart: false };
 
@@ -296,6 +347,11 @@ export class CaliburnEditorComponent
     if (actionResult.elements) {
       this.scene.replaceAllElements(actionResult.elements);
       didUpdate = true;
+    }
+
+    if (actionResult.files) {
+      this.addMissingFiles(actionResult.files, actionResult.replaceFiles);
+      addNewImagesToImageCache(this);
     }
 
     if (actionResult.appState || this.state.contextMenu) {
@@ -376,6 +432,16 @@ export class CaliburnEditorComponent
   }
 
   ngOnInit() {
+    const imageOptions = this.imageOptions();
+    this.props.imageOptions = {
+      maxWidthOrHeight:
+        imageOptions?.maxWidthOrHeight ??
+        DEFAULT_IMAGE_OPTIONS.maxWidthOrHeight,
+      maxFileSizeBytes:
+        imageOptions?.maxFileSizeBytes ??
+        DEFAULT_IMAGE_OPTIONS.maxFileSizeBytes,
+    };
+
     this.store.onDurableIncrementEmitter.on((increment) => {
       this.history.record(increment.delta);
     });
@@ -385,6 +451,7 @@ export class CaliburnEditorComponent
     });
 
     document.addEventListener("keydown", this.onKeyDown);
+    document.addEventListener("paste", this.pasteFromClipboard);
 
     this.commit();
   }
@@ -392,12 +459,16 @@ export class CaliburnEditorComponent
   ngAfterViewInit() {
     this.updateDOMRect();
     this.initializeScene();
+    if (this.autoFocus()) {
+      this.focusContainer();
+    }
   }
 
   ngOnDestroy() {
     this.unmounted = true;
     resetGesture();
     document.removeEventListener("keydown", this.onKeyDown);
+    document.removeEventListener("paste", this.pasteFromClipboard);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
     this.store.onStoreIncrementEmitter.clear();
@@ -713,13 +784,124 @@ export class CaliburnEditorComponent
     return this.scene.getElementsMapIncludingDeleted();
   }
 
-  setActiveTool(
-    tool: { type: ToolType } | { type: "custom"; customType: string },
-  ) {
-    this.setState({
-      activeTool: updateActiveTool(this.state, tool),
+  isToolSupported = <T extends ToolType | "custom">(tool: T): boolean => {
+    const tools = this.props.UIOptions as { tools?: Record<string, boolean> };
+    if (tools.tools?.[tool] === false) {
+      return false;
+    }
+    return this.isInteractionEnabled();
+  };
+
+  setActiveTool = (
+    tool: ({ type: ToolType } | { type: "custom"; customType: string }) & {
+      locked?: boolean;
+      fromSelection?: boolean;
+    },
+    opts: {
+      keepSelection?: boolean;
+      /**
+       * When `true`, re-activating an already-active toggle tool (see
+       * `TOGGLE_TOOLS`) switches back to the previously active tool.
+       * Activation is idempotent by default; toggle tools always record the
+       * previously active tool regardless (so ESC and the next `toggle`
+       * activation can switch back to it).
+       */
+      toggle?: boolean;
+    } = {},
+  ) => {
+    const { keepSelection = false } = opts;
+
+    if (!this.isToolSupported(tool.type)) {
+      console.warn(
+        this.isInteractionEnabled()
+          ? `"${tool.type}" tool is disabled via "UIOptions.canvasActions.tools.${tool.type}"`
+          : `"${tool.type}" tool cannot be activated while the editor is non-interactive (see "interaction.enabled.tools")`,
+      );
+      return;
+    }
+
+    if (this.drawShape.hasPendingGesture()) {
+      // switching tools mid-sketch (e.g. paste resets to the selection tool)
+      // must not strand the gesture — commit it through the finalize funnel
+      // while the drawShape tool is still active
+      this.actionManager.executeAction(actionFinalize);
+    }
+
+    const isToggleTool = TOGGLE_TOOLS.includes(tool.type);
+    const toggle = opts.toggle === true && isToggleTool;
+
+    const nextActiveTool =
+      toggle && this.state.activeTool.type === tool.type
+        ? // toggle back to the tool that was active before this one
+          updateActiveTool(this.state, {
+            ...(this.state.activeTool.lastActiveTool || {
+              type: this.state.preferredSelectionTool.type,
+            }),
+            lastActiveTool: null,
+          })
+        : isToggleTool && this.state.activeTool.type !== tool.type
+        ? // activating a toggle tool records the currently active tool so
+          // ESC and the next `toggle` activation can switch back to it
+          updateActiveTool(this.state, {
+            ...tool,
+            lastActiveTool: this.state.activeTool,
+          })
+        : updateActiveTool(this.state, tool);
+
+    if (nextActiveTool.type === "image") {
+      onImageToolbarButtonClick(this);
+    }
+
+    this.setState((prevState) => {
+      const commonResets = {
+        snapLines: prevState.snapLines.length ? [] : prevState.snapLines,
+        originSnapOffset: null,
+        activeEmbeddable: null,
+        selectedLinearElement: isSelectionLikeTool(nextActiveTool.type)
+          ? prevState.selectedLinearElement
+          : null,
+        frameToHighlight: null,
+        // only the text tool offers arrow-endpoint binding, and the highlight
+        // is refreshed on pointermove — don't leave a stale one behind
+        hoveredArrowTextAnchor: null,
+      } as const;
+
+      if (nextActiveTool.type === "freedraw") {
+        this.store.scheduleCapture();
+      }
+
+      if (nextActiveTool.type === "lasso") {
+        return {
+          ...prevState,
+          ...commonResets,
+          activeTool: nextActiveTool,
+          ...(keepSelection
+            ? {}
+            : {
+                selectedElementIds: makeNextSelectedElementIds({}, prevState),
+                selectedGroupIds: makeNextSelectedElementIds({}, prevState),
+                editingGroupId: null,
+                multiElement: null,
+              }),
+        };
+      } else if (nextActiveTool.type !== "selection") {
+        return {
+          ...prevState,
+          ...commonResets,
+          activeTool: nextActiveTool,
+          selectedElementIds: makeNextSelectedElementIds({}, prevState),
+          selectedGroupIds: makeNextSelectedElementIds({}, prevState),
+          editingGroupId: null,
+          multiElement: null,
+        };
+      }
+      return {
+        ...prevState,
+        ...commonResets,
+        activeTool: nextActiveTool,
+      };
     });
-  }
+  };
 
   toggleToolLock() {
     this.setState({
@@ -808,6 +990,8 @@ export class CaliburnEditorComponent
   }
 
   handleCanvasPointerDown(event: PointerEvent) {
+    this.lastPointerDownEvent = event;
+
     if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;
     }
@@ -898,6 +1082,10 @@ export class CaliburnEditorComponent
 
     handleMultiElementPointerMove(this, event);
     maybeSuggestBindingOnHover(this, event);
+    maybeUpdateFrameToHighlightOnPointerMove(
+      this,
+      viewportCoordsToSceneCoords(event, this.state),
+    );
   }
 
   handleCanvasPointerUp(event: PointerEvent) {
@@ -913,27 +1101,128 @@ export class CaliburnEditorComponent
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleSelectionPointerUp(this, this.pointerDownState);
+        updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
         if (
           maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
         ) {
+          this.clearHighlightsOnPointerUp();
           this.pointerDownState = null;
           return;
         }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
       }
+      this.clearHighlightsOnPointerUp();
       this.pointerDownState = null;
     }
   }
 
-  focusContainer() {}
+  private clearHighlightsOnPointerUp() {
+    if (this.state.frameToHighlight || this.state.elementsToHighlight) {
+      this.setState({ frameToHighlight: null, elementsToHighlight: null });
+    }
+  }
+
+  focusContainer = () => {
+    this.containerRef()?.nativeElement?.focus();
+  };
+
+  pasteFromClipboard = (event: ClipboardEvent) => {
+    pasteFromClipboardIntoEditor(this, event);
+  };
+
+  handleAppOnDrop = (event: DragEvent) => {
+    handleAppOnDrop(this, event);
+  };
+
+  handleAppOnDragOver = (event: DragEvent) => {
+    event.preventDefault();
+  };
+
+  addMissingFiles = (
+    files: BinaryFiles | BinaryFileData[],
+    replace = false,
+  ) => {
+    const nextFiles = replace ? {} : { ...this.files };
+    const addedFiles: BinaryFiles = {};
+
+    const _files = Array.isArray(files) ? files : Object.values(files);
+
+    for (const fileData of _files) {
+      if (nextFiles[fileData.id]) {
+        continue;
+      }
+
+      addedFiles[fileData.id] = fileData;
+      nextFiles[fileData.id] = fileData;
+
+      if (fileData.mimeType === MIME_TYPES.svg) {
+        try {
+          const restoredDataURL = getDataURL_sync(
+            normalizeSVG(dataURLToString(fileData.dataURL)),
+            MIME_TYPES.svg,
+          );
+          if (fileData.dataURL !== restoredDataURL) {
+            // bump version so persistence layer can update the store
+            fileData.version = (fileData.version ?? 1) + 1;
+            fileData.dataURL = restoredDataURL;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    }
+
+    this.files = nextFiles;
+
+    return { addedFiles };
+  };
 
   getEffectiveGridSize() {
     return getEffectiveGridSize(this);
   }
 
-  insertNewElement(element: ExcalidrawElement) {
-    this.scene.insertElementsAtIndex([element], null);
-  }
+  insertNewElements = (elements: readonly ExcalidrawElement[]) => {
+    if (!elements.length) {
+      return;
+    }
+
+    const chunkedElements: ExcalidrawElement[][] = [];
+
+    for (const element of elements) {
+      const currentChunk = chunkedElements[chunkedElements.length - 1];
+
+      if (currentChunk?.[0].frameId === element.frameId) {
+        currentChunk.push(element);
+      } else {
+        chunkedElements.push([element]);
+      }
+    }
+
+    for (const chunk of chunkedElements) {
+      const frameId = chunk[0].frameId;
+
+      const insertionIndex = frameId
+        ? getFrameChildrenInsertionIndex(
+            this.scene.getElementsIncludingDeleted(),
+            frameId,
+          )
+        : null;
+      this.scene.insertElementsAtIndex(chunk, insertionIndex);
+    }
+  };
+
+  insertNewElement = (element: ExcalidrawElement) => {
+    this.insertNewElements([element]);
+
+    const frame = element.frameId
+      ? this.scene.getNonDeletedElement(element.frameId)
+      : null;
+
+    updateFrameToHighlight(
+      this,
+      frame && isFrameLikeElement(frame) ? frame : null,
+    );
+  };
 
   isToolLocked(): boolean {
     return this.state.activeTool.locked;

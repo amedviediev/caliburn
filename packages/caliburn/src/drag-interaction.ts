@@ -31,6 +31,7 @@ import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 import type { KeyboardModifiersObject } from "@excalidraw/excalidraw/types";
 
 import { getEffectiveGridSize } from "./create-interaction";
+import { maybeUpdateFrameToHighlightOnDrag } from "./frame-interaction";
 import { isEditingTextContent } from "./text-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
@@ -126,6 +127,8 @@ export const maybeDragSelectedElements = (
   ) {
     return true;
   }
+
+  maybeUpdateFrameToHighlightOnDrag(editor, pointerCoords);
 
   // Marking that click was used for dragging to check
   // if elements should be deselected on pointerup

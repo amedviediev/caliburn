@@ -32,7 +32,10 @@ import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { AppState, ToolType } from "@excalidraw/excalidraw/types";
 
 // tools flagged `toggle: true` in the upstream tool table
-const TOGGLE_TOOLS: readonly (ToolType | "custom")[] = ["hand", "eraser"];
+export const TOGGLE_TOOLS: readonly (ToolType | "custom")[] = [
+  "hand",
+  "eraser",
+];
 
 type FormData = {
   event: PointerEvent;

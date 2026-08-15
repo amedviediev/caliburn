@@ -15,6 +15,8 @@ import type { ExcalidrawFreeDrawElement } from "@excalidraw/element/types";
 
 import { actionFinalize } from "./actions/actionFinalize";
 
+import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
+
 import type { CaliburnEditorComponent } from "./editor.component";
 import type { PointerDownState } from "./selection-interaction";
 
@@ -30,6 +32,11 @@ export const handleFreeDrawElementOnPointerDown = (
     pointerDownState.origin.y,
     null,
   );
+
+  const topLayerFrame = getTopLayerFrameAtSceneCoords(editor, {
+    x: gridX,
+    y: gridY,
+  });
 
   const simulatePressure = event.pressure === 0.5;
 
@@ -56,7 +63,7 @@ export const handleFreeDrawElementOnPointerDown = (
           : DEFAULT_STROKE_STREAMLINE,
     },
     locked: false,
-    frameId: null,
+    frameId: topLayerFrame ? topLayerFrame.id : null,
     points: [pointFrom<LocalPoint>(0, 0)],
     // pressures are only consumed when rendering a real-pressure stroke, so
     // skip persisting them while pressure is being simulated

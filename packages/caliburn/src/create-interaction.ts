@@ -37,6 +37,8 @@ import type {
   NullableGridSize,
 } from "@excalidraw/excalidraw/types";
 
+import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
+
 import type { CaliburnEditorComponent } from "./editor.component";
 import type { PointerDownState } from "./selection-interaction";
 
@@ -46,7 +48,7 @@ export const getEffectiveGridSize = (editor: CaliburnEditorComponent) => {
   ) as NullableGridSize;
 };
 
-const getCurrentItemRoundness = (
+export const getCurrentItemRoundness = (
   editor: CaliburnEditorComponent,
   elementType:
     | "selection"
@@ -90,6 +92,11 @@ export const createGenericElementOnPointerDown = (
     pointerDownState.withCmdOrCtrl ? null : getEffectiveGridSize(editor),
   );
 
+  const topLayerFrame = getTopLayerFrameAtSceneCoords(editor, {
+    x: gridX,
+    y: gridY,
+  });
+
   const baseElementAttributes = {
     x: gridX,
     y: gridY,
@@ -102,7 +109,7 @@ export const createGenericElementOnPointerDown = (
     opacity: editor.state.currentItemOpacity,
     roundness: getCurrentItemRoundness(editor, elementType),
     locked: false,
-    frameId: null,
+    frameId: topLayerFrame ? topLayerFrame.id : null,
   } as const;
 
   let element;
