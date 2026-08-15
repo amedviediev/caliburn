@@ -31,6 +31,7 @@ import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 import type { KeyboardModifiersObject } from "@excalidraw/excalidraw/types";
 
 import { getEffectiveGridSize } from "./create-interaction";
+import { isEditingTextContent } from "./text-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 import type { PointerDownState } from "./selection-interaction";
@@ -330,12 +331,16 @@ export const cleanupAfterDragOnPointerUp = (
   // flush triggers consumes the capture (upstream relies on React's deferred
   // post-handler commit instead)
   if (
-    editor.state.activeTool.type !== "selection" ||
-    isSomeElementSelected(editor.scene.getNonDeletedElements(), editor.state) ||
-    !isShallowEqual(
-      editor.state.previousSelectedElementIds,
-      editor.state.selectedElementIds,
-    )
+    !isEditingTextContent(editor) &&
+    (editor.state.activeTool.type !== "selection" ||
+      isSomeElementSelected(
+        editor.scene.getNonDeletedElements(),
+        editor.state,
+      ) ||
+      !isShallowEqual(
+        editor.state.previousSelectedElementIds,
+        editor.state.selectedElementIds,
+      ))
   ) {
     editor.store.scheduleCapture();
   }

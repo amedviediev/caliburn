@@ -1,14 +1,16 @@
 import React from "react";
 
-import { reseed } from "@excalidraw/common";
+import { KEYS, reseed } from "@excalidraw/common";
 
 import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
-import { UI, Keyboard } from "./helpers/ui";
+import { UI, Keyboard, Pointer } from "./helpers/ui";
 import { render, unmountComponent } from "./test-utils";
 
 unmountComponent();
+
+const mouse = new Pointer("mouse");
 
 beforeEach(async () => {
   localStorage.clear();
@@ -162,5 +164,201 @@ describe("rotation handle", () => {
     expect(rectangle.get().angle).not.toBeCloseTo(0);
 
     Keyboard.undo();
+  });
+});
+
+describe("text element", () => {
+  it("resizes", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "hello\nworld");
+    const { width, height, fontSize } = text;
+    const scale = 40 / height + 1;
+    UI.resize(text, "se", [30, 40]);
+
+    expect(text.x).toBeCloseTo(0);
+    expect(text.y).toBeCloseTo(0);
+    expect(text.width).toBeCloseTo(width * scale);
+    expect(text.height).toBeCloseTo(height * scale);
+    expect(text.angle).toBeCloseTo(0);
+    expect(text.fontSize).toBeCloseTo(fontSize * scale);
+  });
+
+  // TODO enable this test after adding single text element flipping
+  it.skip("flips while resizing", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "hello\nworld");
+    const { width, height, fontSize } = text;
+    const scale = 100 / width - 1;
+    UI.resize(text, "nw", [100, 80]);
+
+    expect(text.x).toBeCloseTo(width);
+    expect(text.y).toBeCloseTo(height);
+    expect(text.width).toBeCloseTo(width * scale);
+    expect(text.height).toBeCloseTo(height * scale);
+    expect(text.angle).toBeCloseTo(0);
+    expect(text.fontSize).toBeCloseTo(fontSize * scale);
+  });
+
+  // TODO enable this test after fixing text resizing from center
+  it.skip("resizes from center", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "hello\nworld");
+    const { x, y, width, height, fontSize } = text;
+    const scale = 80 / height + 1;
+    UI.resize(text, "nw", [-25, -40], { alt: true });
+
+    expect(text.x).toBeCloseTo(x - ((scale - 1) * width) / 2);
+    expect(text.y).toBeCloseTo(y - 40);
+    expect(text.width).toBeCloseTo(width * scale);
+    expect(text.height).toBeCloseTo(height * scale);
+    expect(text.angle).toBeCloseTo(0);
+    expect(text.fontSize).toBeCloseTo(fontSize * scale);
+  });
+
+  // it("resizes with bound arrow", async () => {
+  //   const text = UI.createElement("text");
+  //   await UI.editText(text, "hello\nworld");
+  //   const boundArrow = UI.createElement("arrow", {
+  //     x: -30,
+  //     y: 25,
+  //     width: 28,
+  //     height: 5,
+  //   });
+
+  //   expect(boundArrow.endBinding?.elementId).toEqual(text.id);
+
+  //   UI.resize(text, "ne", [40, 0]);
+
+  //   expect(boundArrow.width + boundArrow.endBinding!.gap).toBeCloseTo(30);
+
+  //   const textWidth = text.width;
+  //   const scale = 20 / text.height;
+  //   UI.resize(text, "nw", [50, 20]);
+
+  //   expect(boundArrow.endBinding?.elementId).toEqual(text.id);
+  //   expect(boundArrow.width + boundArrow.endBinding!.gap).toBeCloseTo(
+  //     30 + textWidth * scale,
+  //   );
+  // });
+
+  it("updates font size via keyboard", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "abc");
+    const { fontSize } = text;
+    mouse.select(text);
+
+    Keyboard.withModifierKeys({ shift: true, ctrl: true }, () => {
+      Keyboard.keyDown(KEYS.CHEVRON_RIGHT);
+      expect(text.fontSize).toBe(fontSize * 1.1);
+
+      Keyboard.keyDown(KEYS.CHEVRON_LEFT);
+      expect(text.fontSize).toBe(fontSize);
+    });
+  });
+
+  // text can be resized from sides
+  it("can be resized from e", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "Excalidraw\nEditor");
+
+    const width = text.width;
+    const height = text.height;
+
+    UI.resize(text, "e", [30, 0]);
+    expect(text.width).toBe(width + 30);
+    expect(text.height).toBe(height);
+
+    UI.resize(text, "e", [-30, 0]);
+    expect(text.width).toBe(width);
+    expect(text.height).toBe(height);
+  });
+
+  it("can be resized from w", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "Excalidraw\nEditor");
+
+    const width = text.width;
+    const height = text.height;
+
+    UI.resize(text, "w", [-50, 0]);
+    expect(text.width).toBe(width + 50);
+    expect(text.height).toBe(height);
+
+    UI.resize(text, "w", [50, 0]);
+    expect(text.width).toBe(width);
+    expect(text.height).toBe(height);
+  });
+
+  it("wraps when width is narrower than texts inside", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "Excalidraw\nEditor");
+
+    const prevWidth = text.width;
+    const prevHeight = text.height;
+    const prevText = text.text;
+
+    UI.resize(text, "w", [50, 0]);
+    expect(text.width).toBe(prevWidth - 50);
+    expect(text.height).toBeGreaterThan(prevHeight);
+    expect(text.text).not.toEqual(prevText);
+    expect(text.autoResize).toBe(false);
+
+    UI.resize(text, "w", [-50, 0]);
+    expect(text.width).toBe(prevWidth);
+    expect(text.height).toEqual(prevHeight);
+    expect(text.text).toEqual(prevText);
+    expect(text.autoResize).toBe(false);
+
+    UI.resize(text, "e", [-20, 0]);
+    expect(text.width).toBe(prevWidth - 20);
+    expect(text.height).toBeGreaterThan(prevHeight);
+    expect(text.text).not.toEqual(prevText);
+    expect(text.autoResize).toBe(false);
+
+    UI.resize(text, "e", [20, 0]);
+    expect(text.width).toBe(prevWidth);
+    expect(text.height).toEqual(prevHeight);
+    expect(text.text).toEqual(prevText);
+    expect(text.autoResize).toBe(false);
+  });
+
+  it("keeps properties when wrapped", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "Excalidraw\nEditor");
+
+    const alignment = text.textAlign;
+    const fontSize = text.fontSize;
+    const fontFamily = text.fontFamily;
+
+    UI.resize(text, "e", [-60, 0]);
+    expect(text.textAlign).toBe(alignment);
+    expect(text.fontSize).toBe(fontSize);
+    expect(text.fontFamily).toBe(fontFamily);
+    expect(text.autoResize).toBe(false);
+
+    UI.resize(text, "e", [60, 0]);
+    expect(text.textAlign).toBe(alignment);
+    expect(text.fontSize).toBe(fontSize);
+    expect(text.fontFamily).toBe(fontFamily);
+    expect(text.autoResize).toBe(false);
+  });
+
+  it("has a minimum width when wrapped", async () => {
+    const text = UI.createElement("text");
+    await UI.editText(text, "Excalidraw\nEditor");
+
+    const width = text.width;
+
+    UI.resize(text, "e", [-width, 0]);
+    expect(text.width).not.toEqual(0);
+    UI.resize(text, "e", [width - text.width, 0]);
+    expect(text.width).toEqual(width);
+    expect(text.autoResize).toBe(false);
+
+    UI.resize(text, "w", [width, 0]);
+    expect(text.width).not.toEqual(0);
+    UI.resize(text, "w", [text.width - width, 0]);
+    expect(text.width).toEqual(width);
+    expect(text.autoResize).toBe(false);
   });
 });

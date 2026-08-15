@@ -16,7 +16,9 @@ import type { Bounds } from "@excalidraw/common";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { AppState } from "@excalidraw/excalidraw/types";
 
-export const actionZoomIn: Action = {
+import { register } from "./register";
+
+export const actionZoomIn = register({
   name: "zoomIn",
   label: "buttons.zoomIn",
   viewMode: true,
@@ -44,9 +46,9 @@ export const actionZoomIn: Action = {
   keyTest: (event) =>
     (event.code === CODES.EQUAL || event.code === CODES.NUM_ADD) &&
     (event[KEYS.CTRL_OR_CMD] || event.shiftKey),
-};
+});
 
-export const actionZoomOut: Action = {
+export const actionZoomOut = register({
   name: "zoomOut",
   label: "buttons.zoomOut",
   viewMode: true,
@@ -74,9 +76,9 @@ export const actionZoomOut: Action = {
   keyTest: (event) =>
     (event.code === CODES.MINUS || event.code === CODES.NUM_SUBTRACT) &&
     (event[KEYS.CTRL_OR_CMD] || event.shiftKey),
-};
+});
 
-export const actionResetZoom: Action = {
+export const actionResetZoom = register({
   name: "resetZoom",
   label: "buttons.resetZoom",
   viewMode: true,
@@ -109,7 +111,7 @@ export const actionResetZoom: Action = {
   keyTest: (event) =>
     (event.code === CODES.ZERO || event.code === CODES.NUM_ZERO) &&
     (event[KEYS.CTRL_OR_CMD] || event.shiftKey),
-};
+});
 
 // under a viewport lock, zoom-to-fit targets the locked box rather than the
 // scene elements

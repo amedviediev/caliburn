@@ -11,12 +11,15 @@ import {
   DEFAULT_UI_OPTIONS,
   ELEMENT_SHIFT_TRANSLATE_AMOUNT,
   ELEMENT_TRANSLATE_AMOUNT,
+  Emitter,
   MIN_ZOOM,
   POINTER_BUTTON,
   TOOL_TYPE,
   ZOOM_STEP,
   debounce,
   getStrokeWidthByKey,
+  isInputLike,
+  isWritableElement,
   updateActiveTool,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
@@ -27,6 +30,7 @@ import {
   isElementInGroup,
   isBindingElement,
   isLinearElement,
+  isTextElement,
   makeNextSelectedElementIds,
   syncInvalidIndices,
   updateBoundElements,
@@ -53,14 +57,26 @@ import type { Mutable } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
 import type {
   AppState,
+  BinaryFiles,
   SceneData,
   ToolType,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 import type { ActionResult } from "@excalidraw/excalidraw/actions/types";
 
+import {
+  actionBindText,
+  actionUnbindText,
+  actionWrapTextInContainer,
+} from "./actions/actionBoundText";
 import { canvasActions } from "./actions/actionCanvas";
 import { actionDeleteSelected } from "./actions/actionDeleteSelected";
+import {
+  actionDecreaseFontSize,
+  actionIncreaseFontSize,
+} from "./actions/actionFontSize";
+import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
+import { actionTextAutoResize } from "./actions/actionTextAutoResize";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import { actionFinalize } from "./actions/actionFinalize";
 import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
@@ -97,13 +113,20 @@ import {
 import { getEffectiveGridSize } from "./create-interaction";
 import {
   gesture,
-  handleCanvasPanUsingWheelOrSpaceDrag,
+  handleCanvasPanUsingWheelOrSpaceDrag as panCanvasOnWheelOrSpaceDrag,
   isGestureActive,
   removePointer,
   resetGesture,
   updateGestureOnPointerDown,
   updateMultiTouchGesture,
 } from "./pan-gesture";
+import {
+  handleCanvasDoubleClick,
+  handleEnterToEditKeyDown,
+  handleTextElementOnPointerUp,
+  handleTextOnPointerDown,
+  maybeStartTextEditingOnPointerUp,
+} from "./text-interaction";
 import {
   handleSelectionPointerDown,
   handleSelectionPointerMove,
@@ -150,14 +173,16 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
           (click)="toggleToolLock()"
         ></button>
       </div>
-      <canvas class="excalidraw__canvas static"></canvas>
+      <canvas #staticCanvas class="excalidraw__canvas static"></canvas>
       <canvas
         class="excalidraw__canvas interactive"
         (pointerdown)="handleCanvasPointerDown($event)"
         (pointermove)="handleCanvasPointerMove($event)"
         (pointerup)="handleCanvasPointerUp($event)"
+        (dblclick)="handleCanvasDoubleClick($event)"
         (wheel)="handleWheel($event)"
       ></canvas>
+      <div class="excalidraw-textEditorContainer"></div>
     </div>
   `,
 })
@@ -175,8 +200,14 @@ export class CaliburnEditorComponent
   } | null>(null);
 
   readonly containerRef = viewChild<ElementRef<HTMLDivElement>>("container");
+  readonly staticCanvasRef =
+    viewChild<ElementRef<HTMLCanvasElement>>("staticCanvas");
 
   readonly toolbarTools = TOOLBAR_TOOLS;
+
+  get canvas(): HTMLCanvasElement {
+    return this.staticCanvasRef()!.nativeElement;
+  }
 
   state: AppState = {
     ...getDefaultAppState(),
@@ -213,6 +244,32 @@ export class CaliburnEditorComponent
   };
 
   readonly flowchart = { isCreatingChart: false };
+
+  files: BinaryFiles = {};
+
+  textWysiwygSubmitHandler: (() => void) | null = null;
+
+  readonly cursor = {
+    reset: () => {},
+    set: (_cursorType?: string) => {},
+    applyForTool: () => {},
+  };
+
+  lastCompletedCanvasClicks: { x: number; y: number }[] = [];
+
+  lastPointerUpIsDoubleClick = false;
+
+  readonly onChangeEmitter = new Emitter<
+    [
+      elements: readonly ExcalidrawElement[],
+      appState: AppState,
+      files: BinaryFiles,
+    ]
+  >();
+
+  readonly onScrollChangeEmitter = new Emitter<
+    [scrollX: number, scrollY: number, zoom: AppState["zoom"]]
+  >();
 
   readonly drawShape = {
     hasPendingGesture: () => false,
@@ -281,6 +338,13 @@ export class CaliburnEditorComponent
       actionBringForward,
       actionSendToBack,
       actionBringToFront,
+      actionBindText,
+      actionUnbindText,
+      actionWrapTextInContainer,
+      actionTextAutoResize,
+      actionToggleLinearEditor,
+      actionDecreaseFontSize,
+      actionIncreaseFontSize,
       createUndoAction(this.history),
       createRedoAction(this.history),
     ]);
@@ -401,6 +465,17 @@ export class CaliburnEditorComponent
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
+    // bail if
+    if (
+      // inside an input
+      (isWritableElement(event.target) &&
+        // unless pressing escape (finalize action)
+        event.key !== KEYS.ESCAPE) ||
+      // or unless using arrows (to move between buttons)
+      (isArrowKey(event.key) && isInputLike(event.target))
+    ) {
+      return;
+    }
     if (this.maybeHandlePageScrollKeyDown(event)) {
       // the editor consumes the input — the page must not scroll along
       event.preventDefault();
@@ -482,6 +557,8 @@ export class CaliburnEditorComponent
       this.scene.triggerUpdate();
 
       event.preventDefault();
+    } else if (event.key === KEYS.ENTER) {
+      handleEnterToEditKeyDown(this, event);
     }
   };
 
@@ -603,11 +680,23 @@ export class CaliburnEditorComponent
   };
 
   setState(state: SetStateArg, callback?: () => void) {
+    const prevState = this.state;
     const partial = typeof state === "function" ? state(this.state) : state;
     if (partial) {
       this.state = { ...this.state, ...partial };
     }
     this.commit();
+    if (
+      prevState.scrollX !== this.state.scrollX ||
+      prevState.scrollY !== this.state.scrollY ||
+      prevState.zoom !== this.state.zoom
+    ) {
+      this.onScrollChangeEmitter.trigger(
+        this.state.scrollX,
+        this.state.scrollY,
+        this.state.zoom,
+      );
+    }
     this.cdr.detectChanges();
     callback?.();
   }
@@ -711,8 +800,15 @@ export class CaliburnEditorComponent
     }
   };
 
+  handleCanvasPanUsingWheelOrSpaceDrag = (event: PointerEvent | MouseEvent) =>
+    panCanvasOnWheelOrSpaceDrag(this, event as PointerEvent);
+
+  handleCanvasDoubleClick(event: MouseEvent) {
+    handleCanvasDoubleClick(this, event);
+  }
+
   handleCanvasPointerDown(event: PointerEvent) {
-    if (handleCanvasPanUsingWheelOrSpaceDrag(this, event)) {
+    if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;
     }
 
@@ -766,6 +862,9 @@ export class CaliburnEditorComponent
         activeToolType,
         this.pointerDownState,
       );
+    } else if (activeToolType === "text") {
+      this.pointerDownState = initialPointerDownState(this, event);
+      handleTextOnPointerDown(this, event, this.pointerDownState);
     }
   }
 
@@ -808,10 +907,18 @@ export class CaliburnEditorComponent
         finalizeFreeDrawOnPointerUp(this, event);
       } else if (isLinearElement(this.state.newElement)) {
         finalizeLinearOnPointerUp(this, this.pointerDownState, event);
+      } else if (isTextElement(this.state.newElement)) {
+        handleTextElementOnPointerUp(this, this.state.newElement);
       } else if (this.state.newElement) {
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
         handleSelectionPointerUp(this, this.pointerDownState);
+        if (
+          maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
+        ) {
+          this.pointerDownState = null;
+          return;
+        }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
       }
       this.pointerDownState = null;
@@ -847,5 +954,10 @@ export class CaliburnEditorComponent
 
   private commit() {
     this.store.commit(this.scene.getElementsMapIncludingDeleted(), this.state);
+    this.onChangeEmitter.trigger(
+      this.scene.getElementsIncludingDeleted(),
+      this.state,
+      this.files,
+    );
   }
 }

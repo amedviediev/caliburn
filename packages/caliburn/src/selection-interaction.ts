@@ -12,6 +12,9 @@ import {
   dragNewElement,
   getCommonBounds,
   getElementsWithinSelection,
+  hasBoundingBox,
+  hitElementBoundingBox,
+  hitElementBoundText,
   hitElementItself,
   isLinearElement,
   isSomeElementSelected,
@@ -123,47 +126,130 @@ export const initialPointerDownState = (
   };
 };
 
-const getElementHitThreshold = (
+export const getElementHitThreshold = (
   editor: CaliburnEditorComponent,
   element: ExcalidrawElement,
 ) => {
   return Math.max(
     element.strokeWidth / 2 + 0.1,
+    // NOTE: Here be dragons. Do not go under the 0.63 multiplier unless you're
+    // willing to test extensively. The hit testing starts to become unreliable
+    // due to FP imprecision under 0.63 in high zoom levels.
     0.85 * (DEFAULT_COLLISION_THRESHOLD / editor.state.zoom.value),
   );
+};
+
+const hitElement = (
+  editor: CaliburnEditorComponent,
+  x: number,
+  y: number,
+  element: NonDeleted<ExcalidrawElement>,
+  considerBoundingBox = true,
+) => {
+  // if the element is selected, then hit test is done against its bounding box
+  if (
+    considerBoundingBox &&
+    editor.state.selectedElementIds[element.id] &&
+    hasBoundingBox([element], editor.state, editor.editorInterface)
+  ) {
+    // if hitting the bounding box, return early
+    // but if not, we should check for other cases as well (e.g. frame name)
+    if (
+      hitElementBoundingBox(
+        pointFrom(x, y),
+        element,
+        editor.scene.getNonDeletedElementsMap(),
+        getElementHitThreshold(editor, element),
+      )
+    ) {
+      return true;
+    }
+  }
+
+  // take bound text element into consideration for hit collision as well
+  const hitBoundTextOfElement = hitElementBoundText(
+    pointFrom(x, y),
+    element,
+    editor.scene.getNonDeletedElementsMap(),
+  );
+  if (hitBoundTextOfElement) {
+    return true;
+  }
+
+  return hitElementItself({
+    point: pointFrom(x, y),
+    element,
+    threshold: getElementHitThreshold(editor, element),
+    elementsMap: editor.scene.getNonDeletedElementsMap(),
+  });
 };
 
 export const getElementsAtPosition = (
   editor: CaliburnEditorComponent,
   x: number,
   y: number,
+  opts?: {
+    includeBoundTextElement?: boolean;
+    includeLockedElements?: boolean;
+  },
 ): NonDeleted<ExcalidrawElement>[] => {
-  const elementsMap = editor.scene.getNonDeletedElementsMap();
-  return editor.scene
-    .getNonDeletedElements()
-    .filter(
-      (element) =>
-        !element.locked && !(isTextElement(element) && element.containerId),
-    )
-    .filter((element) =>
-      hitElementItself({
-        point: pointFrom(x, y),
-        element,
-        threshold: getElementHitThreshold(editor, element),
-        elementsMap,
-      }),
-    );
+  return (
+    opts?.includeBoundTextElement && opts?.includeLockedElements
+      ? editor.scene.getNonDeletedElements()
+      : editor.scene
+          .getNonDeletedElements()
+          .filter(
+            (element) =>
+              (opts?.includeLockedElements || !element.locked) &&
+              (opts?.includeBoundTextElement ||
+                !(isTextElement(element) && element.containerId)),
+          )
+  ).filter((el) => hitElement(editor, x, y, el));
 };
 
 export const getElementAtPosition = (
   editor: CaliburnEditorComponent,
   x: number,
   y: number,
+  opts?: {
+    includeBoundTextElement?: boolean;
+    includeLockedElements?: boolean;
+    preferSelected?: boolean;
+  },
 ): NonDeleted<ExcalidrawElement> | null => {
-  const candidates = getElementsAtPosition(editor, x, y);
+  const allHitElements = getElementsAtPosition(editor, x, y, {
+    includeBoundTextElement: opts?.includeBoundTextElement,
+    includeLockedElements: opts?.includeLockedElements,
+  });
 
-  // topmost element wins
-  return candidates.length ? candidates[candidates.length - 1] : null;
+  if (allHitElements.length > 1) {
+    if (opts?.preferSelected) {
+      for (let index = allHitElements.length - 1; index > -1; index--) {
+        if (editor.state.selectedElementIds[allHitElements[index].id]) {
+          return allHitElements[index];
+        }
+      }
+    }
+    const elementWithHighestZIndex = allHitElements[allHitElements.length - 1];
+
+    // If we're hitting element with highest z-index only on its bounding box
+    // while also hitting other element figure, the latter should be considered.
+    return hitElementItself({
+      point: pointFrom(x, y),
+      element: elementWithHighestZIndex,
+      // when overlapping, we would like to be more precise
+      // this also avoids the need to update past tests
+      threshold: getElementHitThreshold(editor, elementWithHighestZIndex) / 2,
+      elementsMap: editor.scene.getNonDeletedElementsMap(),
+    })
+      ? elementWithHighestZIndex
+      : allHitElements[allHitElements.length - 2];
+  }
+  if (allHitElements.length === 1) {
+    return allHitElements[0];
+  }
+
+  return null;
 };
 
 export const handleSelectionPointerDown = (
