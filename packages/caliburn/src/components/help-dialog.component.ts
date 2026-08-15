@@ -301,7 +301,10 @@ export class CaliburnHelpDialogComponent {
       label: t("labels.pasteAsPlaintext"),
       shortcuts: [getShortcutKey("CtrlOrCmd+Shift+V")],
     },
-    { label: t("labels.selectAll"), shortcuts: [getShortcutKey("CtrlOrCmd+A")] },
+    {
+      label: t("labels.selectAll"),
+      shortcuts: [getShortcutKey("CtrlOrCmd+A")],
+    },
     {
       label: t("labels.multiSelect"),
       shortcuts: [getShortcutKey(`Shift+${t("helpDialog.click")}`)],

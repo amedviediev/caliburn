@@ -25,13 +25,13 @@ import type { CaliburnEditorComponent } from "../editor.component";
   imports: [CaliburnConfirmDialogComponent],
   template: `
     @if (editor.activeConfirmDialog() === "clearCanvas") {
-      <caliburn-confirm-dialog
-        [title]="title"
-        (confirm)="handleConfirm()"
-        (cancel)="editor.activeConfirmDialog.set(null)"
-      >
-        <p class="clear-canvas__content">{{ content }}</p>
-      </caliburn-confirm-dialog>
+    <caliburn-confirm-dialog
+      [title]="title"
+      (confirm)="handleConfirm()"
+      (cancel)="editor.activeConfirmDialog.set(null)"
+    >
+      <p class="clear-canvas__content">{{ content }}</p>
+    </caliburn-confirm-dialog>
     }
   `,
 })

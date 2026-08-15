@@ -111,7 +111,11 @@ export class CaliburnJSONExportDialogComponent {
   }
 
   protected setProjectName(name: string) {
-    this.editor.actionManager.executeAction(actionChangeProjectName, "ui", name);
+    this.editor.actionManager.executeAction(
+      actionChangeProjectName,
+      "ui",
+      name,
+    );
   }
 
   protected readonly saveFileToDisk = () => {
@@ -119,8 +123,6 @@ export class CaliburnJSONExportDialogComponent {
   };
 
   protected handleClose() {
-    this.editor.batchCommits(() =>
-      this.editor.setState({ openDialog: null }),
-    );
+    this.editor.batchCommits(() => this.editor.setState({ openDialog: null }));
   }
 }

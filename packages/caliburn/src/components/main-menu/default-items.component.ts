@@ -49,16 +49,16 @@ const injectEditor = () =>
   imports: [CaliburnDropdownMenuItemComponent],
   template: `
     @if (enabled()) {
-      <button
-        caliburn-dropdown-menu-item
-        icon="loadIcon"
-        testId="load-button"
-        [shortcut]="shortcut"
-        [ariaLabel]="label"
-        (select)="handleSelect()"
-      >
-        {{ label }}
-      </button>
+    <button
+      caliburn-dropdown-menu-item
+      icon="loadIcon"
+      testId="load-button"
+      [shortcut]="shortcut"
+      [ariaLabel]="label"
+      (select)="handleSelect()"
+    >
+      {{ label }}
+    </button>
     }
   `,
 })
@@ -84,16 +84,16 @@ export class CaliburnMenuLoadSceneComponent {
   imports: [CaliburnDropdownMenuItemComponent],
   template: `
     @if (enabled()) {
-      <button
-        caliburn-dropdown-menu-item
-        icon="save"
-        testId="save-button"
-        [shortcut]="shortcut"
-        [ariaLabel]="label"
-        (select)="handleSelect()"
-      >
-        {{ label }}
-      </button>
+    <button
+      caliburn-dropdown-menu-item
+      icon="save"
+      testId="save-button"
+      [shortcut]="shortcut"
+      [ariaLabel]="label"
+      (select)="handleSelect()"
+    >
+      {{ label }}
+    </button>
     }
   `,
 })
@@ -207,15 +207,15 @@ export class CaliburnMenuHelpComponent {
   imports: [CaliburnDropdownMenuItemComponent],
   template: `
     @if (enabled()) {
-      <button
-        caliburn-dropdown-menu-item
-        icon="trashIcon"
-        testId="clear-canvas-button"
-        [ariaLabel]="label"
-        (select)="handleSelect()"
-      >
-        {{ label }}
-      </button>
+    <button
+      caliburn-dropdown-menu-item
+      icon="trashIcon"
+      testId="clear-canvas-button"
+      [ariaLabel]="label"
+      (select)="handleSelect()"
+    >
+      {{ label }}
+    </button>
     }
   `,
 })
@@ -247,16 +247,16 @@ export class CaliburnMenuClearCanvasComponent {
   imports: [CaliburnDropdownMenuItemComponent],
   template: `
     @if (enabled()) {
-      <button
-        caliburn-dropdown-menu-item
-        [icon]="isDark() ? 'sunIcon' : 'moonIcon'"
-        testId="toggle-dark-mode"
-        [shortcut]="shortcut"
-        [ariaLabel]="label()"
-        (select)="handleSelect($event)"
-      >
-        {{ label() }}
-      </button>
+    <button
+      caliburn-dropdown-menu-item
+      [icon]="isDark() ? 'sunIcon' : 'moonIcon'"
+      testId="toggle-dark-mode"
+      [shortcut]="shortcut"
+      [ariaLabel]="label()"
+      (select)="handleSelect($event)"
+    >
+      {{ label() }}
+    </button>
     }
   `,
 })
@@ -299,31 +299,31 @@ export class CaliburnMenuToggleThemeComponent {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (visible()) {
-      <div style="margin-top: 0.75rem">
-        <div
-          data-testid="canvas-background-label"
-          style="font-size: 0.875rem; margin-bottom: 0.25rem; margin-left: 0.5rem"
-        >
-          {{ label }}
-        </div>
-        <div style="padding: 0 0.625rem">
-          <div class="color-picker__top-picks">
-            @for (color of topPicks; track color) {
-              <button
-                type="button"
-                class="color-picker__button"
-                [class.active]="color === currentColor()"
-                [attr.title]="color"
-                [attr.data-testid]="'color-top-pick-' + color"
-                [style.--swatch-color]="color"
-                (click)="setColor(color)"
-              >
-                <div class="color-picker__button-outline"></div>
-              </button>
-            }
-          </div>
+    <div style="margin-top: 0.75rem">
+      <div
+        data-testid="canvas-background-label"
+        style="font-size: 0.875rem; margin-bottom: 0.25rem; margin-left: 0.5rem"
+      >
+        {{ label }}
+      </div>
+      <div style="padding: 0 0.625rem">
+        <div class="color-picker__top-picks">
+          @for (color of topPicks; track color) {
+          <button
+            type="button"
+            class="color-picker__button"
+            [class.active]="color === currentColor()"
+            [attr.title]="color"
+            [attr.data-testid]="'color-top-pick-' + color"
+            [style.--swatch-color]="color"
+            (click)="setColor(color)"
+          >
+            <div class="color-picker__button-outline"></div>
+          </button>
+          }
         </div>
       </div>
+    </div>
     }
   `,
 })

@@ -474,7 +474,9 @@ export class CaliburnEditorComponent
       canvasActions: { ...DEFAULT_UI_OPTIONS.canvasActions, toggleTheme: true },
     },
     onDuplicate: undefined as unknown,
-    onThemeChange: undefined as ((theme: AppState["theme"]) => void) | undefined,
+    onThemeChange: undefined as
+      | ((theme: AppState["theme"]) => void)
+      | undefined,
     imageOptions: { ...DEFAULT_IMAGE_OPTIONS },
   };
 

@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   computed,
   effect,
   forwardRef,
@@ -48,6 +47,8 @@ import { CaliburnFilledButtonComponent } from "./filled-button.component";
 import { CaliburnRadioGroupComponent } from "./radio-group.component";
 import { CaliburnSwitchComponent } from "./switch.component";
 import { CaliburnTooltipComponent } from "./tooltip.component";
+
+import type { ElementRef } from "@angular/core";
 
 import type { CaliburnEditorComponent } from "../editor.component";
 
@@ -386,7 +387,11 @@ export class CaliburnImageExportDialogComponent {
   protected setProjectName(name: string) {
     this.resetCopyStatus();
     this.projectName.set(name);
-    this.editor.actionManager.executeAction(actionChangeProjectName, "ui", name);
+    this.editor.actionManager.executeAction(
+      actionChangeProjectName,
+      "ui",
+      name,
+    );
   }
 
   protected setExportWithBackground(checked: boolean) {
@@ -421,25 +426,25 @@ export class CaliburnImageExportDialogComponent {
   protected setExportScale(scale: number) {
     this.resetCopyStatus();
     this.exportScale.set(scale);
-    this.editor.actionManager.executeAction(actionChangeExportScale, "ui", scale);
+    this.editor.actionManager.executeAction(
+      actionChangeExportScale,
+      "ui",
+      scale,
+    );
   }
 
   protected readonly exportToPng = () => {
     const { exportedElements, exportingFrame } = this.exportSelection();
-    return this.editor.onExportImage(
-      EXPORT_IMAGE_TYPES.png,
-      exportedElements,
-      { exportingFrame },
-    );
+    return this.editor.onExportImage(EXPORT_IMAGE_TYPES.png, exportedElements, {
+      exportingFrame,
+    });
   };
 
   protected readonly exportToSvg = () => {
     const { exportedElements, exportingFrame } = this.exportSelection();
-    return this.editor.onExportImage(
-      EXPORT_IMAGE_TYPES.svg,
-      exportedElements,
-      { exportingFrame },
-    );
+    return this.editor.onExportImage(EXPORT_IMAGE_TYPES.svg, exportedElements, {
+      exportingFrame,
+    });
   };
 
   protected readonly copyPngToClipboard = async () => {
