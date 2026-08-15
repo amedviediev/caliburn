@@ -429,19 +429,20 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
 
     const onHashChange = async (event: HashChangeEvent) => {
       event.preventDefault();
+      const api = this.excalidrawAPI;
       const libraryUrlTokens = parseLibraryTokensFromUrl();
-      if (!libraryUrlTokens) {
+      if (!libraryUrlTokens && api) {
         if (
           collab?.isCollaborating() &&
           !isCollaborationLink(window.location.href)
         ) {
           collab.stopCollaboration(false);
         }
-        excalidrawAPI.updateScene({ appState: { isLoading: true } });
+        api.updateScene({ appState: { isLoading: true } });
 
         initializeScene({
           collab,
-          excalidrawAPI,
+          excalidrawAPI: api,
           editor: this.editorRef()!,
         }).then((data) => {
           this.loadImages(data);
@@ -452,6 +453,10 @@ export class CaliburnAppComponent implements AfterViewInit, OnDestroy {
 
     const syncData = debounce(() => {
       if (isTestEnv()) {
+        return;
+      }
+      const excalidrawAPI = this.excalidrawAPI;
+      if (!excalidrawAPI) {
         return;
       }
       if (
