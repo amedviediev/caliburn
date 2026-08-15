@@ -148,6 +148,7 @@ import {
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
 import { actionTextAutoResize } from "./actions/actionTextAutoResize";
 import { actionToggleSearchMenu } from "./actions/actionToggleSearchMenu";
+import { actionToggleViewMode } from "./actions/actionToggleViewMode";
 import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import { TOGGLE_TOOLS, actionFinalize } from "./actions/actionFinalize";
 import {
@@ -811,6 +812,7 @@ export class CaliburnEditorComponent
       actionPaste,
       actionShortcuts,
       actionToggleSearchMenu,
+      actionToggleViewMode,
       actionLoadScene,
       actionSaveToActiveFile,
       actionSaveFileToDisk,
@@ -1247,6 +1249,17 @@ export class CaliburnEditorComponent
       event.preventDefault();
     } else if (event.key === KEYS.ENTER) {
       handleEnterToEditKeyDown(this, event);
+    }
+
+    if (
+      event[KEYS.CTRL_OR_CMD] &&
+      (event.key === KEYS.BACKSPACE || event.key === KEYS.DELETE)
+    ) {
+      this.activeConfirmDialog.set("clearCanvas");
+      // the document keydown listener runs outside Angular, and this dialog
+      // lives in a signal rather than in appState — there is no commit for
+      // the refresh to ride along with, so flush the views here
+      this.cdr.detectChanges();
     }
   };
 
