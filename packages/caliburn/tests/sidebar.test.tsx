@@ -321,6 +321,35 @@ describe("LibraryMenu", () => {
     });
   });
 
+  it("renders every item of a library larger than one render batch", async () => {
+    // upstream reveals items in batches of ITEMS_RENDERED_PER_BATCH (17),
+    // one batch per pass, so a library past that size only fully renders if
+    // each batch schedules the next one
+    const ITEM_COUNT = 40;
+
+    await act(() =>
+      h.app.library.updateLibrary({
+        libraryItems: Array.from({ length: ITEM_COUNT }, (_, i) => ({
+          id: `item${i}`,
+          status: "unpublished" as const,
+          created: i,
+          elements: [API.createElement({ id: `elem${i}`, type: "rectangle" })],
+        })),
+      }),
+    );
+
+    openLibrary();
+
+    await waitFor(() => {
+      expect(container().querySelectorAll("caliburn-library-unit").length).toBe(
+        ITEM_COUNT,
+      );
+      expect(
+        container().querySelectorAll("caliburn-empty-library-unit").length,
+      ).toBe(0);
+    });
+  });
+
   it("selects items with shift+click and removes them from the dropdown", async () => {
     await act(() =>
       h.app.library.updateLibrary({

@@ -57,9 +57,13 @@ export class CaliburnLibraryMenuSectionComponent {
   private readonly revealNextBatch = effect(() => {
     const length = this.items().length;
     const batch = this.itemsRenderedPerBatch();
-    const index = untracked(this.index);
+    // `index` stays in the effect's dependency set (upstream lists it in its
+    // `useEffect` deps) so each batch schedules the next one; the write is
+    // untracked only to keep it out of that read pass. Settles once
+    // `index >= length`.
+    const index = this.index();
     if (index < length) {
-      this.index.set(index + batch);
+      untracked(() => this.index.set(index + batch));
     }
   });
 }
