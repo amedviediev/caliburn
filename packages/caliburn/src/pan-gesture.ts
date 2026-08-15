@@ -29,9 +29,13 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
   if (
     !(
       gesture.pointers.size <= 1 &&
-      (event.button === POINTER_BUTTON.WHEEL ||
+      (((event.button === POINTER_BUTTON.WHEEL ||
         (event.button === POINTER_BUTTON.MAIN &&
-          isHandToolActive(editor.state)) ||
+          isHandToolActive(editor.state))) &&
+        // reachable while non-interactive when the active tool is allowed
+        // via `interaction.enabled.tools` — panning must stay gated on
+        // `navigation` then
+        (editor.isInteractionEnabled() || editor.isNavigationEnabled())) ||
         (editor.state.viewModeEnabled &&
           !editor.isActiveToolPointerCapturing()))
     )

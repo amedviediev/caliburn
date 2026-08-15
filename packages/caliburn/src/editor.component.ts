@@ -20,6 +20,7 @@ import {
   MIME_TYPES,
   MIN_ZOOM,
   POINTER_BUTTON,
+  POINTER_EVENTS,
   TOOL_TYPE,
   ZOOM_STEP,
   debounce,
@@ -74,8 +75,6 @@ import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import { Renderer } from "@excalidraw/excalidraw/scene/Renderer";
 import rough from "roughjs/bin/rough";
 
-import type { RoughCanvas } from "roughjs/bin/canvas";
-
 import type { EditorInterface, IMAGE_MIME_TYPES } from "@excalidraw/common";
 import type {
   ExcalidrawArrowElement,
@@ -90,6 +89,7 @@ import type {
   AppState,
   BinaryFileData,
   BinaryFiles,
+  InteractionConfig,
   SceneData,
   ToolType,
 } from "@excalidraw/excalidraw/types";
@@ -213,6 +213,8 @@ import {
   updateActiveLockedIdOnPointerUp,
 } from "./selection-interaction";
 
+import type { RoughCanvas } from "roughjs/bin/canvas";
+
 import type { ElementRef } from "@angular/core";
 
 import type { PointerDownState } from "./selection-interaction";
@@ -271,6 +273,20 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
     <div
       #container
       class="excalidraw excalidraw-container"
+      [class.excalidraw--view-mode]="state.viewModeEnabled"
+      [class.excalidraw--non-interactive]="!isInteractionEnabled()"
+      [class.excalidraw--navigation]="
+        !isInteractionEnabled() && isNavigationEnabled()
+      "
+      [class.excalidraw--tools]="
+        !isInteractionEnabled() && isToolSupported(state.activeTool.type)
+      "
+      [class.excalidraw--embeds]="!isInteractionEnabled() && isEmbedsEnabled()"
+      [class.excalidraw--allow-browser-zoom]="
+        !isInteractionEnabled() && isBrowserZoomEnabled()
+      "
+      [class.excalidraw--zen-mode]="state.zenModeEnabled"
+      [style.--ui-pointerEvents]="uiPointerEvents"
       tabindex="0"
       (drop)="handleAppOnDrop($event)"
       (dragover)="handleAppOnDragOver($event)"
@@ -349,6 +365,9 @@ export class CaliburnEditorComponent
   readonly activeTool = input<
     ({ type: ToolType } | { type: "custom"; customType: string }) | null
   >(null);
+  readonly interaction = input<boolean | InteractionConfig | null | undefined>(
+    undefined,
+  );
   readonly onExcalidrawAPI = input<
     ((api: CaliburnImperativeAPI) => void) | null
   >(null);
@@ -478,7 +497,18 @@ export class CaliburnEditorComponent
     return this.interactiveCanvasRef()?.nativeElement ?? null;
   }
 
+  /**
+   * Whether the active tool captures the primary pointer instead of the
+   * view-mode drag-to-pan — the laser and host-implemented custom tools do;
+   * while non-interactive, any tool allowed via `interaction.enabled.tools`
+   * does.
+   */
   isActiveToolPointerCapturing(): boolean {
+    if (!this.isInteractionEnabled()) {
+      // an active tool that isn't allowed via `interaction.enabled.tools`
+      // is inert — including the laser
+      return this.isToolSupported(this.state.activeTool.type);
+    }
     return (
       this.state.activeTool.type === "laser" ||
       this.state.activeTool.type === "custom"
@@ -510,12 +540,120 @@ export class CaliburnEditorComponent
     finalize: () => {},
   };
 
-  isInteractionEnabled() {
-    return true;
+  /**
+   * `props.interaction`, normalized: the input is `null` rather than
+   * `undefined` when a rerender drops the prop, which would otherwise read
+   * as an (empty) config object.
+   */
+  private interactionProp(): boolean | InteractionConfig | undefined {
+    return this.interaction() ?? undefined;
   }
 
-  isNavigationEnabled() {
-    return true;
+  /**
+   * Whether the editor accepts user input (pointer, keyboard, wheel, touch,
+   * clipboard, drag&drop). When `false`, the editor is fully inert for the
+   * user, but remains controllable through the imperative API.
+   *
+   * All user-input entry points must consult this getter (directly or by
+   * not being attached/rendered at all).
+   */
+  isInteractionEnabled(
+    interaction:
+      | boolean
+      | InteractionConfig
+      | undefined = this.interactionProp(),
+  ): boolean {
+    return interaction !== false && typeof interaction !== "object";
+  }
+
+  /**
+   * Whether element links render their link icon and are clickable. True
+   * when fully interactive, or when `interaction: { enabled: { links: true } }`.
+   */
+  isLinksEnabled(
+    interaction:
+      | boolean
+      | InteractionConfig
+      | undefined = this.interactionProp(),
+  ): boolean {
+    if (typeof interaction === "object" && interaction !== null) {
+      return (
+        interaction.enabled?.links === true ||
+        interaction.enabled?.interactiveContent === true
+      );
+    }
+    return interaction !== false;
+  }
+
+  /**
+   * Whether canvas navigation — panning & zooming, view-mode style — is
+   * enabled. True when fully interactive, or when `interaction: { enabled:
+   * { navigation: true } }`. Respects `appState.scrollConstraints`.
+   */
+  isNavigationEnabled(
+    interaction:
+      | boolean
+      | InteractionConfig
+      | undefined = this.interactionProp(),
+  ): boolean {
+    if (typeof interaction === "object" && interaction !== null) {
+      return interaction.enabled?.navigation === true;
+    }
+    return interaction !== false;
+  }
+
+  /**
+   * Whether embeddable & iframe elements are interactive. True when fully
+   * interactive, or when allowed via `interaction.enabled.embeds` /
+   * `.interactiveContent`.
+   */
+  isEmbedsEnabled(
+    interaction:
+      | boolean
+      | InteractionConfig
+      | undefined = this.interactionProp(),
+  ): boolean {
+    if (typeof interaction === "object" && interaction !== null) {
+      return (
+        interaction.enabled?.embeds === true ||
+        interaction.enabled?.interactiveContent === true
+      );
+    }
+    return interaction !== false;
+  }
+
+  /**
+   * Whether the browser's own zoom (ctrl/cmd + wheel, pinch) stays
+   * available over the non-interactive editor. Prevented by default.
+   */
+  isBrowserZoomEnabled(
+    interaction:
+      | boolean
+      | InteractionConfig
+      | undefined = this.interactionProp(),
+  ): boolean {
+    if (typeof interaction === "object" && interaction !== null) {
+      return interaction.enabled?.browserZoom === true;
+    }
+    return false;
+  }
+
+  get uiPointerEvents() {
+    const shouldBlockPointerEvents =
+      // default back to `--ui-pointerEvents` flow if setPointerCapture
+      // not supported
+      "setPointerCapture" in HTMLElement.prototype
+        ? false
+        : this.state.selectionElement ||
+          this.state.newElement ||
+          this.state.selectedElementsAreBeingDragged ||
+          this.state.resizingElement ||
+          (this.state.activeTool.type === "laser" &&
+            this.state.cursorButton === "down");
+
+    return shouldBlockPointerEvents
+      ? POINTER_EVENTS.disabled
+      : POINTER_EVENTS.enabled;
   }
 
   syncActionResult = (actionResult: ActionResult) => {
@@ -568,28 +706,28 @@ export class CaliburnEditorComponent
   private pointerDownState: PointerDownState | null = null;
 
   constructor() {
-    // react to host-forced tool changes (`props.activeTool`)
+    // react to the host-controlled props that drive editor state
+    // (`props.interaction`, `props.viewModeEnabled`, `props.activeTool`) —
+    // the equivalent of upstream's `componentDidUpdate`, whose handlers run
+    // in this same order (`App.tsx`)
     effect(() => {
-      this.activeTool();
-      untracked(() => {
-        if (!this.unmounted && this.removeSceneUpdateListener) {
-          this.setState({});
-        }
-      });
-    });
-
-    // react to host-controlled view mode (`props.viewModeEnabled`)
-    effect(() => {
+      const interaction = this.interaction();
       const viewModeEnabled = this.viewModeEnabled();
+      const forcedTool = this.activeTool();
       untracked(() => {
-        if (
-          !this.unmounted &&
-          this.removeSceneUpdateListener &&
-          viewModeEnabled !== undefined &&
-          viewModeEnabled !== this.state.viewModeEnabled
-        ) {
-          this.setState({ viewModeEnabled });
+        if (this.unmounted || !this.removeSceneUpdateListener) {
+          // pre-mount: `ngOnInit` seeds the initial state from the props
+          return;
         }
+        const prevProps = {
+          interaction: this.prevInteraction,
+          viewModeEnabled: this.prevViewModeEnabled,
+          activeTool: this.prevForcedTool,
+        };
+        this.prevInteraction = interaction;
+        this.prevViewModeEnabled = viewModeEnabled;
+        this.prevForcedTool = forcedTool;
+        this.handlePropsChange(prevProps);
       });
     });
 
@@ -674,7 +812,11 @@ export class CaliburnEditorComponent
     };
 
     const viewModeEnabled = this.viewModeEnabled();
-    if (viewModeEnabled !== undefined) {
+    if (!this.isInteractionEnabled()) {
+      // non-interactive editor implies view mode so that all edit-mode
+      // gates apply
+      this.state = { ...this.state, viewModeEnabled: true };
+    } else if (viewModeEnabled !== undefined) {
       this.state = { ...this.state, viewModeEnabled };
     }
 
@@ -682,6 +824,10 @@ export class CaliburnEditorComponent
     if (forcedTool) {
       if ((forcedTool.type as string) === "image") {
         console.warn(`"image" tool cannot be forced via "props.activeTool"`);
+      } else if (!this.isToolSupported(forcedTool.type)) {
+        console.warn(
+          `"${forcedTool.type}" tool ("props.activeTool") cannot be activated — disabled via "UIOptions.tools", or not enabled while non-interactive (see "interaction.enabled.tools")`,
+        );
       } else {
         this.state = {
           ...this.state,
@@ -689,6 +835,10 @@ export class CaliburnEditorComponent
         };
       }
     }
+
+    this.prevInteraction = this.interaction();
+    this.prevViewModeEnabled = viewModeEnabled;
+    this.prevForcedTool = forcedTool;
 
     this.onExcalidrawAPI()?.(this.getApi());
 
@@ -851,6 +1001,22 @@ export class CaliburnEditorComponent
   };
 
   private onKeyDownImpl = (event: KeyboardEvent) => {
+    if (!this.isInteractionEnabled()) {
+      // only the navigation keyboard remains: page-scroll keys and
+      // `navigation`-flagged action shortcuts (canvas zoom & zoom-to-fit —
+      // see `ActionManager.handleKeyDown`'s own gates)
+      if (
+        this.isNavigationEnabled() &&
+        this.maybeHandlePageScrollKeyDown(event)
+      ) {
+        // the editor consumes the input — the page must not scroll along
+        event.preventDefault();
+        return;
+      }
+      this.actionManager.handleKeyDown(event);
+      return;
+    }
+
     trackPlainPasteKeyDown(event);
 
     // bail if
@@ -1006,6 +1172,17 @@ export class CaliburnEditorComponent
   handleWheel = (event: WheelEvent) => {
     // NOTE no preventDefault so the page can scroll over the editor
     if (!this.isNavigationEnabled()) {
+      if (
+        !this.isInteractionEnabled() &&
+        !this.isBrowserZoomEnabled() &&
+        event[KEYS.CTRL_OR_CMD]
+      ) {
+        // the browser's own zoom is prevented over the editor by default,
+        // mirroring the interactive editor (opt out via
+        // `interaction: { enabled: { browserZoom: true } }`); trackpad
+        // pinch is delivered as ctrl+wheel
+        event.preventDefault();
+      }
       return;
     }
     if (
@@ -1126,7 +1303,7 @@ export class CaliburnEditorComponent
     if (partial) {
       this.state = { ...this.state, ...partial };
     }
-    this.applyForcedTool();
+    this.applyToolInvariants();
     this.commit();
     if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
       this.cursor.reset();
@@ -1166,12 +1343,38 @@ export class CaliburnEditorComponent
     return this.scene.getElementsMapIncludingDeleted();
   }
 
-  isToolSupported = <T extends ToolType | "custom">(tool: T): boolean => {
-    const tools = this.props.UIOptions as { tools?: Record<string, boolean> };
-    if (tools.tools?.[tool] === false) {
+  /**
+   * Whether the tool can be activated & driven by user input. False when
+   * disabled via `UIOptions.tools`, or when the editor is non-interactive
+   * and the tool isn't kept user-driven via `interaction.enabled.tools`.
+   */
+  isToolSupported = <T extends ToolType | "custom">(
+    tool: T,
+    interaction:
+      | boolean
+      | InteractionConfig
+      | undefined = this.interactionProp(),
+  ): boolean => {
+    const UIOptions = this.props.UIOptions as {
+      tools?: Record<string, boolean>;
+    };
+    if (UIOptions.tools?.[tool] === false) {
       return false;
     }
-    return this.isInteractionEnabled();
+    if (this.isInteractionEnabled(interaction)) {
+      return true;
+    }
+    const tools =
+      typeof interaction === "object" && interaction !== null
+        ? interaction.enabled?.tools
+        : undefined;
+    if (tool === "laser") {
+      return tools?.laser === true;
+    }
+    if (tool === "custom") {
+      return tools?.custom === true;
+    }
+    return false;
   };
 
   setActiveTool = (
@@ -1294,6 +1497,10 @@ export class CaliburnEditorComponent
   };
 
   toggleToolLock() {
+    if (this.activeTool()) {
+      // the active tool — including its lock state — is host-controlled
+      return;
+    }
     this.setState({
       activeTool: {
         ...this.state.activeTool,
@@ -1421,6 +1628,23 @@ export class CaliburnEditorComponent
   }
 
   private handleCanvasPointerDownImpl(event: PointerEvent) {
+    if (
+      !this.isInteractionEnabled() &&
+      !this.isToolSupported(this.state.activeTool.type)
+    ) {
+      if (this.isNavigationEnabled()) {
+        updateGestureOnPointerDown(this, event);
+        // pans on drag same as view mode (the pan session manages its own
+        // window listeners & teardown)
+        this.handleCanvasPanUsingWheelOrSpaceDrag(event);
+      }
+      return;
+    }
+    // with the active tool allowed via `interaction.enabled.tools`, the
+    // pointer keeps driving it through the full flow below — safe while
+    // non-interactive because that implies view mode, whose gates constrain
+    // everything except the tool-usage path
+
     this.lastPointerDownEvent = event;
 
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
@@ -1521,6 +1745,18 @@ export class CaliburnEditorComponent
   }
 
   private handleCanvasPointerMoveImpl(event: PointerEvent) {
+    if (!this.isInteractionEnabled()) {
+      if (this.isNavigationEnabled()) {
+        // wheel zoom is anchored on `viewport.lastPosition`
+        this.viewport.lastPosition.x = event.clientX;
+        this.viewport.lastPosition.y = event.clientY;
+        // two-finger pinch zoom/pan (single-pointer panning is handled by
+        // the pan session set up on pointerdown)
+        updateMultiTouchGesture(this, event);
+      }
+      return;
+    }
+
     this.viewport.lastPosition.x = event.clientX;
     this.viewport.lastPosition.y = event.clientY;
 
@@ -1595,6 +1831,17 @@ export class CaliburnEditorComponent
   }
 
   private handleCanvasPointerUpImpl(event: PointerEvent) {
+    // upstream returns early whenever non-interactive: a tool allowed via
+    // `interaction.enabled.tools` finishes its stroke through the window
+    // listeners its own pointerdown installed. Caliburn drives pointerup
+    // off the canvas binding instead, so the allowed tool must reach it.
+    if (
+      !this.isInteractionEnabled() &&
+      !this.isToolSupported(this.state.activeTool.type)
+    ) {
+      return;
+    }
+
     removePointer(this, event);
 
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
@@ -1787,20 +2034,201 @@ export class CaliburnEditorComponent
 
   /**
    * Keeps `state.activeTool` synced to the host-controlled
-   * `props.activeTool`. `setActiveTool` refuses non-matching activations
-   * while forced; this backstop covers the writers that bypass the funnel.
+   * `props.activeTool`, and — while non-interactive — to the invariant that
+   * the active tool is either input-enabled (`interaction.enabled.tools`)
+   * or the neutral default. `setActiveTool` refuses non-matching
+   * activations while forced; this backstop covers the writers that bypass
+   * the funnel.
    */
-  private applyForcedTool() {
+  private applyToolInvariants() {
     const forcedTool = this.activeTool?.();
     if (
       forcedTool &&
       (forcedTool.type as string) !== "image" &&
+      this.isToolSupported(forcedTool.type) &&
       !this.isSameForcedTool(forcedTool, this.state.activeTool)
     ) {
       this.state = {
         ...this.state,
         activeTool: updateActiveTool(this.state, forcedTool),
       };
+    }
+
+    // reset stale tool state (e.g. a presenter's laser after handing off)
+    // so it doesn't leak through `onChange` or linger until interaction is
+    // re-enabled
+    if (
+      !this.isInteractionEnabled() &&
+      !this.isToolSupported(this.state.activeTool.type) &&
+      this.state.activeTool.type !== "selection"
+    ) {
+      this.state = {
+        ...this.state,
+        activeTool: updateActiveTool(this.state, { type: "selection" }),
+      };
+    }
+  }
+
+  private prevInteraction: boolean | InteractionConfig | null | undefined;
+  private prevViewModeEnabled: boolean | undefined;
+  private prevForcedTool:
+    | ({ type: ToolType } | { type: "custom"; customType: string })
+    | null = null;
+
+  private handlePropsChange(prevProps: {
+    interaction: boolean | InteractionConfig | null | undefined;
+    viewModeEnabled: boolean | undefined;
+    activeTool:
+      | ({ type: ToolType } | { type: "custom"; customType: string })
+      | null;
+  }) {
+    const prevInteraction = prevProps.interaction ?? undefined;
+    const wasToolSupported = this.isToolSupported(
+      this.state.activeTool.type,
+      prevInteraction,
+    );
+
+    this.handleInteractionStateChange(prevProps, prevInteraction);
+    this.handleForcedToolChange(prevProps, prevInteraction);
+
+    // re-applies the tool invariants (`applyToolInvariants`) and re-renders
+    // the chrome for whatever the handlers above left unchanged
+    this.setState({});
+
+    if (
+      wasToolSupported !== this.isToolSupported(this.state.activeTool.type) ||
+      this.isNavigationEnabled(prevInteraction) !== this.isNavigationEnabled()
+    ) {
+      this.cursor.reset();
+    }
+  }
+
+  private handleInteractionStateChange(
+    prevProps: { viewModeEnabled: boolean | undefined },
+    prevInteraction: boolean | InteractionConfig | undefined,
+  ) {
+    const prevViewModeEnabled = this.state.viewModeEnabled;
+    const wasInteractionEnabled = this.isInteractionEnabled(prevInteraction);
+    const interactionEnabledChanged =
+      wasInteractionEnabled !== this.isInteractionEnabled();
+    const viewModePropChanged =
+      prevProps.viewModeEnabled !== this.viewModeEnabled();
+
+    // Preserve internally toggled view mode while interactive and
+    // uncontrolled. Synchronize it when its prop changes, when interaction
+    // is re-enabled, or when non-interactive mode needs to force it on.
+    let nextViewModeEnabled = this.state.viewModeEnabled;
+    if (!this.isInteractionEnabled()) {
+      nextViewModeEnabled = true;
+    } else if (viewModePropChanged || interactionEnabledChanged) {
+      nextViewModeEnabled = !!this.viewModeEnabled();
+    }
+    if (nextViewModeEnabled !== this.state.viewModeEnabled) {
+      this.setState({ viewModeEnabled: nextViewModeEnabled });
+    }
+
+    const editingWasEnabled = wasInteractionEnabled && !prevViewModeEnabled;
+    const editingEnabled =
+      this.isInteractionEnabled() && !this.state.viewModeEnabled;
+    const becameNonInteractive =
+      interactionEnabledChanged && !this.isInteractionEnabled();
+
+    if (becameNonInteractive || (editingWasEnabled && !editingEnabled)) {
+      this.terminateActiveInteraction();
+    }
+
+    if (this.isEmbedsEnabled(prevInteraction) !== this.isEmbedsEnabled()) {
+      if (!this.isEmbedsEnabled()) {
+        this.setState({ activeEmbeddable: null });
+      }
+    }
+  }
+
+  /**
+   * Keeps `state.activeTool` synced to `props.activeTool` across prop
+   * changes, and re-applies the forced tool once it becomes activatable
+   * (e.g. `interaction` config changes).
+   */
+  private handleForcedToolChange(
+    prevProps: {
+      activeTool:
+        | ({ type: ToolType } | { type: "custom"; customType: string })
+        | null;
+    },
+    prevInteraction: boolean | InteractionConfig | undefined,
+  ) {
+    const forcedTool = this.activeTool();
+    if (!forcedTool) {
+      return;
+    }
+
+    const forcedToolChanged = !this.isSameForcedTool(
+      prevProps.activeTool,
+      forcedTool,
+    );
+
+    if ((forcedTool.type as string) === "image") {
+      if (forcedToolChanged) {
+        console.warn(`"image" tool cannot be forced via "props.activeTool"`);
+      }
+      return;
+    }
+
+    if (this.isSameForcedTool(forcedTool, this.state.activeTool)) {
+      return;
+    }
+
+    // (re)force only on relevant changes so that a standing refusal (tool
+    // disabled, or not enabled while non-interactive) warns once instead of
+    // on every update
+    if (
+      forcedToolChanged ||
+      this.isToolSupported(forcedTool.type, prevInteraction) !==
+        this.isToolSupported(forcedTool.type)
+    ) {
+      this.setActiveTool(forcedTool);
+    }
+  }
+
+  /**
+   * Ends whatever interaction is in flight — called when the editor becomes
+   * non-interactive (or leaves edit mode) so no gesture, transient or
+   * selection outlives it.
+   */
+  private terminateActiveInteraction() {
+    // textWysiwyg's submit path runs synchronously. Defer until after the
+    // current update, then submit whichever text-editing session is active
+    // if editing is still disabled.
+    queueMicrotask(() => {
+      if (!this.isInteractionEnabled() || this.state.viewModeEnabled) {
+        this.textWysiwygSubmitHandler?.();
+      }
+    });
+
+    this.setState({
+      contextMenu: null,
+      openMenu: null,
+      openPopup: null,
+      cursorButton: "up",
+      activeEmbeddable: null,
+      activeLockedId: null,
+      selectedElementsAreBeingDragged: false,
+      selectionElement: null,
+      resizingElement: null,
+      isResizing: false,
+      isRotating: false,
+      isCropping: false,
+      croppingElementId: null,
+      suggestedBinding: null,
+      frameToHighlight: null,
+      elementsToHighlight: null,
+      snapLines: [],
+      showHyperlinkPopup: false,
+    });
+    this.clearSelection();
+    if (!this.isInteractionEnabled()) {
+      this.setState({ originSnapOffset: null });
+      this.cursor.reset();
     }
   }
 

@@ -58,6 +58,7 @@ const INPUT_DEFAULTS: Record<string, unknown> = {
   autoFocus: false,
   viewModeEnabled: undefined,
   activeTool: null,
+  interaction: undefined,
   onExcalidrawAPI: null,
   imageOptions: null,
   initialData: null,
