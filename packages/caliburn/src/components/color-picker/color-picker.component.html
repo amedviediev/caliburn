@@ -1,0 +1,64 @@
+<ng-template #colorInput>
+  <div>
+    <div caliburn-picker-heading>{{ hexCodeLabel }}</div>
+    <caliburn-color-input
+      [color]="color() || ''"
+      [label]="label()"
+      [placeholder]="colorPlaceholder"
+      (colorChange)="colorChange.emit($event)"
+    />
+  </div>
+</ng-template>
+<div role="dialog" aria-modal="true" class="color-picker-container">
+  <div
+    caliburn-top-picks
+    [theme]="theme()"
+    [activeColor]="color()"
+    [type]="type()"
+    [topPicks]="topPicks()"
+    (colorChange)="onTopPickChange($event)"
+  ></div>
+  <caliburn-button-separator />
+  <button
+    #trigger
+    type="button"
+    class="{{ triggerClass() }}"
+    [attr.aria-label]="label()"
+    [attr.title]="triggerTitle()"
+    [attr.data-openpopup]="type()"
+    [style.--swatch-color]="displayColor()"
+    (click)="onTriggerClick($event)"
+  >
+    <div class="color-picker__button-outline">
+      @if (!color()) {
+      <ng-icon name="slashIcon" />
+      }
+    </div>
+  </button>
+  @if (isOpen()) {
+  <div
+    caliburn-properties-popover
+    [triggerRect]="triggerRect()"
+    (close)="onClose()"
+  >
+    @if (palette(); as palette) {
+    <div
+      caliburn-picker
+      [theme]="theme()"
+      [color]="color()"
+      [type]="type()"
+      [elements]="elements()"
+      [palette]="palette"
+      [updateData]="updateData()"
+      [excludedColors]="excludedColors()"
+      (colorChange)="colorChange.emit($event)"
+      (escape)="onClose()"
+    >
+      <ng-container [ngTemplateOutlet]="colorInput" />
+    </div>
+    } @else {
+    <ng-container [ngTemplateOutlet]="colorInput" />
+    }
+  </div>
+  }
+</div>

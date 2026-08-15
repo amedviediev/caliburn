@@ -1,0 +1,24 @@
+<div class="color-picker__input-label-container">
+  <div class="color-picker__input-label" [class.has-error]="!!errorMessage()">
+    <div class="color-picker__input-hash">#</div>
+    <input
+      #colorInput
+      style="border: 0; padding: 0"
+      spellcheck="false"
+      class="color-picker-input"
+      tabindex="-1"
+      [attr.aria-label]="label()"
+      [attr.aria-invalid]="!!errorMessage()"
+      [attr.placeholder]="placeholder() ?? null"
+      [value]="displayValue()"
+      (input)="onInput($event)"
+      (change)="onInput($event)"
+      (blur)="onBlur()"
+      (focus)="onFocus()"
+      (keydown)="onKeyDown($event)"
+    />
+  </div>
+  @if (errorMessage(); as errorMessage) {
+  <div class="color-picker__error-message" role="alert">{{ errorMessage }}</div>
+  }
+</div>

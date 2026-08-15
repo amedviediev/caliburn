@@ -1,0 +1,18 @@
+@for (entry of entries(); track entry.index) {
+<button
+  tabindex="-1"
+  type="button"
+  class="{{ entry.className }}"
+  [attr.title]="entry.color"
+  [attr.aria-label]="label()"
+  [style.--swatch-color]="entry.displayColor"
+  (click)="select(entry.color)"
+>
+  <div class="color-picker__button-outline"></div>
+  <div
+    caliburn-hotkey-label
+    [color]="entry.displayColor"
+    [keyLabel]="entry.index + 1"
+  ></div>
+</button>
+}

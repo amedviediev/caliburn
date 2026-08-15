@@ -1,0 +1,13 @@
+@for (pick of picks(); track pick.color) {
+<button
+  class="{{ pick.className }}"
+  type="button"
+  [attr.title]="pick.color"
+  [attr.data-testid]="'color-top-pick-' + pick.color"
+  [attr.data-top-pick-index]="pick.index"
+  [style.--swatch-color]="pick.displayColor"
+  (click)="colorChange.emit(pick.color)"
+>
+  <div class="color-picker__button-outline"></div>
+</button>
+}

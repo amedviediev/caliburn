@@ -8,13 +8,7 @@ import {
   output,
 } from "@angular/core";
 
-import {
-  COLOR_OUTLINE_CONTRAST_THRESHOLD,
-  DEFAULT_CANVAS_BACKGROUND_PICKS,
-  THEME,
-  applyDarkModeFilter,
-  isColorDark,
-} from "@excalidraw/common";
+import { DEFAULT_CANVAS_BACKGROUND_PICKS, THEME } from "@excalidraw/common";
 
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
@@ -32,6 +26,7 @@ import {
 import { actionShortcuts } from "../../actions/actionMenu";
 import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+import { CaliburnColorPickerComponent } from "../color-picker/color-picker.component";
 import { CaliburnDropdownMenuItemLinkComponent } from "../dropdown-menu/dropdown-menu-item-link.component";
 import { CaliburnDropdownMenuItemComponent } from "../dropdown-menu/dropdown-menu-item.component";
 
@@ -240,35 +235,21 @@ export class CaliburnMenuToggleThemeComponent {
 }
 
 /**
- * Upstream delegates the swatches to `actionManager.renderAction(
- * "changeViewBackgroundColor")`, i.e. the full `ColorPicker` (popup, custom
- * color input, shades). Caliburn has no ColorPicker port; as in
- * `panel/shape-actions.component.ts`, the canvas-background top picks are
- * rendered directly, with the upstream classes and `color-top-pick-*` testids.
+ * Upstream delegates the picker to `actionManager.renderAction(
+ * "changeViewBackgroundColor")`, whose `PanelComponent` is a `ColorPicker`
+ * with `palette={null}` — top picks plus a hex input, no palette grid.
  */
 @Component({
   selector: "caliburn-menu-change-canvas-background",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CaliburnColorPickerComponent],
   templateUrl: "./menu-change-canvas-background.component.html",
 })
 export class CaliburnMenuChangeCanvasBackgroundComponent {
   private readonly editor = injectEditor();
 
   protected readonly label = t("labels.canvasBackground");
-
-  /** the per-swatch contract of upstream `ColorPicker/TopPicks.tsx` minus its
-   * drag-and-drop classes (`is-dnd-*`), which belong to the unported
-   * `useColorPickerDnD` hook */
-  protected picks() {
-    this.editor.changeGeneration();
-    const dark = this.editor.state.theme === THEME.DARK;
-    return DEFAULT_CANVAS_BACKGROUND_PICKS.map((color) => ({
-      color,
-      displayColor: applyDarkModeFilter(color, dark),
-      isTransparent: color === "transparent" || !color,
-      hasOutline: !isColorDark(color, COLOR_OUTLINE_CONTRAST_THRESHOLD),
-    }));
-  }
+  protected readonly canvasBackgroundPicks = DEFAULT_CANVAS_BACKGROUND_PICKS;
 
   protected visible() {
     this.editor.changeGeneration();
@@ -279,15 +260,22 @@ export class CaliburnMenuChangeCanvasBackgroundComponent {
   }
 
   protected currentColor() {
+    this.editor.changeGeneration();
     return this.editor.state.viewBackgroundColor;
   }
 
-  protected setColor(viewBackgroundColor: string) {
+  /** upstream's `updateData` for this action — also how the picker drives
+   * `appState.openPopup` */
+  protected readonly updateViewBackgroundColor = (formData?: any) => {
     this.editor.actionManager.executeAction(
       actionChangeViewBackgroundColor,
       "ui",
-      { viewBackgroundColor },
+      formData,
     );
+  };
+
+  protected setColor(viewBackgroundColor: string) {
+    this.updateViewBackgroundColor({ viewBackgroundColor });
   }
 }
 

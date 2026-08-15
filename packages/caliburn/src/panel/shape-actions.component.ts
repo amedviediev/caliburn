@@ -2,11 +2,10 @@ import { Component, forwardRef, inject } from "@angular/core";
 
 import {
   CLASSES,
-  COLOR_PALETTE,
-  DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX,
   DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE,
-  DEFAULT_ELEMENT_STROKE_COLOR_INDEX,
+  DEFAULT_ELEMENT_BACKGROUND_PICKS,
   DEFAULT_ELEMENT_STROKE_COLOR_PALETTE,
+  DEFAULT_ELEMENT_STROKE_PICKS,
   FONT_FAMILY,
   FONT_SIZES,
   VERTICAL_ALIGN,
@@ -16,7 +15,7 @@ import { getTargetElements } from "@excalidraw/element";
 import { getShapeActionPredicates } from "@excalidraw/excalidraw/components/shapeActionPredicates";
 import { t } from "@excalidraw/excalidraw/i18n";
 
-import type { AppState } from "@excalidraw/excalidraw/types";
+import type { Action } from "@excalidraw/excalidraw/actions/types";
 
 import { actionDeleteSelected } from "../actions/actionDeleteSelected";
 import { actionDuplicateSelection } from "../actions/actionDuplicateSelection";
@@ -44,25 +43,15 @@ import {
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { CaliburnColorPickerComponent } from "../components/color-picker/color-picker.component";
+
 import type { CaliburnEditorComponent } from "../editor.component";
-import type { Action } from "@excalidraw/excalidraw/actions/types";
 
 interface RadioOption {
   value: unknown;
   text: string;
   testId?: string;
 }
-
-const paletteSwatches = (
-  palette: Record<string, string | readonly string[]>,
-  shadeIndex: number,
-) =>
-  Object.entries(palette).map(([key, value]) => ({
-    key,
-    color: Array.isArray(value)
-      ? (value[shadeIndex] as string)
-      : (value as string),
-  }));
 
 /**
  * The Angular port of upstream `SelectedShapeActions` (Actions.tsx): the
@@ -72,6 +61,7 @@ const paletteSwatches = (
  */
 @Component({
   selector: "caliburn-shape-actions",
+  imports: [CaliburnColorPickerComponent],
   templateUrl: "./shape-actions.component.html",
 })
 export class CaliburnShapeActionsComponent {
@@ -99,14 +89,10 @@ export class CaliburnShapeActionsComponent {
     actions: t("labels.actions"),
   };
 
-  readonly strokeSwatches = paletteSwatches(
-    DEFAULT_ELEMENT_STROKE_COLOR_PALETTE,
-    DEFAULT_ELEMENT_STROKE_COLOR_INDEX,
-  );
-  readonly backgroundSwatches = paletteSwatches(
-    DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE,
-    DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX,
-  );
+  readonly strokePalette = DEFAULT_ELEMENT_STROKE_COLOR_PALETTE;
+  readonly backgroundPalette = DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
+  readonly strokeTopPicks = DEFAULT_ELEMENT_STROKE_PICKS;
+  readonly backgroundTopPicks = DEFAULT_ELEMENT_BACKGROUND_PICKS;
 
   readonly fillOptions: RadioOption[] = [
     { value: "hachure", text: t("labels.hachure"), testId: "fill-hachure" },
@@ -270,25 +256,26 @@ export class CaliburnShapeActionsComponent {
     return this.editor().state.currentItemOpacity;
   }
 
-  togglePopup(popup: AppState["openPopup"]) {
-    const editor = this.editor();
-    editor.setState({
-      openPopup: editor.state.openPopup === popup ? null : popup,
-    });
-  }
-
   execute(action: Action, value: unknown) {
     this.editor().actionManager.executeAction(action, "ui", value);
   }
 
+  /** upstream's `updateData` for the two color pickers: the raw action
+   * dispatcher, which the picker also drives `appState.openPopup` through */
+  readonly updateStrokeColor = (formData?: any) => {
+    this.execute(actionChangeStrokeColor, formData);
+  };
+
+  readonly updateBackgroundColor = (formData?: any) => {
+    this.execute(actionChangeBackgroundColor, formData);
+  };
+
   setStrokeColor(color: string) {
-    this.execute(actionChangeStrokeColor, { currentItemStrokeColor: color });
+    this.updateStrokeColor({ currentItemStrokeColor: color });
   }
 
   setBackgroundColor(color: string) {
-    this.execute(actionChangeBackgroundColor, {
-      currentItemBackgroundColor: color,
-    });
+    this.updateBackgroundColor({ currentItemBackgroundColor: color });
   }
 
   setFontFamily(value: unknown) {
@@ -299,6 +286,4 @@ export class CaliburnShapeActionsComponent {
     const value = Number((event.target as HTMLInputElement).value);
     this.execute(actionChangeOpacity, value);
   }
-
-  protected readonly COLOR_PALETTE = COLOR_PALETTE;
 }

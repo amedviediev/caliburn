@@ -1,0 +1,44 @@
+@if (shades(); as shades) { @for (entry of shades; track entry.index) {
+<button
+  tabindex="-1"
+  type="button"
+  class="{{ entry.className }}"
+  aria-label="Shade"
+  [attr.title]="entry.title"
+  [style.--swatch-color]="entry.displayColor"
+  (click)="select(entry.color)"
+>
+  <div class="color-picker__button-outline"></div>
+  @if (showHotKey()) {
+  <div
+    caliburn-hotkey-label
+    [color]="entry.displayColor"
+    [keyLabel]="entry.index + 1"
+    [isShade]="true"
+  ></div>
+  }
+</button>
+} } @else {
+<button
+  type="button"
+  tabindex="-1"
+  class="color-picker__button color-picker__button--large color-picker__button--no-focus-visible"
+></button>
+<div
+  tabindex="-1"
+  style="
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.75rem;
+  "
+>
+  {{ noShadesLabel }}
+</div>
+}

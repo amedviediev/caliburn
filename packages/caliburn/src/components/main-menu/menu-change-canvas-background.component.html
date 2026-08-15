@@ -7,24 +7,15 @@
     {{ label }}
   </div>
   <div style="padding: 0 0.625rem">
-    <div class="color-picker__top-picks">
-      @for (pick of picks(); track pick.color; let index = $index) {
-      <button
-        type="button"
-        class="color-picker__button"
-        [class.active]="pick.color === currentColor()"
-        [class.is-transparent]="pick.isTransparent"
-        [class.has-outline]="pick.hasOutline"
-        [attr.title]="pick.color"
-        [attr.data-testid]="'color-top-pick-' + pick.color"
-        [attr.data-top-pick-index]="index"
-        [style.--swatch-color]="pick.displayColor"
-        (click)="setColor(pick.color)"
-      >
-        <div class="color-picker__button-outline"></div>
-      </button>
-      }
-    </div>
+    <caliburn-color-picker
+      type="canvasBackground"
+      [palette]="null"
+      [topPicks]="canvasBackgroundPicks"
+      [label]="label"
+      [color]="currentColor()"
+      [updateData]="updateViewBackgroundColor"
+      (colorChange)="setColor($event)"
+    />
   </div>
 </div>
 }

@@ -1,0 +1,27 @@
+@for (entry of entries(); track entry.key) { @if (entry.excluded) {
+<div
+  class="color-picker__button color-picker__button--large"
+  style="visibility: hidden"
+  aria-hidden="true"
+></div>
+} @else {
+<button
+  tabindex="-1"
+  type="button"
+  class="{{ entry.className }}"
+  [attr.title]="entry.title"
+  [attr.aria-label]="entry.ariaLabel"
+  [style.--swatch-color]="entry.displayColor"
+  [attr.data-testid]="'color-' + entry.key"
+  (click)="select(entry.color)"
+>
+  <div class="color-picker__button-outline"></div>
+  @if (showHotKey()) {
+  <div
+    caliburn-hotkey-label
+    [color]="entry.displayColor"
+    [keyLabel]="entry.keybinding"
+  ></div>
+  }
+</button>
+} }

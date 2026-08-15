@@ -1,57 +1,32 @@
 @if (visible()) {
 <div class="selected-shape-actions {{ shapeActionsMenuClass }}">
-  @if (predicates().strokeColor) {
-  <fieldset>
-    <legend>{{ labels.stroke }}</legend>
-    <button
-      type="button"
-      class="color-picker__button"
-      [attr.aria-label]="labels.stroke"
-      [style.--swatch-color]="currentStrokeColor()"
-      (click)="togglePopup('elementStroke')"
-    ></button>
-    @if (editor().state.openPopup === 'elementStroke') {
-    <div class="color-picker-popover properties-content">
-      @for (swatch of strokeSwatches; track swatch.key) {
-      <button
-        type="button"
-        class="color-picker__button"
-        [attr.data-testid]="'color-' + swatch.key"
-        [attr.aria-label]="swatch.key"
-        [attr.title]="swatch.key"
-        [style.--swatch-color]="swatch.color"
-        (click)="setStrokeColor(swatch.color)"
-      ></button>
-      }
-    </div>
+  <div>
+    @if (predicates().strokeColor) {
+    <h3 aria-hidden="true">{{ labels.stroke }}</h3>
+    <caliburn-color-picker
+      type="elementStroke"
+      [label]="labels.stroke"
+      [color]="currentStrokeColor()"
+      [palette]="strokePalette"
+      [topPicks]="strokeTopPicks"
+      [updateData]="updateStrokeColor"
+      (colorChange)="setStrokeColor($event)"
+    />
     }
-  </fieldset>
-  } @if (predicates().backgroundColor) {
-  <fieldset>
-    <legend>{{ labels.background }}</legend>
-    <button
-      type="button"
-      class="color-picker__button"
-      [attr.aria-label]="labels.background"
-      [style.--swatch-color]="currentBackgroundColor()"
-      (click)="togglePopup('elementBackground')"
-    ></button>
-    @if (editor().state.openPopup === 'elementBackground') {
-    <div class="color-picker-popover properties-content">
-      @for (swatch of backgroundSwatches; track swatch.key) {
-      <button
-        type="button"
-        class="color-picker__button"
-        [attr.data-testid]="'color-' + swatch.key"
-        [attr.aria-label]="swatch.key"
-        [attr.title]="swatch.key"
-        [style.--swatch-color]="swatch.color"
-        (click)="setBackgroundColor(swatch.color)"
-      ></button>
-      }
-    </div>
-    }
-  </fieldset>
+  </div>
+  @if (predicates().backgroundColor) {
+  <div>
+    <h3 aria-hidden="true">{{ labels.background }}</h3>
+    <caliburn-color-picker
+      type="elementBackground"
+      [label]="labels.background"
+      [color]="currentBackgroundColor()"
+      [palette]="backgroundPalette"
+      [topPicks]="backgroundTopPicks"
+      [updateData]="updateBackgroundColor"
+      (colorChange)="setBackgroundColor($event)"
+    />
+  </div>
   } @if (predicates().fill) {
   <fieldset>
     <legend>{{ labels.fill }}</legend>
