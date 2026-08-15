@@ -1,8 +1,13 @@
 import clsx from "clsx";
 import fuzzy from "fuzzy";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 
-import { EVENT, KEYS, isWritableElement } from "@excalidraw/common";
+import {
+  DEFAULT_SIDEBAR,
+  EVENT,
+  KEYS,
+  isWritableElement,
+} from "@excalidraw/common";
 
 import type { MarkRequired } from "@excalidraw/common/utility-types";
 
@@ -44,6 +49,7 @@ import {
   ExportImageIcon,
   mermaidLogoIcon,
   brainIconThin,
+  LibraryIcon,
   historyCommandIcon,
 } from "../icons";
 
@@ -55,12 +61,22 @@ import { useStable } from "../../hooks/useStable";
 
 import { Ellipsify } from "../Ellipsify";
 
+import {
+  distributeLibraryItemsOnSquareGrid,
+  libraryItemsAtom,
+} from "../../data/library";
+
+import {
+  useLibraryCache,
+  useLibraryItemSvg,
+} from "../../hooks/useLibraryItemSvg";
+
 import * as defaultItems from "./defaultCommandPaletteItems";
 import "./CommandPalette.scss";
 
 import type { CommandPaletteItem } from "./types";
 import type { ToolbarToolType } from "../Tools";
-import type { AppProps, AppState, UIAppState } from "../../types";
+import type { AppProps, AppState, LibraryItem, UIAppState } from "../../types";
 import type { ShortcutName } from "../../actions/shortcuts";
 import type { TranslationKeys } from "../../i18n";
 import type { Action } from "../../actions/types";
@@ -74,6 +90,7 @@ export const DEFAULT_CATEGORIES = {
   editor: "Editor",
   elements: "Elements",
   links: "Links",
+  library: "Library",
 };
 
 const getCategoryOrder = (category: string) => {
@@ -200,6 +217,34 @@ function CommandPaletteInner({
     customCommandPaletteItems,
     appProps,
   });
+
+  const [libraryItemsData] = useAtom(libraryItemsAtom);
+  const libraryCommands: CommandPaletteItem[] = useMemo(() => {
+    return (
+      libraryItemsData.libraryItems
+        ?.filter(
+          (libraryItem): libraryItem is MarkRequired<LibraryItem, "name"> =>
+            !!libraryItem.name,
+        )
+        .map((libraryItem) => ({
+          label: libraryItem.name,
+          icon: (
+            <LibraryItemIcon
+              id={libraryItem.id}
+              elements={libraryItem.elements}
+            />
+          ),
+          category: "Library",
+          order: getCategoryOrder("Library"),
+          haystack: deburr(libraryItem.name),
+          perform: () => {
+            app.onInsertElements(
+              distributeLibraryItemsOnSquareGrid([libraryItem]),
+            );
+          },
+        })) || []
+    );
+  }, [app, libraryItemsData.libraryItems]);
 
   useEffect(() => {
     // these props change often and we don't want them to re-run the effect
@@ -376,6 +421,26 @@ function CommandPaletteInner({
       const additionalCommands: CommandPaletteItem[] = [
         actionToCommand(actionToggleTheme, DEFAULT_CATEGORIES.app),
         {
+          label: t("toolBar.library"),
+          category: DEFAULT_CATEGORIES.app,
+          icon: LibraryIcon,
+          viewMode: false,
+          perform: () => {
+            if (uiAppState.openSidebar) {
+              setAppState({
+                openSidebar: null,
+              });
+            } else {
+              setAppState({
+                openSidebar: {
+                  name: DEFAULT_SIDEBAR.name,
+                  tab: DEFAULT_SIDEBAR.defaultTab,
+                },
+              });
+            }
+          },
+        },
+        {
           label: t("search.title"),
           category: DEFAULT_CATEGORIES.app,
           icon: searchIcon,
@@ -549,8 +614,9 @@ function CommandPaletteInner({
 
       setAllCommands(allCommands);
       setLastUsed(
-        allCommands.find((command) => command.label === lastUsed?.label) ??
-          null,
+        [...allCommands, ...libraryCommands].find(
+          (command) => command.label === lastUsed?.label,
+        ) ?? null,
       );
     }
   }, [
@@ -561,6 +627,7 @@ function CommandPaletteInner({
     lastUsed?.label,
     setLastUsed,
     setAppState,
+    libraryCommands,
   ]);
 
   const [commandSearch, setCommandSearch] = useState("");
@@ -757,9 +824,17 @@ function CommandPaletteInner({
       return nextCommandsByCategory;
     };
 
-    let matchingCommands = allCommands
-      .filter(isCommandAvailable)
-      .sort((a, b) => a.order - b.order);
+    let matchingCommands =
+      commandSearch?.length > 1
+        ? [
+            ...allCommands
+              .filter(isCommandAvailable)
+              .sort((a, b) => a.order - b.order),
+            ...libraryCommands,
+          ]
+        : allCommands
+            .filter(isCommandAvailable)
+            .sort((a, b) => a.order - b.order);
 
     const showLastUsed =
       !commandSearch && lastUsed && isCommandAvailable(lastUsed);
@@ -790,7 +865,13 @@ function CommandPaletteInner({
 
     setCommandsByCategory(getNextCommandsByCategory(matchingCommands));
     setCurrentCommand(matchingCommands[0] ?? null);
-  }, [commandSearch, allCommands, isCommandAvailable, lastUsed]);
+  }, [
+    commandSearch,
+    allCommands,
+    isCommandAvailable,
+    lastUsed,
+    libraryCommands,
+  ]);
 
   return (
     <Dialog
@@ -865,6 +946,7 @@ function CommandPaletteInner({
                     onMouseMove={() => setCurrentCommand(command)}
                     showShortcut={app.editorInterface.formFactor !== "phone"}
                     appState={uiAppState}
+                    size={category === "Library" ? "large" : "small"}
                   />
                 ))}
               </div>
@@ -880,6 +962,21 @@ function CommandPaletteInner({
     </Dialog>
   );
 }
+const LibraryItemIcon = ({
+  id,
+  elements,
+}: {
+  id: LibraryItem["id"] | null;
+  elements: LibraryItem["elements"] | undefined;
+}) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const { svgCache } = useLibraryCache();
+
+  useLibraryItemSvg(id, elements, svgCache, ref);
+
+  return <div className="library-item-icon" ref={ref} />;
+};
+
 const CommandItem = ({
   command,
   isSelected,
@@ -888,6 +985,7 @@ const CommandItem = ({
   onClick,
   showShortcut,
   appState,
+  size = "small",
 }: {
   command: CommandPaletteItem;
   isSelected: boolean;
@@ -896,6 +994,7 @@ const CommandItem = ({
   onClick: (event: React.MouseEvent) => void;
   showShortcut: boolean;
   appState: UIAppState;
+  size?: "small" | "large";
 }) => {
   const noop = () => {};
 
@@ -904,6 +1003,7 @@ const CommandItem = ({
       className={clsx("command-item", {
         "item-selected": isSelected,
         "item-disabled": disabled,
+        "command-item-large": size === "large",
       })}
       ref={(ref) => {
         if (isSelected && !disabled) {
