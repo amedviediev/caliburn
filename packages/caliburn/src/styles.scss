@@ -110,6 +110,15 @@ caliburn-text-field {
   }
 }
 
+// `.help-icon svg` sizes the footer's help button; `<ng-icon>` wraps that svg
+// in its own `1em`, `overflow: hidden` host, which clips it. Give the host
+// the same box and let the svg fill it.
+.excalidraw .help-icon ng-icon {
+  display: flex;
+  width: var(--lg-icon-size);
+  height: var(--lg-icon-size);
+}
+
 // `.OverwriteConfirm__Description__icon svg` sizes the modal's warning icon;
 // the `<ng-icon>` host would clip it to `1em`.
 .excalidraw .OverwriteConfirm__Description__icon ng-icon {
@@ -128,6 +137,7 @@ caliburn-text-field {
 // aliased `class` input that puts it on the real `.dropdown-menu`/`.Modal`
 // root — `display: contents` keeps the duplicate inert.
 caliburn-hint-viewer,
+caliburn-help-button,
 caliburn-color-picker,
 caliburn-color-input,
 caliburn-layer-ui,

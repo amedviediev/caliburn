@@ -16,8 +16,10 @@ import {
   actionZoomIn,
   actionZoomOut,
 } from "../actions/actionCanvas";
+import { actionShortcuts } from "../actions/actionMenu";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { CaliburnHelpButtonComponent } from "./help-button.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 import { CaliburnSectionComponent } from "./section.component";
 import {
@@ -35,16 +37,17 @@ import type { CaliburnEditorComponent } from "../editor.component";
  * Upstream renders those two through `actionManager.renderAction`, which
  * mounts each action's React `PanelComponent`; caliburn's actions carry no
  * component, so the buttons are declared here and dispatch through
- * `actionManager.executeAction`. The footer-center tunnel, the help button
- * and the exit-zen-mode button are omitted — each needs a surface that has
- * no caliburn equivalent yet. The welcome screen's `HelpHint` is mounted at
- * its upstream tunnel spot (`layer-ui__wrapper__footer-right`'s
- * `position: relative` box, sibling to the omitted `HelpButton`).
+ * `actionManager.executeAction`. The footer-center tunnel and the
+ * exit-zen-mode button are omitted — each needs a surface that has no
+ * caliburn equivalent yet. The welcome screen's `HelpHint` is mounted at its
+ * upstream tunnel spot (`layer-ui__wrapper__footer-right`'s
+ * `position: relative` box, sibling to the `HelpButton`).
  */
 @Component({
   selector: "caliburn-footer",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CaliburnHelpButtonComponent,
     CaliburnIconButtonComponent,
     CaliburnSectionComponent,
     CaliburnStackColComponent,
@@ -118,5 +121,9 @@ export class CaliburnFooterComponent {
 
   protected readonly redo = () => {
     this.editor.actionManager.executeAction(this.editor.redoAction, "ui");
+  };
+
+  protected readonly showHelp = () => {
+    this.editor.actionManager.executeAction(actionShortcuts, "ui");
   };
 }

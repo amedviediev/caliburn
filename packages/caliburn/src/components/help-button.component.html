@@ -1,0 +1,10 @@
+<caliburn-tooltip [label]="tooltip">
+  <button
+    class="help-icon"
+    type="button"
+    [attr.aria-label]="label"
+    (click)="onClick()?.()"
+  >
+    <ng-icon name="helpIcon" />
+  </button>
+</caliburn-tooltip>
