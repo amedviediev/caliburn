@@ -1,0 +1,958 @@
+import { NgTemplateOutlet } from "@angular/common";
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  forwardRef,
+  inject,
+  input,
+  signal,
+} from "@angular/core";
+
+import {
+  EVENT,
+  KEYS,
+  THEME,
+  addEventListener,
+  isWritableElement,
+} from "@excalidraw/common";
+
+import { getSelectedElements } from "@excalidraw/element";
+
+import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
+import { trackEvent } from "@excalidraw/excalidraw/analytics";
+import { TOOLS, getToolLetter } from "@excalidraw/excalidraw/components/Tools";
+import {
+  canChangeBackgroundColor,
+  canChangeStrokeColor,
+} from "@excalidraw/excalidraw/components/shapeActionPredicates";
+import { deburr } from "@excalidraw/excalidraw/deburr";
+import { t } from "@excalidraw/excalidraw/i18n";
+import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
+
+import { NgIcon } from "@ng-icons/core";
+
+import fuzzy from "fuzzy";
+
+import type { MarkRequired } from "@excalidraw/common/utility-types";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
+import type { ShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
+import type { Action } from "@excalidraw/excalidraw/actions/types";
+import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
+import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
+import type { AppState } from "@excalidraw/excalidraw/types";
+
+import {
+  actionClearCanvas,
+  actionToggleTheme,
+} from "../../actions/actionCanvas";
+import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+import { CaliburnDialogComponent } from "../dialog.component";
+import { CaliburnTextFieldComponent } from "../text-field.component";
+import { TOOL_ICONS } from "../tools";
+
+import type { CommandPaletteItem } from "./types";
+import type { CaliburnEditorComponent } from "../../editor.component";
+import type { OnDestroy } from "@angular/core";
+
+/**
+ * Upstream keeps the last executed item in a module-level jotai atom, so it
+ * outlives the palette's own mount — a module-level signal is the same scope.
+ */
+const lastUsedPaletteItem = signal<CommandPaletteItem | null>(null);
+
+export const DEFAULT_CATEGORIES = {
+  app: "App",
+  export: "Export",
+  tools: "Tools",
+  editor: "Editor",
+  elements: "Elements",
+  links: "Links",
+};
+
+const getCategoryOrder = (category: string) => {
+  switch (category) {
+    case DEFAULT_CATEGORIES.app:
+      return 1;
+    case DEFAULT_CATEGORIES.export:
+      return 2;
+    case DEFAULT_CATEGORIES.editor:
+      return 3;
+    case DEFAULT_CATEGORIES.tools:
+      return 4;
+    case DEFAULT_CATEGORIES.elements:
+      return 5;
+    case DEFAULT_CATEGORIES.links:
+      return 6;
+    default:
+      return 10;
+  }
+};
+
+const isCommandPaletteToggleShortcut = (event: KeyboardEvent) => {
+  return (
+    !event.altKey &&
+    event[KEYS.CTRL_OR_CMD] &&
+    ((event.shiftKey && event.key.toLowerCase() === KEYS.P) ||
+      event.key === KEYS.SLASH)
+  );
+};
+
+/**
+ * The ng-icon registry name of the React node upstream's actions carry on
+ * `action.icon` — caliburn's ported actions can't hold one, so the palette
+ * resolves it by action name here. The entries that read the theme or the
+ * selection are upstream's `(appState, elements) => ...` icon functions.
+ */
+const getActionIconName = (
+  action: Action,
+  appState: AppState,
+  elements: readonly ExcalidrawElement[],
+) => {
+  const isDark = appState.theme === THEME.DARK;
+
+  switch (action.name) {
+    case "group":
+      return isDark ? "groupIconDark" : "groupIconLight";
+    case "ungroup":
+      return isDark ? "ungroupIconDark" : "ungroupIconLight";
+    case "cut":
+      return "cutIcon";
+    case "copy":
+    case "duplicateSelection":
+      return "duplicateIcon";
+    case "deleteSelectedElements":
+    case "clearCanvas":
+      return "trashIcon";
+    case "bringToFront":
+      return "bringToFrontIcon";
+    case "bringForward":
+      return "bringForwardIcon";
+    case "sendBackward":
+      return "sendBackwardIcon";
+    case "sendToBack":
+      return "sendToBackIcon";
+    case "flipHorizontal":
+      return "flipHorizontal";
+    case "flipVertical":
+      return "flipVertical";
+    case "zoomToFit":
+    case "zoomToFitSelection":
+    case "zoomToFitSelectionInViewport":
+      return "zoomAreaIcon";
+    case "increaseFontSize":
+    case "decreaseFontSize":
+      return "fontSizeIcon";
+    case "undo":
+      return "undoIcon";
+    case "redo":
+      return "redoIcon";
+    case "zoomIn":
+      return "zoomInIcon";
+    case "zoomOut":
+      return "zoomOutIcon";
+    case "resetZoom":
+      return "zoomResetIcon";
+    case "toggleShortcuts":
+      return "helpIconThin";
+    case "selectAll":
+      return "selectAllIcon";
+    case "toggleElementLock":
+      return getSelectedElements(elements, appState).every((el) => !el.locked)
+        ? "lockedIcon"
+        : "unlockedIcon";
+    case "unlockAllElements":
+      return "unlockedIcon";
+    case "saveToActiveFile":
+    case "saveFileToDisk":
+      return "exportIcon";
+    case "toggleTheme":
+      return isDark ? "sunIcon" : "moonIcon";
+    case "searchMenu":
+      return "searchIcon";
+    default:
+      return undefined;
+  }
+};
+
+/**
+ * Angular port of upstream `CommandPalette.tsx`'s `CommandShortcutHint`. The
+ * host element IS upstream's `.shortcut` div; upstream's `className` prop has
+ * no call site and is not ported.
+ */
+@Component({
+  selector: "caliburn-command-shortcut-hint",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: "shortcut" },
+  template: `
+    @for (item of keys(); track $index) {
+      <div class="shortcut-wrapper">
+        <div class="shortcut-key">{{ item === "$" ? "+" : item }}</div>
+      </div>
+    }
+    <div class="shortcut-desc"><ng-content /></div>
+  `,
+})
+export class CaliburnCommandShortcutHintComponent {
+  readonly shortcut = input.required<string>();
+
+  protected readonly keys = computed(() =>
+    this.shortcut().replace("++", "+$").split("+"),
+  );
+}
+
+/**
+ * Angular port of upstream `CommandPalette.tsx`'s `CommandPaletteInner` — the
+ * palette itself, mounted only while it is open, as upstream mounts it.
+ *
+ * Upstream builds `allCommands` in a mount effect over `useStable` deps, so
+ * the list is fixed for the lifetime of one opening; the constructor here is
+ * that same moment. The category list is likewise recomputed only from the
+ * inputs upstream's effect depends on (the query, the built commands and the
+ * recent item), not from every appState change.
+ *
+ * Upstream's `customCommandPaletteItems` prop and its `defaultItems` static
+ * (upstream's `defaultCommandPaletteItems.ts` is an empty module) have no
+ * caliburn host API to hang off yet and are not ported.
+ */
+@Component({
+  selector: "caliburn-command-palette-inner",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CaliburnCommandShortcutHintComponent,
+    CaliburnDialogComponent,
+    CaliburnTextFieldComponent,
+    NgIcon,
+    NgTemplateOutlet,
+  ],
+  template: `
+    <caliburn-dialog
+      class="command-palette-dialog"
+      [size]="720"
+      [closeOnClickOutside]="true"
+      [fullscreen]="isPhone"
+      (closeRequest)="closeCommandPalette()"
+    >
+      <caliburn-text-field
+        [value]="commandSearch()"
+        [placeholder]="placeholder"
+        [selectOnRender]="true"
+        (valueChange)="handleSearchChange($event)"
+      />
+
+      @if (!isPhone) {
+        <div class="shortcuts-wrapper">
+          <caliburn-command-shortcut-hint shortcut="↑↓">{{
+            selectLabel
+          }}</caliburn-command-shortcut-hint>
+          <caliburn-command-shortcut-hint shortcut="↵">{{
+            confirmLabel
+          }}</caliburn-command-shortcut-hint>
+          <caliburn-command-shortcut-hint [shortcut]="escapeShortcut">{{
+            closeLabel
+          }}</caliburn-command-shortcut-hint>
+        </div>
+      }
+
+      <div class="commands">
+        @if (lastUsed(); as recent) {
+          @if (!commandSearch()) {
+            <div class="command-category">
+              <div class="command-category-title">
+                {{ recentsLabel }}
+                <div class="icon" style="margin-left: 6px">
+                  <ng-icon name="historyCommandIcon" />
+                </div>
+              </div>
+              <ng-container
+                [ngTemplateOutlet]="commandItem"
+                [ngTemplateOutletContext]="{
+                  $implicit: recent,
+                  disabled: !isCommandAvailable(recent),
+                }"
+              />
+            </div>
+          }
+        }
+
+        @if (categories().length > 0) {
+          @for (category of categories(); track category) {
+            <div class="command-category">
+              <div class="command-category-title">{{ category }}</div>
+              @for (
+                command of commandsByCategory()[category];
+                track command.label
+              ) {
+                <ng-container
+                  [ngTemplateOutlet]="commandItem"
+                  [ngTemplateOutletContext]="{ $implicit: command }"
+                />
+              }
+            </div>
+          }
+        } @else {
+          <div class="no-match">
+            <div class="icon"><ng-icon name="searchIcon" /></div>
+            {{ noMatchLabel }}
+          </div>
+        }
+      </div>
+    </caliburn-dialog>
+
+    <ng-template #commandItem let-command let-disabled="disabled">
+      <div
+        class="command-item"
+        [class.item-selected]="command.label === currentCommand()?.label"
+        [class.item-disabled]="disabled"
+        [attr.title]="disabled ? itemNotAvailableLabel : ''"
+        (click)="onItemClick(command, disabled, $event)"
+        (mousemove)="onItemMouseMove(command, disabled)"
+      >
+        <div class="name">
+          @if (command.icon) {
+            <span
+              class="icon"
+              style="width: var(--icon-size, 1rem); height: 100%; margin: 0 0.5ex 0 0.5ex; display: inline-flex; line-height: 0; vertical-align: middle; flex: 0 0 auto"
+            >
+              <ng-icon [name]="command.icon" />
+            </span>
+          }
+          <span
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap"
+            >{{ command.label }}</span
+          >
+        </div>
+        @if (!isPhone && command.shortcut) {
+          <caliburn-command-shortcut-hint [shortcut]="command.shortcut" />
+        }
+      </div>
+    </ng-template>
+  `,
+})
+export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
+  private readonly editor = inject<CaliburnEditorComponent>(
+    forwardRef(() => CaliburnEditorComponentToken),
+  );
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  protected readonly isPhone =
+    this.editor.editorInterface.formFactor === "phone";
+  protected readonly placeholder = t("commandPalette.search.placeholder");
+  protected readonly noMatchLabel = t("commandPalette.search.noMatch");
+  protected readonly recentsLabel = t("commandPalette.recents");
+  protected readonly selectLabel = t("commandPalette.shortcuts.select");
+  protected readonly confirmLabel = t("commandPalette.shortcuts.confirm");
+  protected readonly closeLabel = t("commandPalette.shortcuts.close");
+  protected readonly itemNotAvailableLabel = t(
+    "commandPalette.itemNotAvailable",
+  );
+  protected readonly escapeShortcut = getShortcutKey("Esc");
+
+  protected readonly lastUsed = lastUsedPaletteItem;
+  protected readonly commandSearch = signal("");
+  protected readonly currentCommand = signal<CommandPaletteItem | null>(null);
+  protected readonly commandsByCategory = signal<
+    Record<string, CommandPaletteItem[]>
+  >({});
+  protected readonly categories = signal<string[]>([]);
+
+  private allCommands: MarkRequired<
+    CommandPaletteItem,
+    "haystack" | "order"
+  >[] = [];
+
+  private readonly detachKeyDown = addEventListener(
+    window,
+    EVENT.KEYDOWN,
+    (event: Event) => this.handleKeyDown(event as KeyboardEvent),
+    { capture: true, passive: false },
+  );
+
+  constructor() {
+    this.buildCommands();
+  }
+
+  ngOnDestroy() {
+    this.detachKeyDown();
+  }
+
+  protected handleSearchChange(value: string) {
+    this.commandSearch.set(value);
+    this.applyCommands();
+    this.cdr.detectChanges();
+  }
+
+  protected onItemClick(
+    command: CommandPaletteItem,
+    disabled: boolean | undefined,
+    event: MouseEvent,
+  ) {
+    if (!disabled) {
+      this.executeCommand(command, event);
+    }
+  }
+
+  protected onItemMouseMove(
+    command: CommandPaletteItem,
+    disabled: boolean | undefined,
+  ) {
+    if (!disabled) {
+      this.currentCommand.set(command);
+    }
+  }
+
+  protected closeCommandPalette(cb?: () => void) {
+    this.editor.batchCommits(() =>
+      this.editor.setState({ openDialog: null }, cb),
+    );
+    this.commandSearch.set("");
+  }
+
+  protected isCommandAvailable(command: CommandPaletteItem) {
+    if (command.viewMode === false && this.editor.state.viewModeEnabled) {
+      return false;
+    }
+
+    return typeof command.predicate === "function"
+      ? command.predicate(
+          this.editor.scene.getNonDeletedElements(),
+          this.editor.state,
+          this.editor.props as any,
+          this.editor as any,
+        )
+      : command.predicate === undefined || command.predicate;
+  }
+
+  private executeCommand(
+    command: CommandPaletteItem,
+    event: MouseEvent | KeyboardEvent,
+  ) {
+    if (this.editor.state.openDialog?.name !== "commandPalette") {
+      return;
+    }
+    event.stopPropagation();
+    event.preventDefault();
+    document.body.classList.add("excalidraw-animations-disabled");
+    this.closeCommandPalette(() => {
+      command.perform({ actionManager: this.editor.actionManager, event });
+      lastUsedPaletteItem.set(command);
+
+      requestAnimationFrame(() => {
+        document.body.classList.remove("excalidraw-animations-disabled");
+      });
+    });
+  }
+
+  private handleKeyDown(event: KeyboardEvent) {
+    const ignoreAlphanumerics =
+      isWritableElement(event.target) ||
+      isCommandPaletteToggleShortcut(event) ||
+      event.key === KEYS.ESCAPE;
+
+    if (
+      ignoreAlphanumerics &&
+      event.key !== KEYS.ARROW_UP &&
+      event.key !== KEYS.ARROW_DOWN &&
+      event.key !== KEYS.ENTER
+    ) {
+      return;
+    }
+
+    const matchingCommands = Object.values(this.commandsByCategory()).flat();
+    const lastUsed = this.lastUsed();
+    const currentCommand = this.currentCommand();
+    const shouldConsiderLastUsed =
+      lastUsed && !this.commandSearch() && this.isCommandAvailable(lastUsed);
+
+    if (event.key === KEYS.ARROW_UP) {
+      event.preventDefault();
+      const index = matchingCommands.findIndex(
+        (item) => item.label === currentCommand?.label,
+      );
+
+      if (shouldConsiderLastUsed) {
+        if (index === 0) {
+          this.selectCommand(lastUsed);
+          return;
+        }
+
+        if (currentCommand === lastUsed) {
+          const nextItem = matchingCommands[matchingCommands.length - 1];
+          if (nextItem) {
+            this.selectCommand(nextItem);
+          }
+          return;
+        }
+      }
+
+      let nextIndex;
+
+      if (index === -1) {
+        nextIndex = matchingCommands.length - 1;
+      } else {
+        nextIndex =
+          index === 0
+            ? matchingCommands.length - 1
+            : (index - 1) % matchingCommands.length;
+      }
+
+      const nextItem = matchingCommands[nextIndex];
+      if (nextItem) {
+        this.selectCommand(nextItem);
+      }
+
+      return;
+    }
+
+    if (event.key === KEYS.ARROW_DOWN) {
+      event.preventDefault();
+      const index = matchingCommands.findIndex(
+        (item) => item.label === currentCommand?.label,
+      );
+
+      if (shouldConsiderLastUsed) {
+        if (!currentCommand || index === matchingCommands.length - 1) {
+          this.selectCommand(lastUsed);
+          return;
+        }
+
+        if (currentCommand === lastUsed) {
+          const nextItem = matchingCommands[0];
+          if (nextItem) {
+            this.selectCommand(nextItem);
+          }
+          return;
+        }
+      }
+
+      const nextIndex = (index + 1) % matchingCommands.length;
+      const nextItem = matchingCommands[nextIndex];
+      if (nextItem) {
+        this.selectCommand(nextItem);
+      }
+
+      return;
+    }
+
+    if (event.key === KEYS.ENTER) {
+      if (currentCommand) {
+        setTimeout(() => {
+          this.executeCommand(currentCommand, event);
+        });
+      }
+    }
+
+    if (ignoreAlphanumerics) {
+      return;
+    }
+
+    // prevent regular editor shortcuts
+    event.stopPropagation();
+
+    // if alphanumeric keypress and we're not inside the input, focus it
+    if (/^[a-zA-Z0-9]$/.test(event.key)) {
+      this.focusInput();
+      return;
+    }
+
+    event.preventDefault();
+  }
+
+  /**
+   * Upstream re-renders on the `currentCommand` state change and scrolls the
+   * highlighted row into view from its ref callback; Angular has no per-render
+   * ref hook, so the pass is forced here and the row looked up after it.
+   */
+  private selectCommand(command: CommandPaletteItem) {
+    this.currentCommand.set(command);
+    this.cdr.detectChanges();
+    this.editor.excalidrawContainerValue.container
+      ?.querySelector(".command-item.item-selected:not(.item-disabled)")
+      ?.scrollIntoView?.({ block: "nearest" });
+  }
+
+  private focusInput() {
+    this.editor.excalidrawContainerValue.container
+      ?.querySelector<HTMLInputElement>(".command-palette-dialog input")
+      ?.focus();
+  }
+
+  private buildCommands() {
+    const app = this.editor;
+    const appState = app.state;
+    const elements = app.scene.getNonDeletedElements();
+    const actionManager = app.actionManager;
+
+    const getActionLabel = (action: Action) => {
+      let label = "";
+      if (action.label) {
+        if (typeof action.label === "function") {
+          label = t(
+            action.label(
+              elements,
+              appState,
+              app as any,
+            ) as unknown as TranslationKeys,
+          );
+        } else {
+          label = t(action.label as unknown as TranslationKeys);
+        }
+      }
+      return label;
+    };
+
+    const actionToCommand = (
+      action: Action,
+      category: string,
+      transformer?: (
+        command: CommandPaletteItem,
+        action: Action,
+      ) => CommandPaletteItem,
+    ): CommandPaletteItem => {
+      const command: CommandPaletteItem = {
+        label: getActionLabel(action),
+        icon: getActionIconName(action, appState, elements),
+        category,
+        shortcut: getShortcutFromShortcutName(action.name as ShortcutName),
+        keywords: action.keywords,
+        predicate: action.predicate,
+        viewMode: action.viewMode,
+        perform: () => {
+          actionManager.executeAction(action, "commandPalette");
+        },
+      };
+
+      return transformer ? transformer(command, action) : command;
+    };
+
+    const elementsCommands: CommandPaletteItem[] = [
+      actionManager.actions.group,
+      actionManager.actions.ungroup,
+      actionManager.actions.cut,
+      actionManager.actions.copy,
+      actionManager.actions.deleteSelectedElements,
+      actionManager.actions.bringToFront,
+      actionManager.actions.bringForward,
+      actionManager.actions.sendBackward,
+      actionManager.actions.sendToBack,
+      actionManager.actions.duplicateSelection,
+      actionManager.actions.flipHorizontal,
+      actionManager.actions.flipVertical,
+      actionManager.actions.zoomToFitSelection,
+      actionManager.actions.zoomToFitSelectionInViewport,
+      actionManager.actions.increaseFontSize,
+      actionManager.actions.decreaseFontSize,
+      actionManager.actions.toggleLinearEditor,
+    ].map((action: Action) =>
+      actionToCommand(
+        action,
+        DEFAULT_CATEGORIES.elements,
+        (command, action) => ({
+          ...command,
+          predicate: action.predicate
+            ? action.predicate
+            : (elements, appState) =>
+                getSelectedElements(elements, appState).length > 0,
+        }),
+      ),
+    );
+
+    const editorCommands: CommandPaletteItem[] = [
+      actionManager.actions.undo,
+      actionManager.actions.redo,
+      actionManager.actions.zoomIn,
+      actionManager.actions.zoomOut,
+      actionManager.actions.resetZoom,
+      actionManager.actions.zoomToFit,
+      actionManager.actions.toggleShortcuts,
+      actionManager.actions.selectAll,
+      actionManager.actions.toggleElementLock,
+      actionManager.actions.unlockAllElements,
+    ].map((action) => actionToCommand(action, DEFAULT_CATEGORIES.editor));
+
+    const exportCommands: CommandPaletteItem[] = [
+      actionManager.actions.saveToActiveFile,
+      actionManager.actions.saveFileToDisk,
+    ].map((action) => actionToCommand(action, DEFAULT_CATEGORIES.export));
+
+    const commandsFromActions: CommandPaletteItem[] = [
+      ...elementsCommands,
+      ...editorCommands,
+      {
+        label: getActionLabel(actionClearCanvas),
+        icon: getActionIconName(actionClearCanvas, appState, elements),
+        shortcut: getShortcutFromShortcutName(
+          actionClearCanvas.name as ShortcutName,
+        ),
+        category: DEFAULT_CATEGORIES.editor,
+        keywords: ["delete", "destroy"],
+        viewMode: false,
+        perform: () => {
+          app.activeConfirmDialog.set("clearCanvas");
+        },
+      },
+      {
+        label: t("buttons.exportImage"),
+        category: DEFAULT_CATEGORIES.export,
+        icon: "exportImageIcon",
+        shortcut: getShortcutFromShortcutName("imageExport"),
+        keywords: [
+          "export",
+          "image",
+          "png",
+          "jpeg",
+          "svg",
+          "clipboard",
+          "picture",
+        ],
+        perform: () => {
+          app.batchCommits(() =>
+            app.setState({ openDialog: { name: "imageExport" } }),
+          );
+        },
+      },
+      ...exportCommands,
+    ];
+
+    const additionalCommands: CommandPaletteItem[] = [
+      actionToCommand(actionToggleTheme, DEFAULT_CATEGORIES.app),
+      {
+        label: t("search.title"),
+        category: DEFAULT_CATEGORIES.app,
+        icon: "searchIcon",
+        viewMode: true,
+        perform: () => {
+          actionManager.executeAction(actionToggleSearchMenu);
+        },
+      },
+      {
+        label: t("labels.changeStroke"),
+        keywords: ["color", "outline"],
+        category: DEFAULT_CATEGORIES.elements,
+        icon: "bucketFillIcon",
+        viewMode: false,
+        predicate: (elements, appState) => {
+          const selectedElements = getSelectedElements(elements, appState);
+          return (
+            selectedElements.length > 0 &&
+            canChangeStrokeColor(appState, selectedElements)
+          );
+        },
+        perform: () => {
+          app.batchCommits(() => app.setState({ openPopup: "elementStroke" }));
+        },
+      },
+      {
+        label: t("labels.changeBackground"),
+        keywords: ["color", "fill"],
+        icon: "bucketFillIcon",
+        category: DEFAULT_CATEGORIES.elements,
+        viewMode: false,
+        predicate: (elements, appState) => {
+          const selectedElements = getSelectedElements(elements, appState);
+          return (
+            selectedElements.length > 0 &&
+            canChangeBackgroundColor(appState, selectedElements)
+          );
+        },
+        perform: () => {
+          app.batchCommits(() =>
+            app.setState({ openPopup: "elementBackground" }),
+          );
+        },
+      },
+      {
+        label: t("labels.canvasBackground"),
+        keywords: ["color"],
+        icon: "bucketFillIcon",
+        category: DEFAULT_CATEGORIES.editor,
+        viewMode: false,
+        perform: () => {
+          app.batchCommits(() =>
+            app.setState((prevState) => ({
+              openMenu: prevState.openMenu === "canvas" ? null : "canvas",
+              openPopup: "canvasBackground",
+            })),
+          );
+        },
+      },
+      ...(Object.keys(TOOLS) as ToolbarToolType[]).reduce(
+        (acc: CommandPaletteItem[], value) => {
+          // upstream tests `UIOptions.tools` here; caliburn's `isToolSupported`
+          // is that check plus the non-interactive editor's own tool gate
+          if (!app.isToolSupported(value)) {
+            return acc;
+          }
+
+          const config = TOOLS[value];
+          const shortcut = getToolLetter(value) || config.numericKey;
+
+          acc.push({
+            label: t(`toolBar.${value}`),
+            category: DEFAULT_CATEGORIES.tools,
+            shortcut,
+            icon: TOOL_ICONS[value],
+            keywords: ["toolbar"],
+            viewMode: false,
+            perform: () => {
+              app.setActiveTool({ type: value }, { toggle: false });
+            },
+          });
+
+          return acc;
+        },
+        [],
+      ),
+      {
+        label: t("toolBar.lock"),
+        category: DEFAULT_CATEGORIES.tools,
+        icon: appState.activeTool.locked ? "lockedIcon" : "unlockedIcon",
+        shortcut: KEYS.Q.toLocaleUpperCase(),
+        viewMode: false,
+        perform: () => {
+          app.toggleToolLock();
+        },
+      },
+    ];
+
+    this.allCommands = [...commandsFromActions, ...additionalCommands].map(
+      (command) => ({
+        ...command,
+        icon: command.icon || "boltIcon",
+        order: command.order ?? getCategoryOrder(command.category),
+        haystack: `${deburr(command.label.toLocaleLowerCase())} ${
+          command.keywords?.join(" ") || ""
+        }`,
+      }),
+    );
+
+    const lastUsed = this.lastUsed();
+    lastUsedPaletteItem.set(
+      this.allCommands.find((command) => command.label === lastUsed?.label) ??
+        null,
+    );
+
+    this.applyCommands();
+  }
+
+  private applyCommands() {
+    const getNextCommandsByCategory = (commands: CommandPaletteItem[]) => {
+      const nextCommandsByCategory: Record<string, CommandPaletteItem[]> = {};
+      for (const command of commands) {
+        if (nextCommandsByCategory[command.category]) {
+          nextCommandsByCategory[command.category].push(command);
+        } else {
+          nextCommandsByCategory[command.category] = [command];
+        }
+      }
+
+      return nextCommandsByCategory;
+    };
+
+    const setCommands = (commands: Record<string, CommandPaletteItem[]>) => {
+      this.commandsByCategory.set(commands);
+      this.categories.set(Object.keys(commands));
+    };
+
+    const commandSearch = this.commandSearch();
+    const lastUsed = this.lastUsed();
+    let matchingCommands = this.allCommands
+      .filter((command) => this.isCommandAvailable(command))
+      .sort((a, b) => a.order - b.order);
+
+    const showLastUsed =
+      !commandSearch && lastUsed && this.isCommandAvailable(lastUsed);
+
+    if (!commandSearch) {
+      setCommands(
+        getNextCommandsByCategory(
+          showLastUsed
+            ? matchingCommands.filter(
+                (command) => command.label !== lastUsed?.label,
+              )
+            : matchingCommands,
+        ),
+      );
+      this.currentCommand.set(
+        showLastUsed ? lastUsed : matchingCommands[0] || null,
+      );
+      return;
+    }
+
+    const query = deburr(
+      commandSearch.toLocaleLowerCase().replace(/[<>_| -]/g, ""),
+    );
+    matchingCommands = fuzzy
+      .filter(query, matchingCommands, {
+        extract: (command) => command.haystack ?? "",
+      })
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.original);
+
+    setCommands(getNextCommandsByCategory(matchingCommands));
+    this.currentCommand.set(matchingCommands[0] ?? null);
+  }
+}
+
+/**
+ * Angular port of upstream `CommandPalette.tsx`'s outer component: always
+ * mounted, owns the CtrlOrCmd+/ (and CtrlOrCmd+Shift+P) toggle, and renders
+ * the palette only while `appState.openDialog` is `{ name: "commandPalette" }`.
+ */
+@Component({
+  selector: "caliburn-command-palette",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CaliburnCommandPaletteInnerComponent],
+  template: `
+    @if (isOpen()) {
+      <caliburn-command-palette-inner />
+    }
+  `,
+})
+export class CaliburnCommandPaletteComponent implements OnDestroy {
+  private readonly editor = inject<CaliburnEditorComponent>(
+    forwardRef(() => CaliburnEditorComponentToken),
+  );
+
+  private readonly detachToggle = addEventListener(
+    window,
+    EVENT.KEYDOWN,
+    (event: Event) => this.handleToggleShortcut(event as KeyboardEvent),
+    { capture: true, passive: false },
+  );
+
+  ngOnDestroy() {
+    this.detachToggle();
+  }
+
+  protected isOpen() {
+    this.editor.changeGeneration();
+    return this.editor.state.openDialog?.name === "commandPalette";
+  }
+
+  private handleToggleShortcut(event: KeyboardEvent) {
+    if (!isCommandPaletteToggleShortcut(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.editor.batchCommits(() =>
+      this.editor.setState((appState) => {
+        const nextState =
+          appState.openDialog?.name === "commandPalette"
+            ? null
+            : ({ name: "commandPalette" } as const);
+
+        if (nextState) {
+          trackEvent("command_palette", "open", "shortcut");
+        }
+
+        return { openDialog: nextState };
+      }),
+    );
+  }
+}

@@ -268,6 +268,15 @@ export class CaliburnHelpDialogComponent {
       label: t("search.title"),
       shortcuts: [getShortcutFromShortcutName("searchMenu")],
     },
+    {
+      label: t("commandPalette.title"),
+      shortcuts: isFirefox
+        ? [getShortcutFromShortcutName("commandPalette")]
+        : [
+            getShortcutFromShortcutName("commandPalette"),
+            getShortcutFromShortcutName("commandPalette", 1),
+          ],
+    },
   ]);
 
   private readonly editorRows = buildRows([

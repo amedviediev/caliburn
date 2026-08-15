@@ -17,6 +17,7 @@ import {
 } from "@excalidraw/common";
 
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
+import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import {
@@ -145,6 +146,47 @@ export class CaliburnMenuSaveAsImageComponent {
   protected handleSelect() {
     this.editor.batchCommits(() =>
       this.editor.setState({ openDialog: { name: "imageExport" } }),
+    );
+  }
+}
+
+/**
+ * Upstream's library-level `DefaultMainMenu` composes every other item on this
+ * page but not this one — excalidraw.com's own `AppMainMenu` adds it, right
+ * before `SearchMenu`. Caliburn has no app-level menu, so
+ * `caliburn-default-main-menu` takes that position for it; otherwise the
+ * palette's menu trigger would have no call site at all.
+ */
+@Component({
+  selector: "caliburn-menu-command-palette",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CaliburnDropdownMenuItemComponent],
+  template: `
+    <button
+      caliburn-dropdown-menu-item
+      icon="boltIcon"
+      testId="command-palette-button"
+      [shortcut]="shortcut"
+      [ariaLabel]="label"
+      [class]="extraClass()"
+      (select)="handleSelect()"
+    >
+      {{ label }}
+    </button>
+  `,
+})
+export class CaliburnMenuCommandPaletteComponent {
+  private readonly editor = injectEditor();
+
+  readonly extraClass = input<string>("", { alias: "class" });
+
+  protected readonly label = t("commandPalette.title");
+  protected readonly shortcut = getShortcutFromShortcutName("commandPalette");
+
+  protected handleSelect() {
+    trackEvent("command_palette", "open", "menu");
+    this.editor.batchCommits(() =>
+      this.editor.setState({ openDialog: { name: "commandPalette" } }),
     );
   }
 }

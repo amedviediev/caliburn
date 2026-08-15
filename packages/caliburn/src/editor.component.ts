@@ -60,6 +60,7 @@ import {
 } from "@excalidraw/excalidraw/data/blob";
 import { restoreElements } from "@excalidraw/excalidraw/data/restore";
 import { exportCanvas } from "@excalidraw/excalidraw/data";
+import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 
@@ -1037,6 +1038,21 @@ export class CaliburnEditorComponent
       return;
     }
 
+    if (
+      event[KEYS.CTRL_OR_CMD] &&
+      event.key === KEYS.P &&
+      !event.shiftKey &&
+      !event.altKey
+    ) {
+      this.setToast({
+        message: t("commandPalette.shortcutHint", {
+          shortcut: getShortcutFromShortcutName("commandPalette"),
+        }),
+      });
+      event.preventDefault();
+      return;
+    }
+
     trackPlainPasteKeyDown(event);
 
     // bail if
@@ -1519,6 +1535,10 @@ export class CaliburnEditorComponent
         activeTool: nextActiveTool,
       };
     });
+  };
+
+  setToast = (toast: AppState["toast"]) => {
+    this.setState({ toast });
   };
 
   toggleToolLock() {

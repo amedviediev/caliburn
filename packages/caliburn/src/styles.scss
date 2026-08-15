@@ -36,6 +36,8 @@
 @use "../../excalidraw/components/TextField.scss";
 @use "../../excalidraw/components/SearchMenu.scss";
 @use "../../excalidraw/components/Sidebar/Sidebar.scss";
+@use "../../excalidraw/components/CommandPalette/CommandPalette.scss";
+@use "../../excalidraw/components/Toast.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
 // These host-bound primitives (`packages/caliburn/src/components/`)
@@ -112,6 +114,8 @@ caliburn-text-field {
 // root — `display: contents` keeps the duplicate inert.
 caliburn-hint-viewer,
 caliburn-layer-ui,
+caliburn-command-palette,
+caliburn-command-palette-inner,
 caliburn-footer,
 caliburn-toolbar,
 caliburn-dropdown-menu-content,
@@ -124,6 +128,7 @@ caliburn-menu-save-as-image,
 caliburn-menu-search,
 caliburn-menu-help,
 caliburn-menu-clear-canvas,
+caliburn-menu-command-palette,
 caliburn-menu-toggle-theme,
 caliburn-menu-change-canvas-background,
 caliburn-menu-export,

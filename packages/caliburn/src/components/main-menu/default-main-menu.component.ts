@@ -11,6 +11,7 @@ import { CaliburnDropdownMenuSeparatorComponent } from "../dropdown-menu/dropdow
 import {
   CaliburnMenuChangeCanvasBackgroundComponent,
   CaliburnMenuClearCanvasComponent,
+  CaliburnMenuCommandPaletteComponent,
   CaliburnMenuExportComponent,
   CaliburnMenuHelpComponent,
   CaliburnMenuLoadSceneComponent,
@@ -35,6 +36,7 @@ import type { CaliburnEditorComponent } from "../../editor.component";
     CaliburnMainMenuComponent,
     CaliburnMenuChangeCanvasBackgroundComponent,
     CaliburnMenuClearCanvasComponent,
+    CaliburnMenuCommandPaletteComponent,
     CaliburnMenuExportComponent,
     CaliburnMenuHelpComponent,
     CaliburnMenuLoadSceneComponent,
@@ -53,6 +55,7 @@ import type { CaliburnEditorComponent } from "../../editor.component";
       @if (uiOptions.canvasActions.saveAsImage) {
         <caliburn-menu-save-as-image />
       }
+      <caliburn-menu-command-palette />
       <caliburn-menu-search />
       <caliburn-menu-help />
       <caliburn-menu-clear-canvas />

@@ -11,6 +11,7 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../edit
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
 
 import { CaliburnActiveConfirmDialogComponent } from "./active-confirm-dialog.component";
+import { CaliburnCommandPaletteComponent } from "./command-palette/command-palette.component";
 import { CaliburnErrorDialogComponent } from "./error-dialog.component";
 import { CaliburnFixedSideContainerComponent } from "./fixed-side-container.component";
 import { CaliburnFooterComponent } from "./footer.component";
@@ -24,6 +25,10 @@ import {
   CaliburnStackColComponent,
   CaliburnStackRowComponent,
 } from "./stack.component";
+import {
+  CaliburnToastComponent,
+  DEFAULT_TOAST_TIMEOUT,
+} from "./toast.component";
 import { CaliburnToolbarComponent } from "./toolbar.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
@@ -57,6 +62,7 @@ let nextLayerUIId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CaliburnActiveConfirmDialogComponent,
+    CaliburnCommandPaletteComponent,
     CaliburnDefaultMainMenuComponent,
     CaliburnErrorDialogComponent,
     CaliburnFixedSideContainerComponent,
@@ -69,6 +75,7 @@ let nextLayerUIId = 0;
     CaliburnShapeActionsComponent,
     CaliburnStackColComponent,
     CaliburnStackRowComponent,
+    CaliburnToastComponent,
     CaliburnToolbarComponent,
   ],
   template: `
@@ -88,6 +95,7 @@ let nextLayerUIId = 0;
       <caliburn-image-export-dialog />
     }
     <caliburn-json-export-dialog />
+    <caliburn-command-palette />
     <div class="layer-ui__wrapper">
       <caliburn-fixed-side-container side="top">
         <div class="App-menu App-menu_top">
@@ -120,6 +128,16 @@ let nextLayerUIId = 0;
         </div>
       </caliburn-fixed-side-container>
       <caliburn-footer />
+      @if (state().toast; as toast) {
+        <div class="floating-status-stack">
+          <caliburn-toast
+            [message]="toast.message"
+            [closable]="!!toast.closable"
+            [duration]="toast.duration ?? defaultToastDuration"
+            (close)="clearToast()"
+          />
+        </div>
+      }
     </div>
     @if (isSearchSidebarOpen()) {
       <caliburn-island
@@ -139,6 +157,7 @@ export class CaliburnLayerUIComponent {
 
   protected readonly headingId = `caliburn-layer-ui-${nextLayerUIId++}-shapes-title`;
   protected readonly uiOptions = this.editor.props.UIOptions;
+  protected readonly defaultToastDuration = DEFAULT_TOAST_TIMEOUT;
 
   protected state() {
     this.editor.changeGeneration();
@@ -161,5 +180,9 @@ export class CaliburnLayerUIComponent {
 
   protected closeDialog() {
     this.editor.batchCommits(() => this.editor.setState({ openDialog: null }));
+  }
+
+  protected clearToast() {
+    this.editor.batchCommits(() => this.editor.setState({ toast: null }));
   }
 }
