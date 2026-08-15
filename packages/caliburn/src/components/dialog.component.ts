@@ -8,6 +8,8 @@ import {
   viewChild,
 } from "@angular/core";
 
+import clsx from "clsx";
+
 import { KEYS, queryFocusableElements } from "@excalidraw/common";
 
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -48,7 +50,11 @@ let nextDialogId = 0;
  * upstream mismatch, ported as-is rather than "fixed". `setAppState({
  * openMenu: null })` from upstream's `onClose` is editor-state glue, not
  * part of this generic primitive — left for the consumer wiring
- * `(closeRequest)`.
+ * `(closeRequest)`. `class` routes onto the `.Modal` root — upstream puts
+ * `className` there too (`Dialog.tsx`'s `<Modal className={clsx("Dialog",
+ * props.className, ...)}>`), and `ConfirmDialog.tsx`/`HelpDialog.tsx` (Task
+ * 19) depend on their own class landing on that element for
+ * `ConfirmDialog.scss`/`HelpDialog.scss` to apply.
  */
 @Component({
   selector: "caliburn-dialog",
@@ -56,7 +62,7 @@ let nextDialogId = 0;
   imports: [CaliburnModalComponent, CaliburnIslandComponent, NgIcon],
   template: `
     <caliburn-modal
-      class="Dialog"
+      [class]="modalClass()"
       [class.Dialog--fullscreen]="fullscreen()"
       [maxWidth]="dialogSize()"
       labelledBy="dialog-title"
@@ -93,15 +99,17 @@ export class CaliburnDialogComponent implements AfterViewInit, OnDestroy {
   readonly title = input<string | false>(false);
   readonly size = input<DialogSize>();
   readonly autofocus = input(true);
-  readonly closeOnClickOutside = input<boolean>();
+  readonly closeOnClickOutside = input(true);
   /** whether the host formFactor is mobile — drives `.Dialog--fullscreen`
    * and the in-dialog close button, mirroring upstream's
    * `useEditorInterface().formFactor === "phone"`. */
   readonly fullscreen = input(false);
+  readonly extraClass = input<string>("", { alias: "class" });
 
   readonly closeRequest = output<void>();
 
   readonly dialogSize = computed(() => getDialogSize(this.size()));
+  readonly modalClass = computed(() => clsx("Dialog", this.extraClass()));
 
   private readonly island = viewChild(CaliburnIslandComponent, {
     read: ElementRef,

@@ -18,3 +18,17 @@
 @use "../../excalidraw/components/Dialog.scss";
 @use "../../excalidraw/components/Tooltip.scss";
 @use "../../excalidraw/components/dropdownMenu/DropdownMenu.scss";
+
+// Custom elements default to `display: inline` unless styled otherwise.
+// These four host-bound primitives (`packages/caliburn/src/components/`)
+// render upstream classes/markup that were always plain `<div>`s (block by
+// default) and never carried their own `display` rule upstream — Island.scss
+// has none for `.Island`, and `ButtonSeparator`/`DropdownMenuSeparator` have
+// no upstream class at all (inline-styled `<div>`s), so their custom-element
+// tag names are targeted directly instead.
+caliburn-island,
+.dropdown-menu-group,
+caliburn-button-separator,
+caliburn-dropdown-menu-separator {
+  display: block;
+}

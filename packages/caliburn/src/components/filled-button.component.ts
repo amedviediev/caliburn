@@ -30,37 +30,39 @@ export type FilledButtonStatus = null | "loading" | "success";
  * Angular port of upstream `FilledButton.tsx` (`.ExcButton`). `onClick` may
  * return a promise, which drives the (delayed) loading spinner state exactly
  * like upstream's internal `isLoading`.
+ *
+ * Attribute-selector component (`button[caliburn-filled-button]`): the host
+ * IS the real `<button>` — no wrapper tag.
  */
 @Component({
-  selector: "caliburn-filled-button",
+  selector: "button[caliburn-filled-button]",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgIcon, CaliburnSpinnerComponent],
+  host: {
+    type: "button",
+    "[class]": "hostClass()",
+    "[attr.aria-label]": "label() ?? null",
+    "[disabled]": "isDisabled()",
+    "(click)": "handleClick($event)",
+  },
   template: `
-    <button
-      type="button"
-      [class]="hostClass()"
-      [attr.aria-label]="label() ?? null"
-      [disabled]="isDisabled()"
-      (click)="handleClick($event)"
-    >
-      <div class="ExcButton__contents">
-        @if (effectiveStatus() === "loading") {
-          <caliburn-spinner class="ExcButton__statusIcon" />
-        } @else if (effectiveStatus() === "success") {
-          <div class="ExcButton__statusIcon">
-            <ng-icon name="tablerCheckIcon" />
-          </div>
-        }
-        @if (icon()) {
-          <div class="ExcButton__icon" aria-hidden="true">
-            <ng-icon [name]="icon()!" />
-          </div>
-        }
-        @if (variant() !== "icon") {
-          <ng-content>{{ label() }}</ng-content>
-        }
-      </div>
-    </button>
+    <div class="ExcButton__contents">
+      @if (effectiveStatus() === "loading") {
+        <caliburn-spinner class="ExcButton__statusIcon" />
+      } @else if (effectiveStatus() === "success") {
+        <div class="ExcButton__statusIcon">
+          <ng-icon name="tablerCheckIcon" />
+        </div>
+      }
+      @if (icon()) {
+        <div class="ExcButton__icon" aria-hidden="true">
+          <ng-icon [name]="icon()!" />
+        </div>
+      }
+      @if (variant() !== "icon") {
+        <ng-content>{{ label() }}</ng-content>
+      }
+    </div>
   `,
 })
 export class CaliburnFilledButtonComponent {
@@ -70,7 +72,6 @@ export class CaliburnFilledButtonComponent {
   readonly variant = input<FilledButtonVariant>("filled");
   readonly color = input<FilledButtonColor>("primary");
   readonly size = input<FilledButtonSize>("medium");
-  readonly extraClass = input<string>("", { alias: "class" });
   readonly fullWidth = input(false);
   readonly icon = input<string>();
   readonly disabled = input(false);
@@ -98,7 +99,6 @@ export class CaliburnFilledButtonComponent {
       `ExcButton--size-${this.size()}`,
       `ExcButton--status-${this.effectiveStatus()}`,
       { "ExcButton--fullWidth": this.fullWidth() },
-      this.extraClass(),
     ),
   );
 

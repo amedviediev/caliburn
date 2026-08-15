@@ -10,30 +10,38 @@ import clsx from "clsx";
 
 /**
  * Angular port of upstream `Button.tsx` (`.excalidraw-button`).
+ *
+ * Attribute-selector component (`button[caliburn-button]`): the host IS the
+ * real `<button>` — no wrapper tag.
+ *
+ * `testId`/`ariaLabel` are explicit inputs standing in for upstream's
+ * `{...rest}` HTML-attribute spread — `Sidebar/SidebarHeader.tsx` passes
+ * `data-testid="sidebar-dock"`/`"sidebar-close"` and `aria-label`, which
+ * upstream's own Sidebar tests query by.
  */
 @Component({
-  selector: "caliburn-button",
+  selector: "button[caliburn-button]",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <button
-      [type]="type()"
-      [class]="hostClass()"
-      [disabled]="disabled()"
-      (click)="select.emit()"
-    >
-      <ng-content />
-    </button>
-  `,
+  host: {
+    "[attr.type]": "type()",
+    "[class]": "hostClass()",
+    "[disabled]": "disabled()",
+    "[attr.data-testid]": "testId() ?? null",
+    "[attr.aria-label]": "ariaLabel() ?? null",
+    "(click)": "select.emit()",
+  },
+  template: `<ng-content />`,
 })
 export class CaliburnButtonComponent {
   readonly type = input<"button" | "submit" | "reset">("button");
   readonly selected = input(false);
   readonly disabled = input(false);
-  readonly extraClass = input<string>("", { alias: "class" });
+  readonly testId = input<string>();
+  readonly ariaLabel = input<string>();
 
   readonly select = output<void>();
 
   readonly hostClass = computed(() =>
-    clsx("excalidraw-button", this.extraClass(), { selected: this.selected() }),
+    clsx("excalidraw-button", { selected: this.selected() }),
   );
 }

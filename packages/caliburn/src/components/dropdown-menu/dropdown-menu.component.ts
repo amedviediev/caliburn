@@ -1,6 +1,14 @@
-import { ChangeDetectionStrategy, Component, input } from "@angular/core";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  contentChild,
+  input,
+} from "@angular/core";
 
 import { CLASSES } from "@excalidraw/common";
+
+import { CaliburnDropdownMenuTriggerComponent } from "./dropdown-menu-trigger.component";
 
 /**
  * Angular port of upstream `dropdownMenu/DropdownMenu.tsx`. Upstream builds
@@ -10,6 +18,11 @@ import { CLASSES } from "@excalidraw/common";
  * contract upstream already has (the consumer owns the boolean, e.g.
  * `Toolbar.tsx`'s `isExtraToolsMenuOpen`). Host-bound (no wrapper element)
  * so the rendered DOM is exactly `.dropdown-menu-event-wrapper`.
+ *
+ * Exposes the projected trigger's element (`trigger`) so
+ * `caliburn-dropdown-menu-content` can position itself against it (Radix's
+ * popper positioning has no CSS-only equivalent here since this wrapper is
+ * `display: contents` — see `dropdown-menu-content.component.ts`).
  */
 @Component({
   selector: "caliburn-dropdown-menu",
@@ -22,4 +35,8 @@ import { CLASSES } from "@excalidraw/common";
 })
 export class CaliburnDropdownMenuComponent {
   readonly open = input.required<boolean>();
+
+  readonly trigger = contentChild(CaliburnDropdownMenuTriggerComponent, {
+    read: ElementRef,
+  });
 }

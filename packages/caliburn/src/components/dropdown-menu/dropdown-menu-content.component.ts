@@ -2,9 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from "@angular/core";
 
@@ -17,7 +19,7 @@ import { CaliburnStackColComponent } from "../stack.component";
 
 import { CaliburnDropdownMenuComponent } from "./dropdown-menu.component";
 
-import type { OnDestroy, OnInit, ElementRef } from "@angular/core";
+import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
 
 /**
  * Angular port of upstream `dropdownMenu/DropdownMenuContent.tsx`. Radix's
@@ -29,6 +31,14 @@ import type { OnDestroy, OnInit, ElementRef } from "@angular/core";
  * `open` is true, injected via DI (no `forwardRef`: no import cycle between
  * this file and `dropdown-menu.component.ts`). `mobile` replaces
  * `useEditorInterface().formFactor === "phone"`, see the trigger component.
+ *
+ * Positioning: `caliburn-dropdown-menu` (the shared wrapper) is `display:
+ * contents`, so it can't itself be a `position: relative` containing block
+ * for a CSS-only `position: absolute` pairing — instead this measures the
+ * trigger's `getBoundingClientRect()` (via `menu.trigger()`) and applies
+ * `position: fixed` with `top`/`right` computed from it, matching Radix's
+ * actual rendered placement here (`side="bottom"`, `align="end"`,
+ * `sideOffset={8}`).
  */
 @Component({
   selector: "caliburn-dropdown-menu-content",
@@ -36,7 +46,14 @@ import type { OnDestroy, OnInit, ElementRef } from "@angular/core";
   imports: [CaliburnIslandComponent, CaliburnStackColComponent],
   template: `
     @if (menu.open()) {
-      <div class="{{ hostClass() }}" data-testid="dropdown-menu" #menuRoot>
+      <div
+        class="{{ hostClass() }}"
+        data-testid="dropdown-menu"
+        [style.position]="'fixed'"
+        [style.top.px]="positionTop()"
+        [style.right.px]="positionRight()"
+        #menuRoot
+      >
         @if (mobile()) {
           <caliburn-stack-col class="dropdown-menu-container">
             <ng-content />
@@ -62,6 +79,35 @@ export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
   readonly itemSelected = output<Event>();
 
   private readonly menuRoot = viewChild<ElementRef<HTMLElement>>("menuRoot");
+
+  private readonly sideOffset = 8;
+  private readonly triggerRect = signal<DOMRect | null>(null);
+
+  readonly positionTop = computed(() => {
+    const rect = this.triggerRect();
+    return rect ? rect.bottom + this.sideOffset : 0;
+  });
+  readonly positionRight = computed(() => {
+    const rect = this.triggerRect();
+    return rect ? Math.max(window.innerWidth - rect.right, 0) : 0;
+  });
+
+  /** re-measures the trigger every time the menu actually opens (not just
+   * once at construction): this component instance is created once by the
+   * consumer and persists across open/close — only its `@if (menu.open())`
+   * template block toggles — see `onDocKeydown`'s comment for the same
+   * "instance outlives `open`" point. */
+  private readonly measureTriggerOnOpen = effect(() => {
+    if (!this.menu.open()) {
+      return;
+    }
+    const triggerEl = this.menu.trigger()?.nativeElement as
+      | HTMLElement
+      | undefined;
+    if (triggerEl) {
+      this.triggerRect.set(triggerEl.getBoundingClientRect());
+    }
+  });
 
   readonly hostClass = computed(() =>
     clsx("dropdown-menu", this.extraClass(), {
@@ -94,6 +140,14 @@ export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
   };
 
   private readonly onDocKeydown = (event: KeyboardEvent) => {
+    // upstream only attaches this listener while `open` (DropdownMenuContent.tsx's
+    // `useEffect` returns early when `!open`); this instance exists for as
+    // long as *any* `caliburn-dropdown-menu` in the app is closed too (its
+    // own `@if (menu.open())` only gates the rendered DOM, not the
+    // component/its `ngOnInit`), so the guard has to be explicit here.
+    if (!this.menu.open()) {
+      return;
+    }
     if (event.key === KEYS.ESCAPE) {
       event.preventDefault();
       event.stopImmediatePropagation();

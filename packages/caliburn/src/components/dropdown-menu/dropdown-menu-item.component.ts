@@ -53,37 +53,43 @@ export class CaliburnDropdownMenuItemBadgeComponent {
  * the brief — only the inner `<button>` and its classes/data-testid are
  * preserved. `select` composes with the parent content's shared
  * `itemSelected` (upstream's `composeEventHandlers(onSelect,
- * DropdownMenuContentProps.onSelect)`), injected directly (optional, no
- * `forwardRef` needed — no import cycle).
+ * DropdownMenuContentProps.onSelect)`, honoring `event.defaultPrevented` —
+ * see `common/src/utils.ts`'s `composeEventHandlers`), injected directly
+ * (optional, no `forwardRef` needed — no import cycle).
+ *
+ * Attribute-selector component (`button[caliburn-dropdown-menu-item]`): the
+ * host IS the real `<button>` — no wrapper tag — because `.dropdown-menu-item`
+ * must be a direct flex child of `.dropdown-menu-container`
+ * (`.dropdown-menu-container { display: flex; ... }`, `DropdownMenu.scss`)
+ * for the container's row layout/spacing to apply.
  */
 @Component({
-  selector: "caliburn-dropdown-menu-item",
+  selector: "button[caliburn-dropdown-menu-item]",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CaliburnDropdownMenuItemContentComponent],
+  host: {
+    type: "button",
+    "[class]": "itemClass()",
+    "[attr.value]": "value() ?? null",
+    "[attr.title]": "title() ?? ariaLabel() ?? null",
+    "[attr.aria-label]": "ariaLabel() ?? null",
+    "[attr.data-testid]": "testId() ?? null",
+    "[disabled]": "disabled()",
+    "(click)": "handleSelect($event)",
+  },
   template: `
-    <button
-      type="button"
-      [class]="itemClass()"
-      [attr.value]="value() ?? null"
-      [attr.title]="title() ?? ariaLabel() ?? null"
-      [attr.aria-label]="ariaLabel() ?? null"
-      [attr.data-testid]="testId() ?? null"
-      [disabled]="disabled()"
-      (click)="handleSelect($event)"
+    <caliburn-dropdown-menu-item-content
+      [icon]="icon()"
+      [shortcut]="shortcut()"
+      [hasBadge]="hasBadge()"
+      [mobile]="content?.mobile() ?? false"
     >
-      <caliburn-dropdown-menu-item-content
-        [icon]="icon()"
-        [shortcut]="shortcut()"
-        [hasBadge]="hasBadge()"
-        [mobile]="content?.mobile() ?? false"
-      >
-        <ng-content />
-        <ng-content
-          select="[dropdown-menu-item-badge-slot]"
-          ngProjectAs="[dropdown-menu-item-badge-slot]"
-        />
-      </caliburn-dropdown-menu-item-content>
-    </button>
+      <ng-content />
+      <ng-content
+        select="[dropdown-menu-item-badge-slot]"
+        ngProjectAs="[dropdown-menu-item-badge-slot]"
+      />
+    </caliburn-dropdown-menu-item-content>
   `,
 })
 export class CaliburnDropdownMenuItemComponent {
@@ -110,6 +116,13 @@ export class CaliburnDropdownMenuItemComponent {
 
   handleSelect(event: Event) {
     this.select.emit(event);
-    this.content?.itemSelected.emit(event);
+    // upstream's composeEventHandlers checks event.defaultPrevented before
+    // calling the second handler — an item that calls preventDefault() in
+    // its own onSelect (e.g. the theme toggle, main-menu/DefaultItems.tsx)
+    // must not also trigger the content's shared onSelect (which callers
+    // typically wire to close the menu).
+    if (!event.defaultPrevented) {
+      this.content?.itemSelected.emit(event);
+    }
   }
 }

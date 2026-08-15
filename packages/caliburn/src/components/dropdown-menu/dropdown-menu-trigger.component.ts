@@ -13,31 +13,35 @@ import clsx from "clsx";
  * replaces `useEditorInterface().formFactor === "phone"` as a plain input —
  * the consumer (which already has editor access) passes it down, keeping
  * this primitive host-agnostic and directly unit-testable.
+ *
+ * Attribute-selector component (`button[caliburn-dropdown-menu-trigger]`):
+ * the host IS the real `<button>` — no wrapper tag — so upstream's
+ * `.dropdown-menu-button` element is the actual direct child of whatever
+ * DOM position the consumer places it at (relevant for any future `>`-keyed
+ * selector targeting it, and needed for `dropdown-menu.component.ts`'s
+ * `contentChild(..., { read: ElementRef })` to resolve the real button for
+ * positioning the content).
  */
 @Component({
-  selector: "caliburn-dropdown-menu-trigger",
+  selector: "button[caliburn-dropdown-menu-trigger]",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <button
-      type="button"
-      [class]="hostClass()"
-      data-testid="dropdown-menu-button"
-      [attr.title]="title() ?? null"
-      (click)="toggle.emit()"
-    >
-      <ng-content />
-    </button>
-  `,
+  host: {
+    type: "button",
+    "[class]": "hostClass()",
+    "data-testid": "dropdown-menu-button",
+    "[attr.title]": "title() ?? null",
+    "(click)": "toggle.emit()",
+  },
+  template: `<ng-content />`,
 })
 export class CaliburnDropdownMenuTriggerComponent {
   readonly mobile = input(false);
   readonly title = input<string>();
-  readonly extraClass = input<string>("", { alias: "class" });
 
   readonly toggle = output<void>();
 
   readonly hostClass = computed(() =>
-    clsx("dropdown-menu-button", this.extraClass(), "zen-mode-transition", {
+    clsx("dropdown-menu-button", "zen-mode-transition", {
       "dropdown-menu-button--mobile": this.mobile(),
     }),
   );

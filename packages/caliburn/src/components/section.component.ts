@@ -18,15 +18,22 @@ let nextSectionId = 0;
  * function receiving the header node; no consumer uses that form (grepped
  * `packages/excalidraw/components/LayerUI.tsx`, the only caller), so only
  * the plain-children form is ported.
+ *
+ * Attribute-selector component (`section[caliburn-section]`): the host IS
+ * the real `<section>` — no wrapper tag. A custom-element wrapper would
+ * both introduce an intervening node for any future `>`-keyed selector and
+ * lose `<section>`'s implicit ARIA landmark ("region") role, which only
+ * applies to the real element.
  */
 @Component({
-  selector: "caliburn-section",
+  selector: "section[caliburn-section]",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    "[attr.aria-labelledby]": "titleId()",
+  },
   template: `
-    <section [class]="sectionClass()" [attr.aria-labelledby]="titleId()">
-      <h2 class="visually-hidden" [id]="titleId()">{{ headingLabel() }}</h2>
-      <ng-content />
-    </section>
+    <h2 class="visually-hidden" [id]="titleId()">{{ headingLabel() }}</h2>
+    <ng-content />
   `,
 })
 export class CaliburnSectionComponent {
@@ -35,7 +42,6 @@ export class CaliburnSectionComponent {
   readonly heading = input.required<
     "canvasActions" | "selectedShapeActions" | "shapes"
   >();
-  readonly sectionClass = input<string>("", { alias: "class" });
 
   readonly titleId = computed(() => `${this.id}-${this.heading()}-title`);
   readonly headingLabel = computed(() =>
