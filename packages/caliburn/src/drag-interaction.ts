@@ -1,6 +1,7 @@
 import {
   KEYS,
   arrayToMap,
+  isShallowEqual,
   randomInteger,
   tupleToCoors,
   updateStable,
@@ -325,6 +326,20 @@ export const cleanupAfterDragOnPointerUp = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
 ) => {
+  // schedule before the state flush below so the synchronous commit that the
+  // flush triggers consumes the capture (upstream relies on React's deferred
+  // post-handler commit instead)
+  if (
+    editor.state.activeTool.type !== "selection" ||
+    isSomeElementSelected(editor.scene.getNonDeletedElements(), editor.state) ||
+    !isShallowEqual(
+      editor.state.previousSelectedElementIds,
+      editor.state.selectedElementIds,
+    )
+  ) {
+    editor.store.scheduleCapture();
+  }
+
   editor.setState((prevState) => ({
     isResizing: false,
     isRotating: false,
@@ -341,11 +356,4 @@ export const cleanupAfterDragOnPointerUp = (
 
   SnapCache.setReferenceSnapPoints(null);
   SnapCache.setVisibleGaps(null);
-
-  if (
-    editor.state.activeTool.type !== "selection" ||
-    isSomeElementSelected(editor.scene.getNonDeletedElements(), editor.state)
-  ) {
-    editor.store.scheduleCapture();
-  }
 };

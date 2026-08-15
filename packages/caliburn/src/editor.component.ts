@@ -60,7 +60,19 @@ import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 import type { ActionResult } from "@excalidraw/excalidraw/actions/types";
 
 import { canvasActions } from "./actions/actionCanvas";
+import { actionDeleteSelected } from "./actions/actionDeleteSelected";
+import { actionDuplicateSelection } from "./actions/actionDuplicateSelection";
 import { actionFinalize } from "./actions/actionFinalize";
+import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
+import { actionGroup, actionUngroup } from "./actions/actionGroup";
+import { createRedoAction, createUndoAction } from "./actions/actionHistory";
+import { actionSelectAll } from "./actions/actionSelectAll";
+import {
+  actionBringForward,
+  actionBringToFront,
+  actionSendBackward,
+  actionSendToBack,
+} from "./actions/actionZindex";
 import { ActionManager } from "./actions/manager";
 
 import { createTestHook } from "./test-hook";
@@ -197,6 +209,14 @@ export class CaliburnEditorComponent
 
   readonly props = {
     UIOptions: DEFAULT_UI_OPTIONS,
+    onDuplicate: undefined as unknown,
+  };
+
+  readonly flowchart = { isCreatingChart: false };
+
+  readonly drawShape = {
+    hasPendingGesture: () => false,
+    finalize: () => {},
   };
 
   isInteractionEnabled() {
@@ -247,7 +267,23 @@ export class CaliburnEditorComponent
   private pointerDownState: PointerDownState | null = null;
 
   constructor() {
-    this.actionManager.registerAll([...canvasActions, actionFinalize]);
+    this.actionManager.registerAll([
+      ...canvasActions,
+      actionFinalize,
+      actionSelectAll,
+      actionDeleteSelected,
+      actionDuplicateSelection,
+      actionFlipHorizontal,
+      actionFlipVertical,
+      actionGroup,
+      actionUngroup,
+      actionSendBackward,
+      actionBringForward,
+      actionSendToBack,
+      actionBringToFront,
+      createUndoAction(this.history),
+      createRedoAction(this.history),
+    ]);
     const hook = createTestHook();
     Object.defineProperties(hook, {
       state: {
