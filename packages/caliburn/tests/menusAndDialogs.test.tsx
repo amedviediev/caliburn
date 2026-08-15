@@ -89,6 +89,44 @@ describe("MainMenu", () => {
     expect(queryByTestId(container, "save-button")).toBeNull();
   });
 
+  it("renders the Excalidraw links group with GitHub/X/Discord", () => {
+    const { container } = renderResult;
+
+    openMainMenu();
+
+    const group = Array.from(
+      container.querySelectorAll(".dropdown-menu-group"),
+    ).find(
+      (candidate) =>
+        candidate.querySelector(".dropdown-menu-group-title")?.textContent ===
+        "Excalidraw links",
+    );
+    expect(group).not.toBeUndefined();
+
+    const github = group!.querySelector<HTMLAnchorElement>(
+      'a[aria-label="GitHub"]',
+    );
+    expect(github).not.toBeNull();
+    expect(github!.getAttribute("href")).toBe(
+      "https://github.com/excalidraw/excalidraw",
+    );
+    expect(github!.getAttribute("target")).toBe("_blank");
+    expect(github!.getAttribute("rel")).toContain("noopener");
+    expect(github!.textContent?.trim()).toBe("GitHub");
+
+    const x = group!.querySelector<HTMLAnchorElement>('a[aria-label="X"]');
+    expect(x).not.toBeNull();
+    expect(x!.getAttribute("href")).toBe("https://x.com/excalidraw");
+    expect(x!.textContent?.trim()).toBe(t("labels.followUs"));
+
+    const discord = group!.querySelector<HTMLAnchorElement>(
+      'a[aria-label="Discord"]',
+    );
+    expect(discord).not.toBeNull();
+    expect(discord!.getAttribute("href")).toBe("https://discord.gg/UexuTaE");
+    expect(discord!.textContent?.trim()).toBe(t("labels.discordChat"));
+  });
+
   it("closes when a regular item is selected", () => {
     openMainMenu();
     expect(h.state.openMenu).toBe("canvas");

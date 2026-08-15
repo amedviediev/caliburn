@@ -34,6 +34,8 @@ import {
   CaliburnStackRowComponent,
 } from "../src/components/stack.component";
 import { CaliburnTooltipComponent } from "../src/components/tooltip.component";
+import { CaliburnWelcomeScreenMenuItemLiveCollaborationTriggerComponent } from "../src/components/welcome-screen/menu-item-live-collaboration-trigger.component";
+import { CaliburnWelcomeScreenMenuItemLinkComponent } from "../src/components/welcome-screen/menu-item-link.component";
 
 function createComponent<T>(type: new (...args: any[]) => T) {
   TestBed.configureTestingModule({
@@ -1136,5 +1138,93 @@ describe("host-bound custom elements get an explicit display (packages/caliburn/
     expect(getComputedStyle(group).display).toBe("block");
     expect(getComputedStyle(buttonSeparator).display).toBe("block");
     expect(getComputedStyle(menuSeparator).display).toBe("block");
+  });
+});
+
+// `MenuItemLink`/`MenuItemLiveCollaborationTrigger` are ported per the
+// upstream `welcome-screen/WelcomeScreen.Center.tsx` API surface but not
+// composed into `<WelcomeScreen />`'s default content (`layer-ui.component`
+// wires only `MenuItemLoadScene`/`MenuItemHelp`, covered end-to-end in
+// `welcomeScreen.test.tsx`) — Task 23 consumes them for a host-app welcome
+// screen. Exercised directly here so their templates/DOM contract are
+// verified even while unconsumed.
+describe("caliburn-welcome-screen unwired primitives", () => {
+  @Component({
+    selector: "welcome-screen-primitives-host",
+    imports: [
+      CaliburnWelcomeScreenMenuItemLinkComponent,
+      CaliburnWelcomeScreenMenuItemLiveCollaborationTriggerComponent,
+    ],
+    template: `
+      <a
+        caliburn-welcome-screen-menu-item-link
+        icon="githubIcon"
+        href="https://github.com/excalidraw/excalidraw"
+        ariaLabel="GitHub"
+      >
+        GitHub
+      </a>
+      <caliburn-welcome-screen-menu-item-live-collaboration-trigger
+        (select)="onSelect()"
+      />
+    `,
+  })
+  class WelcomeScreenPrimitivesHost {
+    selectCount = 0;
+    onSelect() {
+      this.selectCount++;
+    }
+  }
+
+  it("MenuItemLink is a wrapper-less attribute-selector anchor with the welcome-screen-menu-item DOM contract", async () => {
+    const fixture = createComponent(WelcomeScreenPrimitivesHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        "caliburn-welcome-screen-menu-item-link",
+      ),
+    ).toBeNull();
+
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
+      "a[aria-label='GitHub']",
+    );
+    expect(link.classList.contains("welcome-screen-menu-item")).toBe(true);
+    expect(link.getAttribute("href")).toBe(
+      "https://github.com/excalidraw/excalidraw",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    expect(
+      link.querySelector(".welcome-screen-menu-item__icon svg"),
+    ).not.toBeNull();
+    expect(
+      link
+        .querySelector(".welcome-screen-menu-item__text")
+        ?.textContent?.trim(),
+    ).toBe("GitHub");
+  });
+
+  it("MenuItemLiveCollaborationTrigger renders the usersIcon item and emits select on click", async () => {
+    const fixture = createComponent(WelcomeScreenPrimitivesHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+      "caliburn-welcome-screen-menu-item-live-collaboration-trigger button",
+    );
+    expect(button.classList.contains("welcome-screen-menu-item")).toBe(true);
+    expect(
+      button.querySelector(".welcome-screen-menu-item__icon svg"),
+    ).not.toBeNull();
+    expect(
+      button.querySelector(".welcome-screen-menu-item__shortcut"),
+    ).toBeNull();
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectCount).toBe(1);
   });
 });
