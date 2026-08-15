@@ -6,12 +6,15 @@ The name is Excalibur's older form — Latin _Caliburnus_, from the Welsh _Caled
 
 ## Status
 
-The port is at its beginning. What is in this repository today is Excalidraw's source at the pinned commit, being cut down and translated in the order below. Nothing is published to npm yet; the planned package name is `caliburn-ng`.
+The editor's interaction core is ported and green against the upstream test suite. What is in this repository today is Excalidraw's source at the pinned commit alongside `packages/caliburn`, the Angular editor being built against it. Nothing is published to npm yet; the planned package name is `caliburn-ng`.
 
 - [x] Repository setup: README, license, brand assets, font licenses
 - [x] Delete the React code that will never be used; measure what remains — after the cut, the editor package holds 44,408 lines of `.tsx` and 30,462 lines of `.ts` outside tests, and 1,733 upstream tests still pass
 - [x] Port the test harness so the upstream test suite drives the port — `render()` mounts the Angular editor (Angular 22, zoneless, AOT under vitest) and `window.h` exposes its state through the real element engine
-- [ ] Port the editor in slices: selection and viewport; rectangle, ellipse, diamond; arrows and binding; text; freehand; images, frames and groups
+- [x] Port the editor in slices: selection and viewport; rectangle, ellipse, diamond; arrows and binding; text and the wysiwyg editor; freehand; images, frames and groups; clipboard paste and drag-and-drop; element locking; undo/redo and the core actions — 319 ported upstream tests pass against the Angular editor, and the creation-flow snapshots are byte-identical to upstream's
+- [ ] Canvas rendering (the static/interactive renderers are vendored and framework-free; wiring them into the Angular component is next)
+- [ ] Properties panel, context menu and the remaining chrome — 64 upstream tests that drive those UIs are skipped in place as their gates
+- [ ] Imperative API (`excalidrawAPI`) and the remaining upstream gates (`tool.test`, `viewMode.test`, the parked history suite at 37/64)
 
 ## Why a port
 
