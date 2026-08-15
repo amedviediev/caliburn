@@ -1,9 +1,11 @@
 export { CaliburnEditorComponent } from "./editor.component";
+export type { CaliburnImperativeAPI } from "./editor.component";
 export { createTestHook, h } from "./test-hook";
 export type { TestHandle } from "./test-hook";
 
 export interface ExcalidrawCompatProps {
   handleKeyboardGlobally?: boolean;
+  onExcalidrawAPI?: (api: any) => void;
   [key: string]: unknown;
 }
 

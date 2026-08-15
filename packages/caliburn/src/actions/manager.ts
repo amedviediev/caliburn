@@ -142,7 +142,9 @@ export class ActionManager {
 
     event.preventDefault();
     event.stopPropagation();
-    this.updater(data[0].perform(elements, appState, null, this.app as any));
+    this.app.batchCommits(() =>
+      this.updater(data[0].perform(elements, appState, null, this.app as any)),
+    );
     return true;
   }
 
@@ -171,7 +173,9 @@ export class ActionManager {
 
     trackAction(action, source, appState, elements, this.app, value);
 
-    this.updater(action.perform(elements, appState, value, this.app as any));
+    this.app.batchCommits(() =>
+      this.updater(action.perform(elements, appState, value, this.app as any)),
+    );
   }
 
   isActionEnabled = (action: Action) => {

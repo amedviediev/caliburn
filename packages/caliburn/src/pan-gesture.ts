@@ -32,7 +32,8 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
       (event.button === POINTER_BUTTON.WHEEL ||
         (event.button === POINTER_BUTTON.MAIN &&
           isHandToolActive(editor.state)) ||
-        editor.state.viewModeEnabled)
+        (editor.state.viewModeEnabled &&
+          !editor.isActiveToolPointerCapturing()))
     )
   ) {
     return false;

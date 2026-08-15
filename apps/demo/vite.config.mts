@@ -19,4 +19,10 @@ export default defineConfig({
   resolve: {
     alias: workspaceAliases,
   },
+  // the angular plugin turns vite's esbuild transform off for the whole
+  // project; the few upstream .tsx modules still in the import graph
+  // (predicates, tool tables) need it
+  esbuild: {
+    include: [/\.tsx$/],
+  },
 });

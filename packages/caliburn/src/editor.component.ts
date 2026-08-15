@@ -2,9 +2,11 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  effect,
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from "@angular/core";
 
@@ -51,11 +53,14 @@ import {
 } from "@excalidraw/excalidraw/data/blob";
 import { restoreElements } from "@excalidraw/excalidraw/data/restore";
 
-import { KEYS, isArrowKey } from "@excalidraw/common";
+import { ARROW_TYPE, CURSOR_TYPE, KEYS, isArrowKey } from "@excalidraw/common";
+
+import { findShapeByKey } from "@excalidraw/excalidraw/components/Tools";
 
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { LassoTrail } from "@excalidraw/excalidraw/lasso";
+import { AppCursor } from "@excalidraw/excalidraw/components/App.cursor";
 import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
 import { History } from "@excalidraw/excalidraw/history";
 import {
@@ -86,7 +91,10 @@ import type {
   ToolType,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
-import type { ActionResult } from "@excalidraw/excalidraw/actions/types";
+import type {
+  Action,
+  ActionResult,
+} from "@excalidraw/excalidraw/actions/types";
 
 import {
   actionBindText,
@@ -157,6 +165,7 @@ import {
 } from "./create-interaction";
 import {
   finalizeLinearOnPointerUp,
+  handleLinearEditorPointerUp,
   handleLinearElementOnPointerDown,
   handleMultiElementPointerMove,
   maybeDragLinearPoint,
@@ -191,11 +200,13 @@ import {
   maybeStartTextEditingOnPointerUp,
 } from "./text-interaction";
 import {
+  getElementAtPosition,
   handleLassoPointerDown,
   handleSelectionPointerDown,
   handleSelectionPointerMove,
   handleSelectionPointerUp,
   initialPointerDownState,
+  isHittingCommonBoundingBoxOfSelectedElements,
   updateActiveLockedIdOnPointerUp,
 } from "./selection-interaction";
 
@@ -204,6 +215,38 @@ import type { ElementRef } from "@angular/core";
 import type { PointerDownState } from "./selection-interaction";
 
 import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
+
+export interface CaliburnImperativeAPI {
+  updateScene: CaliburnEditorComponent["updateScene"];
+  mutateElement: CaliburnEditorComponent["mutateElement"];
+  addFiles: (files: BinaryFileData[]) => void;
+  getSceneElementsIncludingDeleted: () => readonly ExcalidrawElement[];
+  getSceneElementsMapIncludingDeleted: () => ReturnType<
+    Scene["getElementsMapIncludingDeleted"]
+  >;
+  history: { clear: () => void };
+  setViewport: AppViewport["setViewport"];
+  getViewportOffsets: AppViewport["getOffsets"];
+  getSceneElements: () => readonly NonDeletedExcalidrawElement[];
+  getAppState: () => AppState;
+  getFiles: () => BinaryFiles;
+  registerAction: (action: Action) => void;
+  setActiveTool: CaliburnEditorComponent["setActiveTool"];
+  setCursor: AppCursor["set"];
+  resetCursor: AppCursor["reset"];
+  getEditorInterface: () => EditorInterface;
+  onChange: (
+    cb: (
+      elements: readonly ExcalidrawElement[],
+      appState: AppState,
+      files: BinaryFiles,
+    ) => void,
+  ) => () => void;
+  onIncrement: (cb: (increment: unknown) => void) => () => void;
+  onScrollChange: (
+    cb: (scrollX: number, scrollY: number, zoom: AppState["zoom"]) => void,
+  ) => () => void;
+}
 
 type SetStateArg =
   | Partial<AppState>
@@ -248,6 +291,26 @@ export const TOOLBAR_TOOLS = Object.values(TOOL_TYPE);
         >
           lock
         </button>
+        @if (!state.viewModeEnabled) {
+        <button
+          type="button"
+          data-testid="button-undo"
+          aria-label="Undo"
+          [disabled]="history.isUndoStackEmpty"
+          (click)="actionManager.executeAction(undoAction)"
+        >
+          undo
+        </button>
+        <button
+          type="button"
+          data-testid="button-redo"
+          aria-label="Redo"
+          [disabled]="history.isRedoStackEmpty"
+          (click)="actionManager.executeAction(redoAction)"
+        >
+          redo
+        </button>
+        }
       </div>
       <canvas #staticCanvas class="excalidraw__canvas static"></canvas>
       <canvas
@@ -279,6 +342,29 @@ export class CaliburnEditorComponent
 {
   readonly handleKeyboardGlobally = input(false);
   readonly autoFocus = input(false);
+  readonly viewModeEnabled = input<boolean | undefined>(undefined);
+  readonly activeTool = input<
+    ({ type: ToolType } | { type: "custom"; customType: string }) | null
+  >(null);
+  readonly onExcalidrawAPI = input<
+    ((api: CaliburnImperativeAPI) => void) | null
+  >(null);
+  readonly onPointerDown = input<
+    | ((
+        activeTool: AppState["activeTool"],
+        pointerDownState: PointerDownState,
+        event: PointerEvent,
+      ) => void)
+    | null
+  >(null);
+  readonly onPointerUp = input<
+    | ((
+        activeTool: AppState["activeTool"],
+        pointerDownState: PointerDownState,
+        event: PointerEvent,
+      ) => void)
+    | null
+  >(null);
   readonly imageOptions = input<{
     maxWidthOrHeight?: number;
     maxFileSizeBytes?: number;
@@ -338,6 +424,8 @@ export class CaliburnEditorComponent
   readonly store = new Store(this as any);
   readonly history = new History(this.store);
   readonly fonts = new Fonts(this.scene);
+  readonly undoAction = createUndoAction(this.history);
+  readonly redoAction = createRedoAction(this.history);
   readonly lassoTrail = new LassoTrail(this as any);
 
   visibleElements: readonly NonDeletedExcalidrawElement[] = [];
@@ -381,10 +469,21 @@ export class CaliburnEditorComponent
 
   textWysiwygSubmitHandler: (() => void) | null = null;
 
-  readonly cursor = {
-    reset: () => {},
-    set: (_cursorType?: string) => {},
-    applyForTool: () => {},
+  readonly cursor = new AppCursor(this as any);
+
+  get interactiveCanvas(): HTMLCanvasElement | null {
+    return this.interactiveCanvasRef()?.nativeElement ?? null;
+  }
+
+  isActiveToolPointerCapturing(): boolean {
+    return (
+      this.state.activeTool.type === "laser" ||
+      this.state.activeTool.type === "custom"
+    );
+  }
+
+  readonly bucketFill = {
+    getBucketFillBackgroundColor: (color: string) => color,
   };
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
@@ -420,7 +519,12 @@ export class CaliburnEditorComponent
     if (this.unmounted || actionResult === false) {
       return;
     }
+    this.batchCommits(() => this.syncActionResultImpl(actionResult));
+  };
 
+  private syncActionResultImpl = (
+    actionResult: Exclude<ActionResult, false>,
+  ) => {
     this.store.scheduleAction(actionResult.captureUpdate);
 
     let didUpdate = false;
@@ -461,6 +565,31 @@ export class CaliburnEditorComponent
   private pointerDownState: PointerDownState | null = null;
 
   constructor() {
+    // react to host-forced tool changes (`props.activeTool`)
+    effect(() => {
+      this.activeTool();
+      untracked(() => {
+        if (!this.unmounted && this.removeSceneUpdateListener) {
+          this.setState({});
+        }
+      });
+    });
+
+    // react to host-controlled view mode (`props.viewModeEnabled`)
+    effect(() => {
+      const viewModeEnabled = this.viewModeEnabled();
+      untracked(() => {
+        if (
+          !this.unmounted &&
+          this.removeSceneUpdateListener &&
+          viewModeEnabled !== undefined &&
+          viewModeEnabled !== this.state.viewModeEnabled
+        ) {
+          this.setState({ viewModeEnabled });
+        }
+      });
+    });
+
     this.actionManager.registerAll([
       ...canvasActions,
       actionDeselect,
@@ -500,8 +629,8 @@ export class CaliburnEditorComponent
       actionCopy,
       actionCut,
       actionPaste,
-      createUndoAction(this.history),
-      createRedoAction(this.history),
+      this.undoAction,
+      this.redoAction,
     ]);
     const hook = createTestHook();
     Object.defineProperties(hook, {
@@ -541,6 +670,25 @@ export class CaliburnEditorComponent
         DEFAULT_IMAGE_OPTIONS.maxFileSizeBytes,
     };
 
+    const viewModeEnabled = this.viewModeEnabled();
+    if (viewModeEnabled !== undefined) {
+      this.state = { ...this.state, viewModeEnabled };
+    }
+
+    const forcedTool = this.activeTool();
+    if (forcedTool) {
+      if ((forcedTool.type as string) === "image") {
+        console.warn(`"image" tool cannot be forced via "props.activeTool"`);
+      } else {
+        this.state = {
+          ...this.state,
+          activeTool: updateActiveTool(this.state, forcedTool),
+        };
+      }
+    }
+
+    this.onExcalidrawAPI()?.(this.getApi());
+
     this.store.onDurableIncrementEmitter.on((increment) => {
       this.history.record(increment.delta);
     });
@@ -571,6 +719,7 @@ export class CaliburnEditorComponent
     if (svgLayer) {
       this.lassoTrail.start(svgLayer);
     }
+    this.cursor.reset();
     this.updateDOMRect();
     this.initializeScene();
     if (this.autoFocus()) {
@@ -686,6 +835,10 @@ export class CaliburnEditorComponent
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
+    this.batchCommits(() => this.onKeyDownImpl(event));
+  };
+
+  private onKeyDownImpl = (event: KeyboardEvent) => {
     trackPlainPasteKeyDown(event);
 
     // bail if
@@ -705,6 +858,59 @@ export class CaliburnEditorComponent
       return;
     }
     if (this.actionManager.handleKeyDown(event)) {
+      return;
+    }
+
+    if (this.state.viewModeEnabled && event.key === KEYS.ESCAPE) {
+      this.setActiveTool({ type: "selection" });
+      return;
+    }
+
+    if (
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !this.state.newElement &&
+      !this.state.selectionElement &&
+      !this.state.selectedElementsAreBeingDragged
+    ) {
+      const shape = findShapeByKey(event.key, this as any, event.shiftKey);
+
+      if (this.state.viewModeEnabled && shape !== "laser" && shape !== "hand") {
+        return;
+      }
+
+      if (shape) {
+        if (shape === "arrow" && this.state.activeTool.type === "arrow") {
+          const nextArrowType =
+            this.state.currentItemArrowType === ARROW_TYPE.sharp
+              ? ARROW_TYPE.round
+              : this.state.currentItemArrowType === ARROW_TYPE.round
+              ? ARROW_TYPE.elbow
+              : ARROW_TYPE.sharp;
+          this.setState({ currentItemArrowType: nextArrowType });
+        } else if (
+          shape === "lasso" &&
+          this.state.activeTool.type === "laser"
+        ) {
+          this.setActiveTool({
+            type: this.state.preferredSelectionTool.type,
+          });
+        } else {
+          this.setActiveTool({ type: shape }, { toggle: true });
+        }
+
+        event.stopPropagation();
+
+        return;
+      } else if (event.key === KEYS.Q) {
+        this.toggleToolLock();
+        event.stopPropagation();
+        return;
+      }
+    }
+
+    if (this.state.viewModeEnabled) {
       return;
     }
 
@@ -908,7 +1114,19 @@ export class CaliburnEditorComponent
     if (partial) {
       this.state = { ...this.state, ...partial };
     }
+    this.applyForcedTool();
     this.commit();
+    if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
+      this.cursor.reset();
+      // textWysiwyg's submit path runs synchronously. Defer until after the
+      // current update, then submit whichever text-editing session is active
+      // if editing is still disabled.
+      queueMicrotask(() => {
+        if (this.state.viewModeEnabled) {
+          this.textWysiwygSubmitHandler?.();
+        }
+      });
+    }
     if (
       prevState.scrollX !== this.state.scrollX ||
       prevState.scrollY !== this.state.scrollY ||
@@ -968,6 +1186,14 @@ export class CaliburnEditorComponent
         this.isInteractionEnabled()
           ? `"${tool.type}" tool is disabled via "UIOptions.canvasActions.tools.${tool.type}"`
           : `"${tool.type}" tool cannot be activated while the editor is non-interactive (see "interaction.enabled.tools")`,
+      );
+      return;
+    }
+
+    const forcedTool = this.activeTool();
+    if (forcedTool && !this.isSameForcedTool(forcedTool, tool)) {
+      console.warn(
+        `"${tool.type}" tool activation ignored — the active tool is controlled by the host via "props.activeTool"`,
       );
       return;
     }
@@ -1138,11 +1364,11 @@ export class CaliburnEditorComponent
     panCanvasOnWheelOrSpaceDrag(this, event as PointerEvent);
 
   handleCanvasDoubleClick(event: MouseEvent) {
-    handleCanvasDoubleClick(this, event);
+    this.batchCommits(() => handleCanvasDoubleClick(this, event));
   }
 
   handleCanvasContextMenu(event: MouseEvent) {
-    handleCanvasContextMenu(this, event);
+    this.batchCommits(() => handleCanvasContextMenu(this, event));
   }
 
   private onCut = (event: ClipboardEvent) => {
@@ -1176,6 +1402,10 @@ export class CaliburnEditorComponent
   };
 
   handleCanvasPointerDown(event: PointerEvent) {
+    this.batchCommits(() => this.handleCanvasPointerDownImpl(event));
+  }
+
+  private handleCanvasPointerDownImpl(event: PointerEvent) {
     this.lastPointerDownEvent = event;
 
     // since contextMenu options are potentially evaluated on each render,
@@ -1246,10 +1476,24 @@ export class CaliburnEditorComponent
     } else if (activeToolType === "text") {
       this.pointerDownState = initialPointerDownState(this, event);
       handleTextOnPointerDown(this, event, this.pointerDownState);
+    } else if (activeToolType === "custom") {
+      this.pointerDownState = initialPointerDownState(this, event);
+    }
+
+    if (this.pointerDownState) {
+      this.onPointerDown()?.(
+        this.state.activeTool,
+        this.pointerDownState,
+        event,
+      );
     }
   }
 
   handleCanvasPointerMove(event: PointerEvent) {
+    this.batchCommits(() => this.handleCanvasPointerMoveImpl(event));
+  }
+
+  private handleCanvasPointerMoveImpl(event: PointerEvent) {
     this.viewport.lastPosition.x = event.clientX;
     this.viewport.lastPosition.y = event.clientY;
 
@@ -1279,15 +1523,59 @@ export class CaliburnEditorComponent
 
     handleMultiElementPointerMove(this, event);
     maybeSuggestBindingOnHover(this, event);
-    maybeUpdateFrameToHighlightOnPointerMove(
+    const scenePointer = viewportCoordsToSceneCoords(event, this.state);
+    maybeUpdateFrameToHighlightOnPointerMove(this, scenePointer);
+    this.maybeUpdateHoverCursor(scenePointer, event);
+  }
+
+  private maybeUpdateHoverCursor(
+    scenePointer: { x: number; y: number },
+    event: PointerEvent,
+  ) {
+    if (this.state.viewModeEnabled) {
+      this.cursor.set(CURSOR_TYPE.GRAB);
+      return;
+    }
+    if (!isSelectionLikeTool(this.state.activeTool.type)) {
+      return;
+    }
+    const hitElement = getElementAtPosition(
       this,
-      viewportCoordsToSceneCoords(event, this.state),
+      scenePointer.x,
+      scenePointer.y,
     );
+    if (
+      // if using cmd/ctrl, we're not dragging
+      !event[KEYS.CTRL_OR_CMD] &&
+      // editing text -> don't show move cursor when hovering over its bbox
+      hitElement?.id !== this.state.editingTextElement?.id &&
+      (hitElement ||
+        isHittingCommonBoundingBoxOfSelectedElements(
+          this,
+          scenePointer,
+          this.scene.getSelectedElements(this.state),
+        )) &&
+      !hitElement?.locked
+    ) {
+      this.cursor.set(CURSOR_TYPE.MOVE);
+    } else {
+      this.cursor.reset();
+    }
   }
 
   handleCanvasPointerUp(event: PointerEvent) {
+    this.batchCommits(() => this.handleCanvasPointerUpImpl(event));
+  }
+
+  private handleCanvasPointerUpImpl(event: PointerEvent) {
     removePointer(this, event);
     if (this.pointerDownState) {
+      this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
+      if (this.state.activeTool.type === "custom") {
+        this.clearHighlightsOnPointerUp();
+        this.pointerDownState = null;
+        return;
+      }
       if (this.state.newElement?.type === "freedraw") {
         finalizeFreeDrawOnPointerUp(this, event);
       } else if (isLinearElement(this.state.newElement)) {
@@ -1297,6 +1585,7 @@ export class CaliburnEditorComponent
       } else if (this.state.newElement) {
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
+        handleLinearEditorPointerUp(this, this.pointerDownState, event);
         handleSelectionPointerUp(this, this.pointerDownState);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
@@ -1318,6 +1607,40 @@ export class CaliburnEditorComponent
     if (this.state.frameToHighlight || this.state.elementsToHighlight) {
       this.setState({ frameToHighlight: null, elementsToHighlight: null });
     }
+  }
+
+  getApi(): CaliburnImperativeAPI {
+    return {
+      updateScene: this.updateScene,
+      mutateElement: this.mutateElement,
+      addFiles: (files: BinaryFileData[]) => {
+        this.addMissingFiles(files);
+        addNewImagesToImageCache(this);
+        this.scene.triggerUpdate();
+      },
+      getSceneElementsIncludingDeleted: () =>
+        this.getSceneElementsIncludingDeleted(),
+      getSceneElementsMapIncludingDeleted: () =>
+        this.getSceneElementsMapIncludingDeleted(),
+      history: {
+        clear: () => this.history.clear(),
+      },
+      setViewport: this.viewport.setViewport,
+      getViewportOffsets: this.viewport.getOffsets,
+      getSceneElements: () => this.getSceneElements(),
+      getAppState: () => this.state,
+      getFiles: () => this.files,
+      registerAction: (action) => {
+        this.actionManager.registerAction(action);
+      },
+      setActiveTool: this.setActiveTool,
+      setCursor: this.cursor.set,
+      resetCursor: this.cursor.reset,
+      getEditorInterface: () => this.editorInterface,
+      onChange: (cb) => this.onChangeEmitter.on(cb),
+      onIncrement: (cb) => this.store.onStoreIncrementEmitter.on(cb),
+      onScrollChange: (cb) => this.onScrollChangeEmitter.on(cb),
+    };
   }
 
   focusContainer = () => {
@@ -1423,8 +1746,35 @@ export class CaliburnEditorComponent
   };
 
   isToolLocked(): boolean {
-    return this.state.activeTool.locked;
+    return this.state.activeTool.locked || this.activeTool() !== null;
   }
+
+  /**
+   * Keeps `state.activeTool` synced to the host-controlled
+   * `props.activeTool`. `setActiveTool` refuses non-matching activations
+   * while forced; this backstop covers the writers that bypass the funnel.
+   */
+  private applyForcedTool() {
+    const forcedTool = this.activeTool?.();
+    if (
+      forcedTool &&
+      (forcedTool.type as string) !== "image" &&
+      !this.isSameForcedTool(forcedTool, this.state.activeTool)
+    ) {
+      this.state = {
+        ...this.state,
+        activeTool: updateActiveTool(this.state, forcedTool),
+      };
+    }
+  }
+
+  private isSameForcedTool = (
+    a: { type: string; customType?: string | null } | null | undefined,
+    b: { type: string; customType?: string | null } | null | undefined,
+  ) =>
+    a?.type === b?.type &&
+    (a?.type === "custom" ? a.customType ?? null : null) ===
+      (b?.type === "custom" ? b.customType ?? null : null);
 
   getCurrentItemStrokeWidth(elementType: ExcalidrawElement["type"]) {
     return getStrokeWidthByKey(
@@ -1439,7 +1789,36 @@ export class CaliburnEditorComponent
 
   refresh() {}
 
+  private batchDepth = 0;
+  private commitPending = false;
+
+  /**
+   * Defers commits (store capture, onChange, rendering) until the callback
+   * finishes — the synchronous equivalent of React's per-event-handler
+   * batching, which upstream relies on to coalesce a scheduled capture with
+   * an action's own capture into a single history entry.
+   */
+  batchCommits<T>(fn: () => T): T {
+    this.batchDepth++;
+    try {
+      return fn();
+    } finally {
+      this.batchDepth--;
+      if (this.batchDepth === 0 && this.commitPending) {
+        this.commitPending = false;
+        this.commit();
+        if (!this.unmounted) {
+          this.cdr.detectChanges();
+        }
+      }
+    }
+  }
+
   private commit() {
+    if (this.batchDepth > 0) {
+      this.commitPending = true;
+      return;
+    }
     this.changeGeneration.update((generation) => generation + 1);
     this.store.commit(this.scene.getElementsMapIncludingDeleted(), this.state);
     this.onChangeEmitter.trigger(

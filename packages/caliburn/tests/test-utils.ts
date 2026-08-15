@@ -49,6 +49,19 @@ export type RenderResult = BoundQueries & {
   baseElement: HTMLElement;
   debug: (el?: HTMLElement) => void;
   unmount: () => void;
+  rerender: (ui: React.ReactElement) => void;
+};
+
+// defaults restored for props a rerender no longer passes
+const INPUT_DEFAULTS: Record<string, unknown> = {
+  handleKeyboardGlobally: false,
+  autoFocus: false,
+  viewModeEnabled: undefined,
+  activeTool: null,
+  onExcalidrawAPI: null,
+  imageOptions: null,
+  initialData: null,
+  initialState: null,
 };
 
 /**
@@ -134,12 +147,41 @@ const render = async (
 
   const container = fixture.nativeElement as HTMLElement;
 
+  let lastProps = props;
+
+  const rerender = (nextUi: React.ReactElement) => {
+    const nextProps: Record<string, unknown> = findEditorProps(nextUi) ?? {};
+    for (const key of Object.keys(lastProps)) {
+      if (key === "children" || key in nextProps) {
+        continue;
+      }
+      try {
+        fixture.componentRef.setInput(key, INPUT_DEFAULTS[key] ?? null);
+      } catch {
+        // undeclared prop
+      }
+    }
+    for (const [key, value] of Object.entries(nextProps)) {
+      if (key === "children") {
+        continue;
+      }
+      try {
+        fixture.componentRef.setInput(key, value);
+      } catch {
+        // undeclared prop
+      }
+    }
+    lastProps = nextProps;
+    fixture.detectChanges();
+  };
+
   const renderResult: RenderResult = {
     container,
     baseElement: document.body,
     ...(getQueriesForElement(container, customQueries) as BoundQueries),
     debug: (el = container) => console.info(prettyDOM(el)),
     unmount: unmountComponent,
+    rerender,
   };
 
   GlobalTestState.renderResult = renderResult;

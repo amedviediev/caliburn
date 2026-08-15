@@ -616,3 +616,58 @@ export const finalizeLinearOnPointerUp = (
     });
   }
 };
+
+// Handle end of dragging a point of a linear element, might close a loop
+// and sets binding element
+export const handleLinearEditorPointerUp = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+  event: PointerEvent,
+) => {
+  const sceneCoords = viewportCoordsToSceneCoords(event, editor.state);
+
+  if (
+    editor.state.selectedLinearElement?.isEditing &&
+    !editor.state.newElement &&
+    editor.state.selectedLinearElement.draggedFocusPointBinding === null
+  ) {
+    if (
+      !pointerDownState.boxSelection.hasOccurred &&
+      pointerDownState.hit?.element?.id !==
+        editor.state.selectedLinearElement.elementId &&
+      editor.state.selectedLinearElement.draggedFocusPointBinding === null
+    ) {
+      editor.actionManager.executeAction(actionFinalize);
+    } else {
+      const editingLinearElement = LinearElementEditor.handlePointerUp(
+        event,
+        editor.state.selectedLinearElement,
+        editor.state,
+        editor.scene,
+      );
+      editor.actionManager.executeAction(actionFinalize, "ui", {
+        event,
+        sceneCoords,
+      });
+      if (editingLinearElement !== editor.state.selectedLinearElement) {
+        editor.setState({
+          selectedLinearElement: editingLinearElement,
+          suggestedBinding: null,
+        });
+      }
+    }
+  } else if (editor.state.selectedLinearElement) {
+    if (editor.state.selectedLinearElement.isDragging) {
+      editor.setState({
+        selectedLinearElement: {
+          ...editor.state.selectedLinearElement,
+          isDragging: false,
+        },
+      });
+      editor.actionManager.executeAction(actionFinalize, "ui", {
+        event,
+        sceneCoords,
+      });
+    }
+  }
+};
