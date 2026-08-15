@@ -62,6 +62,7 @@ import type { SnapLine } from "./snapping";
 import type { ImportedDataState } from "./data/types";
 import type { SetViewportOptions } from "./viewport";
 
+import type { Language } from "./i18n";
 import type { isOverScrollBars } from "./scene/scrollbars";
 import type React from "react";
 import type { JSX } from "react";
@@ -845,6 +846,7 @@ export interface ExcalidrawProps {
     isMobile: boolean,
     appState: UIAppState,
   ) => JSX.Element | null;
+  langCode?: Language["code"];
   viewModeEnabled?: boolean;
   /**
    * Whether the editor accepts user input (pointer, keyboard, wheel, touch,

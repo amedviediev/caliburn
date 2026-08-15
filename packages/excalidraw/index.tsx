@@ -18,10 +18,12 @@ import App, {
   ExcalidrawAPIContext,
   ExcalidrawAPISetContext,
 } from "./components/App";
+import { InitializeApp } from "./components/InitializeApp";
 import Footer from "./components/footer/FooterCenter";
 import LiveCollaborationTrigger from "./components/live-collaboration/LiveCollaborationTrigger";
 import MainMenu from "./components/main-menu/MainMenu";
 import WelcomeScreen from "./components/welcome-screen/WelcomeScreen";
+import { defaultLang } from "./i18n";
 import {
   useAppStateValue as _useAppStateValue,
   useOnAppStateChange as _useOnAppStateChange,
@@ -79,6 +81,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     onPointerUpdate,
     renderTopLeftUI,
     renderTopRightUI,
+    langCode = defaultLang.code,
     viewModeEnabled,
     interaction,
     ui,
@@ -202,58 +205,61 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
 
   return (
     <EditorJotaiProvider store={editorJotaiStore}>
-      <App
-        onExport={onExport}
-        className={className}
-        onChange={onChange}
-        onThemeChange={onThemeChange}
-        onIncrement={onIncrement}
-        initialData={initialData}
-        initialState={initialState}
-        onExcalidrawAPI={handleExcalidrawAPI}
-        onMount={onMount}
-        onUnmount={onUnmount}
-        onInitialize={onInitialize}
-        isCollaborating={isCollaborating}
-        onPointerUpdate={onPointerUpdate}
-        renderTopLeftUI={renderTopLeftUI}
-        renderTopRightUI={renderTopRightUI}
-        viewModeEnabled={viewModeEnabled}
-        interaction={interaction}
-        ui={ui}
-        activeTool={activeTool}
-        zenModeEnabled={zenModeEnabled}
-        gridModeEnabled={gridModeEnabled}
-        libraryReturnUrl={libraryReturnUrl}
-        theme={theme}
-        name={name}
-        renderCustomStats={renderCustomStats}
-        UIOptions={UIOptions}
-        onPaste={onPaste}
-        detectScroll={detectScroll}
-        handleKeyboardGlobally={handleKeyboardGlobally}
-        onLibraryChange={onLibraryChange}
-        autoFocus={autoFocus}
-        generateIdForFile={generateIdForFile}
-        onLinkOpen={onLinkOpen}
-        generateLinkForSelection={generateLinkForSelection}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onScrollChange={onScrollChange}
-        onUserFollow={onUserFollow}
-        userToFollow={userToFollow}
-        onDuplicate={onDuplicate}
-        validateEmbeddable={validateEmbeddable}
-        renderEmbeddable={renderEmbeddable}
-        aiEnabled={aiEnabled !== false}
-        showDeprecatedFonts={showDeprecatedFonts}
-        renderScrollbars={renderScrollbars}
-        viewportStatusFrame={viewportStatusFrame}
-        currentUserControls={currentUserControls}
-        imageOptions={normalizedImageOptions}
-      >
-        {children}
-      </App>
+      <InitializeApp langCode={langCode} theme={theme}>
+        <App
+          onExport={onExport}
+          className={className}
+          onChange={onChange}
+          onThemeChange={onThemeChange}
+          onIncrement={onIncrement}
+          initialData={initialData}
+          initialState={initialState}
+          onExcalidrawAPI={handleExcalidrawAPI}
+          onMount={onMount}
+          onUnmount={onUnmount}
+          onInitialize={onInitialize}
+          isCollaborating={isCollaborating}
+          onPointerUpdate={onPointerUpdate}
+          renderTopLeftUI={renderTopLeftUI}
+          renderTopRightUI={renderTopRightUI}
+          langCode={langCode}
+          viewModeEnabled={viewModeEnabled}
+          interaction={interaction}
+          ui={ui}
+          activeTool={activeTool}
+          zenModeEnabled={zenModeEnabled}
+          gridModeEnabled={gridModeEnabled}
+          libraryReturnUrl={libraryReturnUrl}
+          theme={theme}
+          name={name}
+          renderCustomStats={renderCustomStats}
+          UIOptions={UIOptions}
+          onPaste={onPaste}
+          detectScroll={detectScroll}
+          handleKeyboardGlobally={handleKeyboardGlobally}
+          onLibraryChange={onLibraryChange}
+          autoFocus={autoFocus}
+          generateIdForFile={generateIdForFile}
+          onLinkOpen={onLinkOpen}
+          generateLinkForSelection={generateLinkForSelection}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onScrollChange={onScrollChange}
+          onUserFollow={onUserFollow}
+          userToFollow={userToFollow}
+          onDuplicate={onDuplicate}
+          validateEmbeddable={validateEmbeddable}
+          renderEmbeddable={renderEmbeddable}
+          aiEnabled={aiEnabled !== false}
+          showDeprecatedFonts={showDeprecatedFonts}
+          renderScrollbars={renderScrollbars}
+          viewportStatusFrame={viewportStatusFrame}
+          currentUserControls={currentUserControls}
+          imageOptions={normalizedImageOptions}
+        >
+          {children}
+        </App>
+      </InitializeApp>
     </EditorJotaiProvider>
   );
 };

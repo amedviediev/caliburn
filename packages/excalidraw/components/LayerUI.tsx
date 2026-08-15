@@ -65,6 +65,7 @@ import "./Toolbar.scss";
 
 import type { ActionManager } from "../actions/manager";
 
+import type { Language } from "../i18n";
 import type {
   AppProps,
   AppState,
@@ -84,6 +85,7 @@ interface LayerUIProps {
   onLockToggle: () => void;
   onPenModeToggle: AppClassProperties["togglePenMode"];
   showExitZenModeBtn: boolean;
+  langCode: Language["code"];
   renderTopLeftUI?: ExcalidrawProps["renderTopLeftUI"];
   renderTopRightUI?: ExcalidrawProps["renderTopRightUI"];
   renderCustomStats?: ExcalidrawProps["renderCustomStats"];
