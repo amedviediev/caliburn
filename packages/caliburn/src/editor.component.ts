@@ -2611,8 +2611,13 @@ export class CaliburnEditorComponent
 
   handleCanvasPointerDown(event: PointerEvent) {
     this.batchCommits(() => {
+      const canRestoreIsBindingEnabled =
+        this.isInteractionEnabled() ||
+        this.isToolSupported(this.state.activeTool.type);
       this.handleCanvasPointerDownImpl(event);
-      this.restoreIsBindingEnabledToPreference(event);
+      if (canRestoreIsBindingEnabled) {
+        this.restoreIsBindingEnabledToPreference(event);
+      }
     });
   }
 
