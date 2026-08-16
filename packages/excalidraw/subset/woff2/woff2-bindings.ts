@@ -2782,9 +2782,7 @@ const Module = (function () {
           return str;
         },
         toWireType(destructors, value) {
-          if (
-            Object.prototype.toString.call(value) === "[object ArrayBuffer]"
-          ) {
+          if (Object.prototype.toString.call(value) === "[object ArrayBuffer]") {
             value = new Uint8Array(value);
           }
           let getLength;
@@ -4049,3 +4047,5 @@ const Module = (function () {
 })();
 
 export default Module;
+
+

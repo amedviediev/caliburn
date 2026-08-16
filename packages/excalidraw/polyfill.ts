@@ -30,7 +30,8 @@ const polyfill = () => {
         predicate: (value: T, index: number, array: T[]) => unknown,
         thisArg?: unknown,
       ) {
-        return this.slice()
+        return this
+          .slice()
           .reverse()
           .find((value, index) =>
             predicate.call(thisArg, value, this.length - index - 1, this),
@@ -70,7 +71,8 @@ const polyfill = () => {
         predicate: (value: T, index: number, array: T[]) => unknown,
         thisArg?: unknown,
       ) {
-        const index = this.slice()
+        const index = this
+          .slice()
           .reverse()
           .findIndex((value, index) =>
             predicate.call(thisArg, value, this.length - index - 1, this),
@@ -97,7 +99,10 @@ const polyfill = () => {
 
   if (!Array.prototype.toSorted) {
     Object.defineProperty(Array.prototype, "toSorted", {
-      value: function <T>(this: T[], compareFn?: (a: T, b: T) => number) {
+      value: function <T>(
+        this: T[],
+        compareFn?: (a: T, b: T) => number,
+      ) {
         return this.slice().sort(compareFn);
       },
       writable: true,

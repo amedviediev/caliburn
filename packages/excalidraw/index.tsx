@@ -476,6 +476,14 @@ export { LiveCollaborationTrigger };
 export { Stats } from "./components/Stats";
 
 export { DefaultSidebar } from "./components/DefaultSidebar";
+export { TTDDialog } from "./components/TTDDialog/TTDDialog";
+export { TTDDialogTrigger } from "./components/TTDDialog/TTDDialogTrigger";
+export { TTDStreamFetch } from "./components/TTDDialog/utils/TTDStreamFetch";
+export type {
+  TTDPersistenceAdapter,
+  SavedChat,
+  SavedChats,
+} from "./components/TTDDialog/types";
 
 export type { ViewportStatusFrame } from "./types";
 
