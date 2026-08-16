@@ -18,11 +18,14 @@ import { API } from "./helpers/api";
 import { CaliburnCollabHostComponent } from "./helpers/collab-host.component";
 import { Pointer } from "./helpers/ui";
 import {
+  GlobalTestState,
   act,
   fireEvent,
   getByText,
+  mockBoundingClientRect,
   render,
   renderHost,
+  restoreOriginalGetBoundingClientRect,
   waitFor,
 } from "./test-utils";
 
@@ -449,5 +452,141 @@ describe("onPointerUpdate", () => {
       pointer: { x: 120, y: 80, tool: "pointer" },
       button: "up",
     });
+  });
+
+  // caliburn-original: upstream has no navigation-only `onPointerUpdate`
+  // case, but caliburn's pan teardown (`pan-gesture.ts`) is the one call site
+  // where `savePointer`'s own non-interactive gate is load-bearing — every
+  // other one is already behind an `isToolSupported` check
+  it("stays silent while panning a navigation-only editor", async () => {
+    const updates: unknown[] = [];
+    await render(
+      <Excalidraw
+        interaction={{ enabled: { navigation: true } }}
+        onPointerUpdate={(payload: unknown) => updates.push(payload)}
+      />,
+    );
+
+    const pointer = new Pointer("mouse");
+    act(() => {
+      pointer.down(10, 10);
+      pointer.move(40, 40);
+      pointer.up();
+    });
+
+    // the pan ran (so the teardown that calls `savePointer` did too)
+    expect([h.state.scrollX, h.state.scrollY]).not.toEqual([0, 0]);
+    expect(updates).toEqual([]);
+  });
+});
+
+/**
+ * Ported from upstream `tests/interactivity.test.tsx`'s
+ * `interaction={{ enabled: { tools } }}` block — the presenter case, where a
+ * non-interactive editor keeps broadcasting the pointer so collaborators can
+ * follow the laser. Caliburn has no `interactivity.test.tsx` port to host it,
+ * so the two cases that turn on `onPointerUpdate` are carried here, beside
+ * the rest of the pointer-broadcast coverage; upstream's `laserTrails`
+ * assertions are dropped with the trails themselves, which caliburn hasn't
+ * ported, and the helper keeps only the spies the carried cases use.
+ */
+describe("interaction={{ enabled: { tools } }}", () => {
+  const mouse = new Pointer("mouse");
+  const onPointerDownSpy = vi.fn();
+  const onPointerUpdateSpy = vi.fn();
+
+  const renderWithInteraction = async (
+    interaction: Record<string, unknown>,
+  ) => {
+    await render(
+      <Excalidraw
+        interaction={interaction}
+        autoFocus={true}
+        handleKeyboardGlobally={true}
+        onPointerDown={onPointerDownSpy}
+        onPointerUpdate={onPointerUpdateSpy}
+        initialData={{
+          elements: [
+            API.createElement({
+              type: "rectangle",
+              x: 10,
+              y: 10,
+              width: 50,
+              height: 50,
+            }),
+          ],
+        }}
+      />,
+    );
+    await waitFor(() => expect(h.state.width).toBe(200));
+    Object.assign(document, {
+      elementFromPoint: () => GlobalTestState.canvas,
+    });
+  };
+
+  beforeEach(() => {
+    mouse.reset();
+    onPointerDownSpy.mockClear();
+    onPointerUpdateSpy.mockClear();
+    mockBoundingClientRect();
+  });
+
+  afterEach(() => {
+    restoreOriginalGetBoundingClientRect();
+  });
+
+  it("laser: pointer positions broadcast via onPointerUpdate", async () => {
+    await renderWithInteraction({ enabled: { tools: { laser: true } } });
+
+    act(() => {
+      h.app.setActiveTool({ type: "laser" });
+    });
+
+    // between strokes (plain hover)
+    mouse.moveTo(50, 50);
+    expect(onPointerUpdateSpy).toHaveBeenCalled();
+    expect(onPointerUpdateSpy.mock.calls.at(-1)![0].pointer.tool).toBe("laser");
+
+    // during a stroke
+    onPointerUpdateSpy.mockClear();
+    mouse.downAt(30, 30);
+    mouse.moveTo(60, 60);
+    mouse.upAt(60, 60);
+    expect(
+      onPointerUpdateSpy.mock.calls.some(
+        ([payload]) => payload.button === "down",
+      ),
+    ).toBe(true);
+    expect(onPointerUpdateSpy.mock.calls.at(-1)![0].button).toBe("up");
+  });
+
+  it("pointer input stays inert when the active tool is not enabled", async () => {
+    await renderWithInteraction({ enabled: { tools: { laser: true } } });
+
+    // default (selection) tool is not in the enabled set
+    expect(h.state.activeTool.type).toBe("selection");
+    expect(h.app.isToolSupported(h.state.activeTool.type)).toBe(false);
+
+    mouse.downAt(30, 30);
+    mouse.moveTo(80, 80);
+    mouse.upAt(80, 80);
+    expect(h.state.selectedElementIds).toEqual({});
+    expect(onPointerDownSpy).not.toHaveBeenCalled();
+    expect(onPointerUpdateSpy).not.toHaveBeenCalled();
+
+    // a custom tool isn't covered by `tools.laser` — the switch itself is
+    // refused
+    act(() => {
+      h.app.setActiveTool({
+        type: "custom",
+        customType: "comment",
+        locked: true,
+      });
+    });
+    expect(h.state.activeTool.type).toBe("selection");
+    expect(h.app.isToolSupported(h.state.activeTool.type)).toBe(false);
+    mouse.reset();
+    mouse.downAt(40, 40);
+    expect(onPointerDownSpy).not.toHaveBeenCalled();
   });
 });
