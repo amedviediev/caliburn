@@ -197,9 +197,17 @@ export const removePointer = (
   }
 };
 
+/**
+ * Runs a hanging pan session's own teardown — upstream's module-level
+ * `lastPointerUp`, replayed by `maybeCleanupAfterMissingPointerUp`.
+ */
+export const endPanSession = () => {
+  lastPointerUp?.();
+};
+
 export const resetGesture = () => {
   isPanning = false;
-  lastPointerUp?.();
+  endPanSession();
   gesture.pointers.clear();
   gesture.lastCenter = null;
   gesture.initialDistance = null;

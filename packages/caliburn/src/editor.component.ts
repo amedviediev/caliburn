@@ -279,6 +279,7 @@ import {
   maybeFinishImageCroppingOnPointerUp,
 } from "./crop-interaction";
 import {
+  endPanSession,
   gesture,
   handleCanvasPanUsingWheelOrSpaceDrag as panCanvasOnWheelOrSpaceDrag,
   isGestureActive,
@@ -287,6 +288,12 @@ import {
   updateGestureOnPointerDown,
   updateMultiTouchGesture,
 } from "./pan-gesture";
+import {
+  endPointerSession,
+  markCanvasHandledPointerEvent,
+  replayPointerSessionUp,
+  startPointerSession,
+} from "./pointer-session";
 import {
   handleCanvasDoubleClick,
   handleEnterToEditKeyDown,
@@ -1170,12 +1177,17 @@ export class CaliburnEditorComponent
     document.addEventListener("copy", this.onCopy);
     document.addEventListener("cut", this.onCut);
     window.addEventListener("resize", this.onWindowResize);
+    window.addEventListener("focus", this.onWindowFocus);
 
     this.commit();
   }
 
   private onWindowResize = () => {
     this.updateDOMRect();
+  };
+
+  private onWindowFocus = () => {
+    this.maybeCleanupAfterMissingPointerUp(null);
   };
 
   ngAfterViewInit() {
@@ -1200,12 +1212,14 @@ export class CaliburnEditorComponent
     this.unmounted = true;
     this.lassoTrail.stop();
     resetGesture();
+    endPointerSession();
     document.removeEventListener("keydown", this.onKeyDown);
     document.removeEventListener("keyup", this.onKeyUp);
     document.removeEventListener("paste", this.pasteFromClipboard);
     document.removeEventListener("copy", this.onCopy);
     document.removeEventListener("cut", this.onCut);
     window.removeEventListener("resize", this.onWindowResize);
+    window.removeEventListener("focus", this.onWindowFocus);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
     this.library.destroy();
@@ -2192,6 +2206,8 @@ export class CaliburnEditorComponent
     // non-interactive because that implies view mode, whose gates constrain
     // everything except the tool-usage path
 
+    this.maybeCleanupAfterMissingPointerUp(event);
+
     this.lastPointerDownEvent = event;
 
     // laser pointer is a presentation aid, not an edit — using it while
@@ -2259,16 +2275,6 @@ export class CaliburnEditorComponent
 
     // don't select while panning
     if (gesture.pointers.size > 1) {
-      if (this.state.selectionElement) {
-        this.setState({ selectionElement: null });
-      }
-      // a second finger means pinch/pan intent, not a bucket click. Upstream
-      // discards the armed fill by replaying the previous gesture's
-      // pointer-up handler with this pointer-DOWN event
-      // (`maybeCleanupAfterMissingPointerUp`); caliburn drives pointer-up
-      // off the canvas binding, so the discard lands here instead.
-      this.bucketFill.cancel();
-      this.pointerDownState = null;
       return;
     }
 
@@ -2276,7 +2282,8 @@ export class CaliburnEditorComponent
     if (activeToolType === "selection" || activeToolType === "lasso") {
       this.pointerDownState = handleSelectionPointerDown(this, event);
       if (!this.pointerDownState) {
-        // the pointer hit an element's link icon — no gesture starts
+        // the pointer hit an element's link icon, or added a point to the
+        // linear element being edited — no gesture starts
         return;
       }
       if (this.state.activeTool.type === "lasso") {
@@ -2337,10 +2344,51 @@ export class CaliburnEditorComponent
         event,
       );
     }
+
+    if (!this.state.viewModeEnabled || this.isActiveToolPointerCapturing()) {
+      startPointerSession(this, event);
+    }
   }
 
   handleCanvasPointerMove(event: PointerEvent) {
+    markCanvasHandledPointerEvent(event);
     this.batchCommits(() => this.handleCanvasPointerMoveImpl(event));
+  }
+
+  /**
+   * The in-flight gesture's own move handling — upstream's
+   * `onPointerMoveFromPointerDownHandler`, which runs off the window-level
+   * listeners the gesture installs, so a drag that leaves the canvas keeps
+   * going (`pointer-session.ts`). Everything the canvas binding does
+   * regardless of a gesture (broadcasting the pointer, the viewport's last
+   * position, the multi-touch gesture, hover affordances) stays out of it,
+   * as upstream splits them.
+   */
+  handlePointerMoveFromPointerDown(event: PointerEvent) {
+    this.batchCommits(() => this.onPointerMoveFromPointerDown(event));
+  }
+
+  private onPointerMoveFromPointerDown(event: PointerEvent) {
+    const pointerDownState = this.pointerDownState;
+    if (!pointerDownState || !(event.target instanceof HTMLElement)) {
+      return;
+    }
+    pointerDownState.lastCoords = viewportCoordsToSceneCoords(
+      event,
+      this.state,
+    );
+    if (maybeDragFreeDrawElement(this, pointerDownState, event)) {
+      return;
+    }
+    if (maybeDragLinearPoint(this, pointerDownState, event)) {
+      return;
+    }
+    if (this.state.newElement) {
+      pointerDownState.drag.hasOccurred = true;
+      maybeDragNewElement(this, pointerDownState, event);
+    } else {
+      handleSelectionPointerMove(this, pointerDownState, event);
+    }
   }
 
   private handleCanvasPointerMoveImpl(event: PointerEvent) {
@@ -2374,20 +2422,7 @@ export class CaliburnEditorComponent
     }
 
     if (this.pointerDownState) {
-      const coords = viewportCoordsToSceneCoords(event, this.state);
-      this.pointerDownState.lastCoords = coords;
-      if (maybeDragFreeDrawElement(this, this.pointerDownState, event)) {
-        return;
-      }
-      if (maybeDragLinearPoint(this, this.pointerDownState, event)) {
-        return;
-      }
-      if (this.state.newElement) {
-        this.pointerDownState.drag.hasOccurred = true;
-        maybeDragNewElement(this, this.pointerDownState, event);
-      } else {
-        handleSelectionPointerMove(this, this.pointerDownState, event);
-      }
+      this.onPointerMoveFromPointerDown(event);
       return;
     }
 
@@ -2464,6 +2499,19 @@ export class CaliburnEditorComponent
   }
 
   handleCanvasPointerUp(event: PointerEvent) {
+    markCanvasHandledPointerEvent(event);
+    // the gesture ends here, so its window listeners have nothing left to do
+    endPointerSession();
+    // upstream returns early whenever non-interactive: a tool allowed via
+    // `interaction.enabled.tools` finishes its stroke through the window
+    // listeners its own pointerdown installed, which is why the teardown
+    // itself carries no such gate.
+    if (
+      !this.isInteractionEnabled() &&
+      !this.isToolSupported(this.state.activeTool.type)
+    ) {
+      return;
+    }
     this.batchCommits(() => this.handleCanvasPointerUpImpl(event));
   }
 
@@ -2473,16 +2521,9 @@ export class CaliburnEditorComponent
   }
 
   private handleCanvasPointerUpImpl(event: PointerEvent) {
-    // upstream returns early whenever non-interactive: a tool allowed via
-    // `interaction.enabled.tools` finishes its stroke through the window
-    // listeners its own pointerdown installed. Caliburn drives pointerup
-    // off the canvas binding instead, so the allowed tool must reach it.
-    if (
-      !this.isInteractionEnabled() &&
-      !this.isToolSupported(this.state.activeTool.type)
-    ) {
-      return;
-    }
+    // a missing-pointer-up cleanup replays this with the gesture's pointer
+    // DOWN event, which must not be mistaken for a release
+    const isGenuinePointerUp = event.type === "pointerup";
 
     removePointer(this, event);
 
@@ -2497,18 +2538,17 @@ export class CaliburnEditorComponent
     // an armed bucket fill commits only on a GENUINE pointer up: a tool
     // switch mid-press orphans the click, which must discard the fill
     // instead of committing an unwanted edit.
-    if (
-      event.type === "pointerup" &&
-      this.state.activeTool.type === "bucketfill"
-    ) {
+    if (isGenuinePointerUp && this.state.activeTool.type === "bucketfill") {
       this.bucketFill.handlePointerUp();
     } else {
       this.bucketFill.cancel();
     }
 
-    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
-    this.lastPointerUpEvent = event;
+    if (isGenuinePointerUp) {
+      this.lastPointerUpEvent = event;
+    }
 
+    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
     if (!event.ctrlKey) {
       const preferenceEnabled = this.state.bindingPreference === "enabled";
       if (this.state.isBindingEnabled !== preferenceEnabled) {
@@ -2517,6 +2557,7 @@ export class CaliburnEditorComponent
     }
 
     if (
+      isGenuinePointerUp &&
       this.isLinksEnabled() &&
       maybeHandleElementLinkClick(
         this,
@@ -2563,6 +2604,26 @@ export class CaliburnEditorComponent
       this.pointerDownState = null;
     }
   }
+
+  /**
+   * The in-flight gesture's window-level pointer up. Unlike the canvas
+   * binding this carries no interaction gate: the session is only installed
+   * while the gesture is allowed to run, and upstream's teardown likewise
+   * runs unconditionally once installed.
+   */
+  handlePointerUpFromPointerDown(event: PointerEvent) {
+    this.batchCommits(() => this.handleCanvasPointerUpImpl(event));
+  }
+
+  /**
+   * pointerup may not fire in certian cases (user tabs away...), so in order
+   * to properly cleanup pointerdown state, we need to fire any hanging
+   * pointerup handlers manually
+   */
+  private maybeCleanupAfterMissingPointerUp = (event: PointerEvent | null) => {
+    endPanSession();
+    replayPointerSessionUp(event);
+  };
 
   /**
    * The single selected element the hyperlink popup renders for, as a
@@ -3004,15 +3065,21 @@ export class CaliburnEditorComponent
    */
   private terminateActiveInteraction() {
     // Complete any active pointer interaction before clearing the state it
-    // relies on. `resetGesture` runs the pan session's own teardown — the
-    // only window-level listeners caliburn installs (pointermove/pointerup/
-    // blur, see `pan-gesture.ts`) — and clears the multi-touch gesture;
-    // dropping `pointerDownState` ends the in-flight drag so it can't
-    // resume once interaction returns (upstream's
-    // `maybeCleanupAfterMissingPointerUp` + `isPanning`/`gesture` resets).
+    // relies on. Among other things this tears down window-level listeners.
+    this.maybeCleanupAfterMissingPointerUp(null);
+
     resetGesture();
+    // the replay above ends any gesture that had a session; dropping the
+    // state covers the rest, so no in-flight drag can resume once
+    // interaction returns
     this.pointerDownState = null;
     resetPlainPasteTracking();
+
+    // These components install their own DOM listeners rather than going
+    // through the editor's input handlers, so they must be explicitly
+    // unmounted.
+    this.bucketFill.closeTemporaryEyeDropper();
+    this.activeEyeDropper.set(null);
 
     if (this.state.editingFrame) {
       const frame = this.scene.getNonDeletedElement(this.state.editingFrame);
