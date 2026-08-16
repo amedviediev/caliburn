@@ -2083,4 +2083,337 @@ export const runSuite = async (browser, url, runner) => {
       },
     );
   });
+
+  // -------------------------------------------------- mermaid / CodeMirror
+  await withPage("mermaid", async (page) => {
+    runner.group("mermaid dialog (CodeMirror editor)");
+
+    const editorSelector = ".ttd-dialog-input--codemirror .cm-editor";
+    const errorSelector = '[data-testid="ttd-dialog-output-error"]';
+
+    /**
+     * Opens the mermaid tab of the TTD dialog from the toolbar, on a cleared
+     * definition so every check starts from upstream's seeded example. The
+     * key is `EDITOR_LS_KEYS.MERMAID_TO_EXCALIDRAW`, which the dialog reads
+     * once, at construction — and which a previous check's typing has left
+     * behind by then.
+     */
+    const openMermaidDialog = async () => {
+      await resetEditor(page);
+      await page.evaluate(() =>
+        localStorage.removeItem("mermaid-to-excalidraw"),
+      );
+      // the trigger toggles, and the open flag is component state that
+      // `resetEditor` cannot reach — so normalise before opening
+      const dropdownSelector =
+        ".App-toolbar__extra-tools-dropdown .dropdown-menu-container";
+      if (
+        await page.evaluate(
+          (sel) => !!document.querySelector(sel),
+          dropdownSelector,
+        )
+      ) {
+        await clickCenter(page, ".App-toolbar__extra-tools-trigger");
+        await waitFor(page, (sel) => !document.querySelector(sel), {
+          message: "extra-tools dropdown would not close",
+          args: [dropdownSelector],
+        });
+      }
+      await clickCenter(page, ".App-toolbar__extra-tools-trigger");
+      await waitFor(page, (sel) => !!document.querySelector(sel), {
+        message: "extra-tools dropdown did not open",
+        args: [dropdownSelector],
+      });
+      // the mermaid entry carries `toolbar-embeddable`, as upstream's own
+      // copy/paste does, so it is picked out by label and clicked for real
+      const target = await page.evaluate(() => {
+        const item = [
+          ...document.querySelectorAll(
+            '.App-toolbar__extra-tools-dropdown [data-testid="toolbar-embeddable"]',
+          ),
+        ].find((el) => el.textContent.includes("Mermaid"));
+        if (!item) {
+          return null;
+        }
+        const r = item.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      expect(target, "the extra-tools dropdown has no `Mermaid` entry to open");
+      await page.mouse.click(target.x, target.y);
+      await waitFor(page, () => !!document.querySelector(".Modal.ttd-dialog"), {
+        message: "the mermaid dialog did not open",
+      });
+      await waitFor(page, (sel) => !!document.querySelector(sel), {
+        message:
+          "the CodeMirror editor never mounted — the dialog is on its textarea fallback",
+        args: [editorSelector],
+        timeout: 20000,
+      });
+    };
+
+    /** the editor's document, read off the rendered lines */
+    const editorDoc = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll(".cm-content .cm-line")]
+          .map((line) => line.textContent)
+          .join("\n"),
+      );
+
+    const previewCanvas = () =>
+      page.evaluate(() => {
+        const canvas = document.querySelector(
+          ".ttd-dialog-output-canvas-content canvas",
+        );
+        return canvas ? { width: canvas.width, height: canvas.height } : null;
+      });
+
+    /** replace the whole definition the way a person would: click into the
+     * editor, select all, delete, type */
+    const retype = async (text) => {
+      await clickCenter(page, ".cm-content");
+      await pressWithMod(page, "a");
+      await page.keyboard.press("Backspace");
+      await page.keyboard.type(text);
+    };
+
+    await runner.check(
+      "mermaid.codemirror-mounts",
+      "the mermaid dialog mounts CodeMirror, not the textarea fallback",
+      async () => {
+        await openMermaidDialog();
+        const mounted = await page.evaluate(() => {
+          const host = document.querySelector(".ttd-dialog-input--codemirror");
+          const rect = host.getBoundingClientRect();
+          return {
+            tag: host.tagName.toLowerCase(),
+            display: getComputedStyle(host).display,
+            editors: document.querySelectorAll(".cm-editor").length,
+            textareas: document.querySelectorAll("textarea.ttd-dialog-input")
+              .length,
+            lineNumbers: document.querySelectorAll(
+              ".cm-gutters .cm-lineNumbers .cm-gutterElement",
+            ).length,
+            highlighted: document.querySelectorAll(".cm-content .cm-line span")
+              .length,
+            focused:
+              document.activeElement?.classList.contains("cm-content") ?? false,
+            height: Math.round(rect.height),
+          };
+        });
+        expectEqual(mounted.editors, 1, "mounted `.cm-editor` count");
+        expectEqual(
+          mounted.textareas,
+          0,
+          "textarea fallbacks rendered alongside CodeMirror",
+        );
+        expectEqual(
+          mounted.display,
+          "block",
+          "`.ttd-dialog-input--codemirror` display",
+        );
+        expect(
+          mounted.height > 100,
+          `the editor collapsed to ${mounted.height}px tall`,
+        );
+        expect(
+          mounted.lineNumbers > 0,
+          "the CodeMirror gutter rendered no line numbers",
+        );
+        expect(
+          mounted.highlighted > 0,
+          "the mermaid definition rendered no syntax-highlighted tokens",
+        );
+        expect(
+          mounted.focused,
+          "opening the dialog did not focus the CodeMirror editor",
+        );
+        const doc = await editorDoc();
+        expect(
+          doc.startsWith("flowchart TD"),
+          `the editor opened on \`${doc.slice(
+            0,
+            40,
+          )}\`, not the seeded example`,
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".ttd-dialog-input--codemirror", ".cm-editor"],
+        },
+      },
+    );
+
+    await runner.check(
+      "mermaid.codemirror-drives-preview",
+      "typing a definition into CodeMirror re-renders the preview",
+      async () => {
+        await openMermaidDialog();
+        await waitFor(
+          page,
+          () =>
+            !!document.querySelector(
+              ".ttd-dialog-output-canvas-content canvas",
+            ),
+          { message: "the seeded example never rendered a preview" },
+        );
+        const before = await previewCanvas();
+        await retype("flowchart LR\nSolo[Only node]");
+        expectEqual(
+          await editorDoc(),
+          "flowchart LR\nSolo[Only node]",
+          "the editor document after typing",
+        );
+        await waitFor(
+          page,
+          (w, h) => {
+            const canvas = document.querySelector(
+              ".ttd-dialog-output-canvas-content canvas",
+            );
+            return !!canvas && (canvas.width !== w || canvas.height !== h);
+          },
+          {
+            message: `the preview stayed at ${before.width}x${before.height} after the definition was retyped`,
+            args: [before.width, before.height],
+            timeout: 10000,
+          },
+        );
+        expect(
+          await page.evaluate(
+            (sel) => !document.querySelector(sel),
+            errorSelector,
+          ),
+          "a valid definition typed into CodeMirror rendered a parse error",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".cm-content", ".ttd-dialog-output-canvas-content"],
+        },
+      },
+    );
+
+    await runner.check(
+      "mermaid.codemirror-error-line",
+      "a parse error decorates the offending line, and fixing it clears the decoration",
+      async () => {
+        await openMermaidDialog();
+        await retype("flowchart TD\nA[Fine] --> B[Also fine]\nB --> ((((");
+        await waitFor(page, (sel) => !!document.querySelector(sel), {
+          message: "the broken definition raised no parse error",
+          args: [errorSelector],
+          timeout: 10000,
+        });
+        await waitFor(
+          page,
+          () => document.querySelectorAll(".cm-errorLine").length === 1,
+          {
+            message:
+              "the parse error decorated no line in the CodeMirror editor",
+            timeout: 10000,
+          },
+        );
+        const decorated = await page.evaluate(() => {
+          const line = document.querySelector(".cm-errorLine");
+          return {
+            text: line.textContent,
+            background: getComputedStyle(line).backgroundColor,
+          };
+        });
+        expectEqual(
+          decorated.text,
+          "B --> ((((",
+          "the line the parse error decorated",
+        );
+        expect(
+          alphaOf(decorated.background) > 0,
+          `the decorated line paints no background (${decorated.background})`,
+        );
+
+        await retype("flowchart TD\nA[Fine] --> B[Also fine]");
+        await waitFor(page, (sel) => !document.querySelector(sel), {
+          message: "fixing the definition left the parse error showing",
+          args: [errorSelector],
+          timeout: 10000,
+        });
+        await waitFor(
+          page,
+          () => document.querySelectorAll(".cm-errorLine").length === 0,
+          {
+            message: "the error-line decoration survived a fixed definition",
+            timeout: 10000,
+          },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".cm-errorLine", ".ttd-dialog-output-error"],
+        },
+      },
+    );
+
+    await runner.check(
+      "mermaid.codemirror-follows-theme",
+      "the editor repaints when the editor theme changes under it",
+      async () => {
+        await openMermaidDialog();
+        const read = () =>
+          page.evaluate(() => ({
+            editor: getComputedStyle(document.querySelector(".cm-editor"))
+              .backgroundColor,
+            gutters: getComputedStyle(document.querySelector(".cm-gutters"))
+              .backgroundColor,
+          }));
+        // upstream's own light/dark `EditorView.theme` palettes
+        expectEqual(
+          JSON.stringify(await read()),
+          JSON.stringify({
+            editor: "rgb(255, 255, 255)",
+            gutters: "rgb(255, 255, 255)",
+          }),
+          "the editor's light-theme background",
+        );
+        // the dialog is modal, so the theme is flipped through the same test
+        // hook `resetEditor` drives the rest of the suite's app state with
+        await page.evaluate(() => window.h.setState({ theme: "dark" }));
+        await waitFor(
+          page,
+          () =>
+            getComputedStyle(document.querySelector(".cm-editor"))
+              .backgroundColor === "rgb(30, 30, 30)",
+          {
+            message:
+              "switching to the dark theme left the CodeMirror editor light",
+          },
+        );
+        expectEqual(
+          JSON.stringify(await read()),
+          JSON.stringify({
+            editor: "rgb(30, 30, 30)",
+            gutters: "rgb(30, 30, 30)",
+          }),
+          "the editor's dark-theme background",
+        );
+        await page.evaluate(() => window.h.setState({ theme: "light" }));
+        await waitFor(
+          page,
+          () =>
+            getComputedStyle(document.querySelector(".cm-editor"))
+              .backgroundColor === "rgb(255, 255, 255)",
+          {
+            message:
+              "switching back to the light theme left the CodeMirror editor dark",
+          },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".cm-editor", ".cm-gutters"],
+        },
+      },
+    );
+  });
 };

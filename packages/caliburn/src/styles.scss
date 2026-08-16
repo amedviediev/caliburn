@@ -71,9 +71,13 @@
 // has none for `.Island`, and `ButtonSeparator`/`DropdownMenuSeparator` have
 // no upstream class at all (inline-styled `<div>`s), so their custom-element
 // tag names are targeted directly instead.
+// `caliburn-code-mirror-editor` is in the list for the same reason: it is
+// upstream's `<div class="ttd-dialog-input ttd-dialog-input--codemirror">`,
+// which `TTDDialog.scss` sizes but never gives a `display` to.
 caliburn-island,
 .dropdown-menu-group,
 caliburn-button-separator,
+caliburn-code-mirror-editor,
 caliburn-dropdown-menu-separator,
 caliburn-switch,
 caliburn-text-field {
@@ -170,6 +174,7 @@ caliburn-overwrite-confirm,
 caliburn-shareable-link-dialog,
 caliburn-ttd-dialog,
 caliburn-mermaid-to-excalidraw,
+caliburn-ttd-dialog-input,
 caliburn-ttd-dialog-output,
 caliburn-library-menu-section {
   display: contents;

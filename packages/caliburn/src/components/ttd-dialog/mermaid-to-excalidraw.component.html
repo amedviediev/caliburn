@@ -5,14 +5,13 @@
 <div class="ttd-dialog-desc">@for (run of descriptionRuns; track $index) {@if (run.href) {<a [href]="run.href" target="_blank" rel="noreferrer">{{ run.text }}</a>} @else {{{ run.text }}}}</div>
 <div class="ttd-dialog-panels">
   <div class="ttd-dialog-panel">
-    <textarea
-      #input
-      class="ttd-dialog-input"
+    <caliburn-ttd-dialog-input
       [value]="text()"
       [placeholder]="labels.inputPlaceholder"
-      (input)="onTextChange($any($event.target).value)"
-      (keydown)="onKeyDown($event)"
-    ></textarea>
+      [errorLine]="errorLine()"
+      (valueChange)="onTextChange($event)"
+      (keyboardSubmit)="onInsertToEditor()"
+    />
     <div
       class="ttd-dialog-panel-button-container invisible"
       style="justify-content: flex-start"

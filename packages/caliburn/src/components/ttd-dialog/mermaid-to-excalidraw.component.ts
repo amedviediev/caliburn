@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  afterNextRender,
   computed,
   effect,
   forwardRef,
@@ -10,7 +9,7 @@ import {
   viewChild,
 } from "@angular/core";
 
-import { EDITOR_LS_KEYS, KEYS, debounce, isDevEnv } from "@excalidraw/common";
+import { EDITOR_LS_KEYS, debounce, isDevEnv } from "@excalidraw/common";
 
 import { EditorLocalStorage } from "@excalidraw/excalidraw/data/EditorLocalStorage";
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -21,7 +20,10 @@ import {
   saveMermaidDataToStorage,
 } from "@excalidraw/excalidraw/components/TTDDialog/common";
 import { getMermaidAutoFixCandidates } from "@excalidraw/excalidraw/components/TTDDialog/utils/mermaidAutoFix";
-import { isMermaidAutoFixableError } from "@excalidraw/excalidraw/components/TTDDialog/utils/mermaidError";
+import {
+  getMermaidErrorLineNumber,
+  isMermaidAutoFixableError,
+} from "@excalidraw/excalidraw/components/TTDDialog/utils/mermaidError";
 
 import { NgIcon } from "@ng-icons/core";
 
@@ -33,9 +35,10 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../e
 import { addElementsFromPasteOrLibrary } from "../../clipboard-interaction";
 import { CaliburnButtonComponent } from "../button.component";
 
+import { CaliburnTTDDialogInputComponent } from "./ttd-dialog-input.component";
 import { CaliburnTTDDialogOutputComponent } from "./ttd-dialog-output.component";
 
-import type { ElementRef, OnDestroy } from "@angular/core";
+import type { OnDestroy } from "@angular/core";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
 
@@ -109,14 +112,6 @@ const getErrorMessage = (error: unknown): string => {
  *
  * Deviations from upstream, all forced by the port boundary:
  *
- * - `TTDDialogInput`'s lazily-imported `CodeMirrorEditor` is not ported (it
- *   is a React component whose theme/highlight configuration is module-local,
- *   so reusing it would mean copying vendored code). Caliburn renders
- *   upstream's own `<textarea className="ttd-dialog-input">` fallback — the
- *   branch upstream itself renders whenever the CodeMirror chunk fails to
- *   load, and the branch upstream's `MermaidToExcalidraw.test.tsx` asserts
- *   against. `errorLine` is consequently dropped: it exists only to feed
- *   CodeMirror's error-line decoration and the textarea branch ignores it.
  * - `TTDDialogPanel`'s `link`/`rateLimit` action variants and its
  *   `onTextSubmitInProgess` spinner are AI-tab-only, so the panel markup is
  *   written out here with just the `button` variant the mermaid tab uses.
@@ -129,7 +124,12 @@ const getErrorMessage = (error: unknown): string => {
 @Component({
   selector: "caliburn-mermaid-to-excalidraw",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnButtonComponent, CaliburnTTDDialogOutputComponent, NgIcon],
+  imports: [
+    CaliburnButtonComponent,
+    CaliburnTTDDialogInputComponent,
+    CaliburnTTDDialogOutputComponent,
+    NgIcon,
+  ],
   templateUrl: "./mermaid-to-excalidraw.component.html",
 })
 export class CaliburnMermaidToExcalidrawComponent implements OnDestroy {
@@ -167,18 +167,24 @@ export class CaliburnMermaidToExcalidrawComponent implements OnDestroy {
   } = { current: { elements: [], files: null } };
 
   private readonly output = viewChild(CaliburnTTDDialogOutputComponent);
-  private readonly input = viewChild<ElementRef<HTMLTextAreaElement>>("input");
   private renderRequestId = 0;
 
   protected readonly hasAutoFix = computed(() => !!this.autoFixCandidate());
+
+  /** upstream derives this from `deferredText`; caliburn has no deferred
+   * value, so it reads `text` — see the class note above */
+  protected readonly errorLine = computed(() => {
+    const message = this.error()?.message;
+    if (!message) {
+      return null;
+    }
+    return getMermaidErrorLineNumber(message, this.text());
+  });
 
   constructor() {
     this.mermaidApi.then(() => this.mermaidLoaded.set(true));
     effect(() => this.renderPreview());
     effect((onCleanup) => this.probeAutoFix(onCleanup));
-    // upstream's `TTDDialogInput` focuses its editor on mount (both the
-    // CodeMirror `view.focus()` and the textarea fallback's `textarea.focus()`)
-    afterNextRender(() => this.input()?.nativeElement.focus());
   }
 
   ngOnDestroy() {
@@ -192,15 +198,6 @@ export class CaliburnMermaidToExcalidrawComponent implements OnDestroy {
 
   protected onTextChange(value: string) {
     this.text.set(value);
-  }
-
-  /** upstream's `TTDDialogInput` fallback binds the same
-   * `CtrlOrCmd+Enter` -> `onKeyboardSubmit` shortcut on the textarea */
-  protected onKeyDown(event: KeyboardEvent) {
-    if (event[KEYS.CTRL_OR_CMD] && event.key === KEYS.ENTER) {
-      event.preventDefault();
-      this.onInsertToEditor();
-    }
   }
 
   protected onApplyAutoFix() {

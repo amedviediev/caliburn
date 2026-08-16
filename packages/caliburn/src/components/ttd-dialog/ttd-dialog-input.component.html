@@ -1,0 +1,20 @@
+@switch (editorState()) {
+  @case ("fallback") {
+    <textarea
+      #textarea
+      class="ttd-dialog-input"
+      [value]="value()"
+      [placeholder]="placeholder() ?? ''"
+      (input)="onTextChange($any($event.target).value)"
+      (keydown)="onKeyDown($event)"
+    ></textarea>
+  }
+  @case ("loading") {
+    @if (showSpinner()) {
+      <div class="ttd-dialog-input ttd-dialog-input--loading">
+        <caliburn-spinner />
+      </div>
+    }
+  }
+}
+<ng-container #editorHost />
