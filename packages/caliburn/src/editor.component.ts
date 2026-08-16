@@ -79,7 +79,10 @@ import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { LassoTrail } from "@excalidraw/excalidraw/lasso";
 import { AppCursor } from "@excalidraw/excalidraw/components/App.cursor";
-import { AppViewport } from "@excalidraw/excalidraw/components/App.viewport";
+import {
+  AppViewport,
+  RIGHT_SIDEBAR_WIDTH,
+} from "@excalidraw/excalidraw/components/App.viewport";
 import { History } from "@excalidraw/excalidraw/history";
 import {
   getScrollToContentState,
@@ -914,6 +917,13 @@ export class CaliburnEditorComponent
       !this.scene.getElementsIncludingDeleted().length
     );
   }
+
+  /**
+   * Upstream's `.excalidraw` container carries
+   * `--right-sidebar-width: ${RIGHT_SIDEBAR_WIDTH}px` inline (`App.tsx`); the
+   * sidebar's own width and the docked UI layer's `calc()`s read it from there.
+   */
+  readonly rightSidebarWidth = `${RIGHT_SIDEBAR_WIDTH}px`;
 
   get uiPointerEvents() {
     const shouldBlockPointerEvents =

@@ -12,15 +12,6 @@
  *   E2E_STRICT=all yarn e2e
  */
 export const KNOWN_BROKEN = {
-  "sidebar.width-matches-upstream":
-    "`--right-sidebar-width` (upstream App.tsx sets it to 302px on the " +
-    ".excalidraw container) is never set by the caliburn editor, so " +
-    "`.sidebar { width: calc(var(--right-sidebar-width) - ...) }` is invalid " +
-    "and the sidebar shrink-wraps its content",
-  "sidebar.docked-keeps-ui-layer":
-    "with the sidebar docked, `.layer-ui__wrapper` gets `width: calc(100% - " +
-    "var(--right-sidebar-width))`; the missing variable makes the calc " +
-    "invalid and the whole UI layer collapses to width 0",
   "links.socials-point-at-this-app":
     "the main menu's socials region is still upstream's verbatim — GitHub, X " +
     "and Discord all link to excalidraw's own properties " +

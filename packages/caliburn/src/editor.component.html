@@ -18,6 +18,7 @@
   [class.excalidraw--viewport-status-label]="!!viewportStatusFrame()?.label"
   [class.excalidraw--zen-mode]="state.zenModeEnabled"
   [style.--ui-pointerEvents]="uiPointerEvents"
+  [style.--right-sidebar-width]="rightSidebarWidth"
   tabindex="0"
   (drop)="handleAppOnDrop($event)"
   (dragover)="handleAppOnDragOver($event)"
