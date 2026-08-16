@@ -18,7 +18,7 @@
   <caliburn-ttd-dialog />
 }
 @if (
-  uiOptions.canvasActions.saveAsImage &&
+  uiOptions().canvasActions.saveAsImage &&
   state().openDialog?.name === "imageExport"
 ) {
   <caliburn-image-export-dialog />

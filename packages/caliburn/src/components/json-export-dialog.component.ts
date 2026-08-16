@@ -53,8 +53,6 @@ export class CaliburnJSONExportDialogComponent {
   protected readonly diskButton = t("exportDialog.disk_button");
   protected readonly fileTitleLabel = t("labels.fileTitle");
   protected readonly nativeFileSystemSupported = nativeFileSystemSupported;
-  protected readonly exportOpts = this.editor.props.UIOptions.canvasActions
-    .export as { saveFileToDisk?: boolean };
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";
 
@@ -64,6 +62,13 @@ export class CaliburnJSONExportDialogComponent {
       !!this.editor.props.UIOptions.canvasActions.export &&
       this.editor.state.openDialog?.name === "jsonExport"
     );
+  }
+
+  protected exportOpts() {
+    this.editor.changeGeneration();
+    return this.editor.props.UIOptions.canvasActions.export as {
+      saveFileToDisk?: boolean;
+    };
   }
 
   protected projectName() {

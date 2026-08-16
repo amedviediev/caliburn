@@ -694,8 +694,8 @@ export class CaliburnEditorComponent
   state: AppState = {
     ...getDefaultAppState(),
     // upstream seeds the scene name at construction, from `props.name` or the
-    // dated default (`App.tsx`); caliburn has no `name` prop, so only the
-    // default applies
+    // dated default (`App.tsx`); the `name` input is read over this in
+    // `ngOnInit`, once inputs are readable
     name: `${t("labels.untitled")}-${getDateTime()}`,
     offsetLeft: 0,
     offsetTop: 0,
@@ -1223,17 +1223,23 @@ export class CaliburnEditorComponent
     // react to the host-controlled props that drive editor state
     // (`props.interaction`, `props.viewModeEnabled`, `props.activeTool`) —
     // the equivalent of upstream's `componentDidUpdate`, whose handlers run
-    // in this same order (`App.tsx`)
+    // in this same order (`App.tsx`). The props upstream merely re-resolves
+    // per render (`UIOptions`, `gridModeEnabled`, `name`) are refreshed first,
+    // so the chrome `handlePropsChange` re-renders reads the current values.
     effect(() => {
       const interaction = this.interaction();
       const viewModeEnabled = this.viewModeEnabled();
       const forcedTool = this.activeTool();
       const theme = this.theme();
+      this.UIOptions();
+      this.gridModeEnabled();
+      this.name();
       untracked(() => {
         if (this.unmounted || !this.removeSceneUpdateListener) {
           // pre-mount: `ngOnInit` seeds the initial state from the props
           return;
         }
+        this.syncHostProps();
         const prevProps = {
           interaction: this.prevInteraction,
           viewModeEnabled: this.prevViewModeEnabled,
@@ -1364,52 +1370,26 @@ export class CaliburnEditorComponent
     this.props.libraryReturnUrl = this.libraryReturnUrl();
     this.props.onLibraryChange = this.onLibraryChange() ?? undefined;
 
-    // upstream's `index.tsx` normalization, mutating `props.UIOptions` in
-    // place so the object LayerUI reads stays the one it captured
-    const uiOptions = this.UIOptions();
-    const canvasActions = uiOptions?.canvasActions;
-    Object.assign(this.props.UIOptions, uiOptions, {
-      canvasActions: {
-        ...DEFAULT_UI_OPTIONS.canvasActions,
-        ...canvasActions,
-      },
-      tools: {
-        image: uiOptions?.tools?.image ?? true,
-      },
-    });
-    if (canvasActions?.export) {
-      this.props.UIOptions.canvasActions.export.saveFileToDisk =
-        canvasActions.export?.saveFileToDisk ??
-        DEFAULT_UI_OPTIONS.canvasActions.export.saveFileToDisk;
-    }
-
     const theme = this.theme();
     this.props.theme = theme;
     this.props.onThemeChange = this.onThemeChange() ?? undefined;
     if (theme) {
       this.state = { ...this.state, theme };
     }
-    // upstream normalizes `UIOptions.canvasActions.toggleTheme` from its
-    // `null` default to `true` whenever the host controls no theme, or
-    // controls it but listens for changes (`index.tsx`)
-    if (
-      this.props.UIOptions.canvasActions.toggleTheme === null &&
-      (theme == null || this.props.onThemeChange)
-    ) {
-      this.props.UIOptions.canvasActions.toggleTheme = true;
-    }
+
+    this.syncHostProps();
 
     const zenModeEnabled = this.zenModeEnabled();
-    const gridModeEnabled = this.gridModeEnabled();
-    const name = this.name();
     this.props.zenModeEnabled = zenModeEnabled;
-    this.props.gridModeEnabled = gridModeEnabled;
-    this.props.name = name;
+    // upstream seeds `state.gridModeEnabled` and `state.name` from the props
+    // in its constructor and never re-syncs them (`componentDidUpdate`);
+    // `syncHostProps` keeps the props themselves live for the reads that go
+    // through them (`isGridModeEnabled`, `getName`)
     this.state = {
       ...this.state,
       zenModeEnabled: zenModeEnabled ?? false,
-      gridModeEnabled: gridModeEnabled ?? this.state.gridModeEnabled,
-      name: name ?? this.state.name,
+      gridModeEnabled: this.props.gridModeEnabled ?? this.state.gridModeEnabled,
+      name: this.props.name ?? this.state.name,
     };
 
     const viewModeEnabled = this.viewModeEnabled();
@@ -3694,6 +3674,61 @@ export class CaliburnEditorComponent
         activeTool: updateActiveTool(this.state, { type: "selection" }),
       };
     }
+  }
+
+  /**
+   * Upstream's `index.tsx` normalization, which runs on every render. Rebuilt
+   * from `DEFAULT_UI_OPTIONS` and the raw input rather than layered onto the
+   * previous result — the host dropping a key has to drop it here too — but
+   * assigned into the existing `props.UIOptions` so the object the chrome
+   * captured stays the one it reads.
+   */
+  private normalizeUIOptions() {
+    const target = this.props.UIOptions as unknown as Record<string, unknown>;
+    for (const key of Object.keys(target)) {
+      delete target[key];
+    }
+
+    const uiOptions = this.UIOptions();
+    const canvasActions = uiOptions?.canvasActions;
+    Object.assign(this.props.UIOptions, uiOptions, {
+      canvasActions: {
+        ...DEFAULT_UI_OPTIONS.canvasActions,
+        ...canvasActions,
+      },
+      tools: {
+        image: uiOptions?.tools?.image ?? true,
+      },
+    });
+    if (canvasActions?.export) {
+      this.props.UIOptions.canvasActions.export.saveFileToDisk =
+        canvasActions.export?.saveFileToDisk ??
+        DEFAULT_UI_OPTIONS.canvasActions.export.saveFileToDisk;
+    }
+
+    // upstream normalizes `UIOptions.canvasActions.toggleTheme` from its
+    // `null` default to `true` whenever the host controls no theme, or
+    // controls it but listens for changes (`index.tsx`)
+    if (
+      this.props.UIOptions.canvasActions.toggleTheme === null &&
+      (this.theme() == null || this.props.onThemeChange)
+    ) {
+      this.props.UIOptions.canvasActions.toggleTheme = true;
+    }
+  }
+
+  /**
+   * Re-resolves the host props upstream resolves per render: `index.tsx`
+   * re-normalizes `UIOptions`, and `App.tsx` reads `props.gridModeEnabled`
+   * (`isGridModeEnabled`, `actionToggleGridMode`'s predicate) and
+   * `props.name` (`getName`) live off the props it was handed. Only the props
+   * are refreshed — upstream's `componentDidUpdate` syncs `zenModeEnabled`
+   * and `theme` back into the state, and nothing else.
+   */
+  private syncHostProps() {
+    this.normalizeUIOptions();
+    this.props.gridModeEnabled = this.gridModeEnabled();
+    this.props.name = this.name();
   }
 
   private prevInteraction: boolean | InteractionConfig | null | undefined;

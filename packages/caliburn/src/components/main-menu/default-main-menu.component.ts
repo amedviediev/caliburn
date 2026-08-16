@@ -54,5 +54,8 @@ export class CaliburnDefaultMainMenuComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly uiOptions = this.editor.props.UIOptions;
+  protected uiOptions() {
+    this.editor.changeGeneration();
+    return this.editor.props.UIOptions;
+  }
 }

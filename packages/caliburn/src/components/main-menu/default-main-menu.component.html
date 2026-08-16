@@ -1,10 +1,10 @@
 <caliburn-main-menu>
   <caliburn-menu-load-scene />
   <caliburn-menu-save-to-active-file />
-  @if (uiOptions.canvasActions.export) {
+  @if (uiOptions().canvasActions.export) {
     <caliburn-menu-export />
   }
-  @if (uiOptions.canvasActions.saveAsImage) {
+  @if (uiOptions().canvasActions.saveAsImage) {
     <caliburn-menu-save-as-image />
   }
   <caliburn-menu-search />

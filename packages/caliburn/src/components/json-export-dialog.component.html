@@ -6,7 +6,7 @@
   >
     <div class="ExportDialog ExportDialog--json">
       <div class="ExportDialog-cards">
-        @if (exportOpts.saveFileToDisk) {
+        @if (exportOpts().saveFileToDisk) {
           <caliburn-card color="lime">
             <div class="Card-icon">
               <ng-icon name="exportToFileIcon" />

@@ -125,7 +125,6 @@ export class CaliburnLayerUIComponent {
   );
 
   protected readonly headingId = `caliburn-layer-ui-${nextLayerUIId++}-shapes-title`;
-  protected readonly uiOptions = this.editor.props.UIOptions;
   protected readonly defaultToastDuration = DEFAULT_TOAST_TIMEOUT;
   protected readonly defaultSidebarName = DEFAULT_SIDEBAR.name;
   protected readonly defaultSidebarTab = DEFAULT_SIDEBAR.defaultTab;
@@ -154,6 +153,11 @@ export class CaliburnLayerUIComponent {
   protected state() {
     this.editor.changeGeneration();
     return this.editor.state;
+  }
+
+  protected uiOptions() {
+    this.editor.changeGeneration();
+    return this.editor.props.UIOptions;
   }
 
   protected readonly renderWelcomeScreen = computed(() => {
