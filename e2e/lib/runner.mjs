@@ -299,7 +299,7 @@ export class Runner {
     } else if (strictOverrides.size) {
       console.log(dim(`(E2E_STRICT=${[...strictOverrides].join(",")})`));
     }
-    return fail.length === 0 && unclaimed.length === 0;
+    return fail.length === 0 && xpass.length === 0 && unclaimed.length === 0;
   }
 }
 
