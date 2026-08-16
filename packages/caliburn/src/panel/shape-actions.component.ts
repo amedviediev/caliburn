@@ -32,7 +32,9 @@ import { NgIcon } from "@ng-icons/core";
 
 import type {
   ExcalidrawElement,
+  ExcalidrawFreeDrawElement,
   ExcalidrawTextElement,
+  StrokeVariability,
 } from "@excalidraw/element/types";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { Primitive } from "@excalidraw/excalidraw/types";
@@ -46,6 +48,7 @@ import {
   actionChangeFillStyle,
   actionChangeFontFamily,
   actionChangeFontSize,
+  actionChangeFreedrawMode,
   actionChangeOpacity,
   actionChangeRoundness,
   actionChangeSloppiness,
@@ -105,6 +108,7 @@ export class CaliburnShapeActionsComponent {
     fill: t("labels.fill"),
     strokeWidth: t("labels.strokeWidth"),
     strokeStyle: t("labels.strokeStyle"),
+    pressure: t("labels.pressure"),
     sloppiness: t("labels.sloppiness"),
     edges: t("labels.edges"),
     fontFamily: t("labels.fontFamily"),
@@ -187,6 +191,19 @@ export class CaliburnShapeActionsComponent {
       value: "dotted",
       text: t("labels.strokeStyle_dotted"),
       icon: "strokeStyleDottedIcon",
+    },
+  ];
+
+  readonly freedrawModeOptions: RadioOption[] = [
+    {
+      value: "constant",
+      text: t("labels.pressure_constant"),
+      icon: "strokeVariabilityConstantIcon",
+    },
+    {
+      value: "variable",
+      text: t("labels.pressure_variable"),
+      icon: "strokeVariabilityVariableIcon",
     },
   ];
 
@@ -333,6 +350,7 @@ export class CaliburnShapeActionsComponent {
   readonly fillStyleAction = actionChangeFillStyle;
   readonly strokeWidthAction = actionChangeStrokeWidth;
   readonly strokeStyleAction = actionChangeStrokeStyle;
+  readonly freedrawModeAction = actionChangeFreedrawMode;
   readonly sloppinessAction = actionChangeSloppiness;
   readonly roundnessAction = actionChangeRoundness;
   readonly fontSizeAction = actionChangeFontSize;
@@ -422,6 +440,21 @@ export class CaliburnShapeActionsComponent {
       (element) => element.hasOwnProperty("strokeStyle"),
       (hasSelection) =>
         hasSelection ? null : this.editor().state.currentItemStrokeStyle,
+    );
+  }
+
+  freedrawModeValue() {
+    return (
+      this.formValue<StrokeVariability | null>(
+        (element) =>
+          (element as ExcalidrawFreeDrawElement).strokeOptions?.variability ??
+          null,
+        (element) => element.type === "freedraw",
+        (hasSelection) =>
+          hasSelection
+            ? null
+            : this.editor().state.currentItemStrokeVariability,
+      ) ?? this.editor().state.currentItemStrokeVariability
     );
   }
 

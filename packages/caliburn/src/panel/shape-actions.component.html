@@ -133,6 +133,26 @@
       }
     </div>
   </fieldset>
+  } @if (predicates().freedrawMode) {
+  <fieldset>
+    <legend>{{ labels.pressure }}</legend>
+    <div class="buttonList">
+      @for (option of freedrawModeOptions; track option.text) {
+      <label
+        [class.active]="freedrawModeValue() === option.value"
+        [attr.title]="option.text"
+      >
+        <input
+          type="radio"
+          name="strokeOptions.variability"
+          [checked]="freedrawModeValue() === option.value"
+          (change)="execute(freedrawModeAction, option.value)"
+        />
+        <ng-icon [name]="option.icon" />
+      </label>
+      }
+    </div>
+  </fieldset>
   } @if (predicates().sloppiness) {
   <fieldset>
     <legend>{{ labels.sloppiness }}</legend>

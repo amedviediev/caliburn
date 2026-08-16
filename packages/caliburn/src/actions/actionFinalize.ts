@@ -198,12 +198,29 @@ export const actionFinalize: Action = {
       focusContainer();
     }
 
+    // clean up pending gesture even if active tool is already not drawShape
+    const hadPendingSketch = app.drawShape.hasPendingGesture();
+    if (hadPendingSketch || isDrawShapeTool) {
+      app.drawShape.finalize();
+      if (hadPendingSketch) {
+        // finalize() inserts the recognized element via app.insertNewElement
+        // — re-read so the returned array includes it (replaceAllElements
+        // would otherwise drop it)
+        newElements = app.scene.getElementsIncludingDeleted();
+      }
+    }
+
     let element: NonDeleted<ExcalidrawElement> | null = null;
     if (appState.multiElement) {
       element = appState.multiElement;
     } else if (
-      appState.newElement?.type === "freedraw" ||
-      isBindingElement(appState.newElement)
+      // the drawShape preview in `newElement` is not a scene element and the
+      // sketch was finalized by app.drawShape.finalize() above — never treat
+      // the preview as an in-progress element here
+      !isDrawShapeTool &&
+      !hadPendingSketch &&
+      (appState.newElement?.type === "freedraw" ||
+        isBindingElement(appState.newElement))
     ) {
       element = appState.newElement;
     } else if (Object.keys(appState.selectedElementIds).length === 1) {

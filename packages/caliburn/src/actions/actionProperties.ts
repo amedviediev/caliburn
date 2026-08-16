@@ -41,6 +41,7 @@ import type {
   ExcalidrawTextElement,
   FontFamilyValues,
   NonDeletedExcalidrawElement,
+  StrokeVariability,
   TextAlign,
   VerticalAlign,
 } from "@excalidraw/element/types";
@@ -278,6 +279,31 @@ export const actionChangeSloppiness = register<ExcalidrawElement["roughness"]>({
         }),
       ),
       appState: { ...appState, currentItemRoughness: value },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+});
+
+export const actionChangeFreedrawMode = register<StrokeVariability>({
+  name: "changeFreedrawMode",
+  label: "labels.pressure",
+  trackEvent: false,
+  perform: (elements, appState, value) => {
+    const variability = value || "constant";
+
+    return {
+      elements: changeProperty(elements, appState, (el) => {
+        if (el.type !== "freedraw") {
+          return el;
+        }
+        return newElementWith(el, {
+          strokeOptions: {
+            ...el.strokeOptions,
+            variability,
+          },
+        }) as ExcalidrawElement;
+      }),
+      appState: { ...appState, currentItemStrokeVariability: variability },
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     };
   },

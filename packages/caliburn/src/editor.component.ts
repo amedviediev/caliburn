@@ -141,6 +141,7 @@ import type {
 
 import { CaliburnArrowText } from "./arrow-text";
 import { CaliburnBucketFill } from "./bucket-fill";
+import { CaliburnDrawShape } from "./draw-shape";
 import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
   actionBindText,
@@ -843,10 +844,7 @@ export class CaliburnEditorComponent
     });
   };
 
-  readonly drawShape = {
-    hasPendingGesture: () => false,
-    finalize: () => {},
-  };
+  readonly drawShape = new CaliburnDrawShape(this);
 
   /**
    * `props.interaction` for a given props snapshot, normalized: the input
@@ -1259,6 +1257,7 @@ export class CaliburnEditorComponent
     const svgLayer = this.svgLayerRef()?.nativeElement;
     if (svgLayer) {
       this.lassoTrail.start(svgLayer);
+      this.drawShape.trail.start(svgLayer);
     }
     this.cursor.reset();
     this.refreshEditorInterface();
@@ -1289,6 +1288,7 @@ export class CaliburnEditorComponent
   ngOnDestroy() {
     this.unmounted = true;
     this.lassoTrail.stop();
+    this.drawShape.stop();
     resetGesture();
     endPointerSession();
     document.removeEventListener("keydown", this.onKeyDown);
@@ -2491,6 +2491,9 @@ export class CaliburnEditorComponent
     } else if (activeToolType === "text") {
       this.pointerDownState = initialPointerDownState(this, event);
       handleTextOnPointerDown(this, event, this.pointerDownState);
+    } else if (activeToolType === "autoshape") {
+      this.pointerDownState = initialPointerDownState(this, event);
+      this.drawShape.handlePointerDown(this.pointerDownState);
     } else if (activeToolType === "bucketfill") {
       // one-shot click tool: pointer down only ARMS the fill — it commits in
       // the shared pointer-up teardown, and only when the interaction stayed
@@ -2555,6 +2558,9 @@ export class CaliburnEditorComponent
       event,
       this.state,
     );
+    if (this.drawShape.handlePointerMove(pointerDownState.lastCoords)) {
+      return;
+    }
     if (maybeDragFreeDrawElement(this, pointerDownState, event)) {
       return;
     }
@@ -2765,6 +2771,17 @@ export class CaliburnEditorComponent
     if (this.pointerDownState) {
       this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
       if (this.state.activeTool.type === "custom") {
+        this.clearHighlightsOnPointerUp();
+        this.pointerDownState = null;
+        return;
+      }
+      if (this.state.activeTool.type === "autoshape") {
+        // upstream's `activeTool.type === "autoshape"` pointer-up branch
+        // (`App.tsx`): the sketch resolves through the finalize funnel and
+        // the handler returns, so none of the new-element paths below —
+        // which would select the recognized shape and revert the tool —
+        // ever see the recognition preview sitting in `newElement`
+        this.actionManager.executeAction(actionFinalize);
         this.clearHighlightsOnPointerUp();
         this.pointerDownState = null;
         return;
