@@ -23,6 +23,15 @@ const armedBucketFill = () =>
 const overlay = () =>
   GlobalTestState.renderResult.getByToolName("selection") as HTMLElement;
 
+/**
+ * The icon inside a toolbar button — an `SVGSVGElement`, so a drag passing
+ * over one reports a target that is no `HTMLElement`.
+ */
+const overlayIcon = () =>
+  GlobalTestState.renderResult.container.querySelector(
+    ".App-toolbar svg",
+  ) as SVGSVGElement;
+
 describe("interaction invariants", () => {
   beforeEach(() => {
     mouse.reset();
@@ -98,8 +107,15 @@ describe("interaction invariants", () => {
       expect.objectContaining({ x: 100, y: 50, isDeleted: false }),
     );
 
+    // ... including across a button's icon, which reports an SVG target
+    expect(overlayIcon()).not.toBeInstanceOf(HTMLElement);
+    fireEvent.pointerMove(overlayIcon(), { clientX: 145, clientY: 95 });
+    expect(h.elements[0]).toEqual(
+      expect.objectContaining({ x: 120, y: 70, isDeleted: false }),
+    );
+
     updates.length = 0;
-    fireEvent.pointerUp(overlay(), { clientX: 125, clientY: 75 });
+    fireEvent.pointerUp(overlay(), { clientX: 145, clientY: 95 });
 
     expect(pointerDownState()).toBe(null);
     expect(h.state.cursorButton).toBe("up");
@@ -108,7 +124,7 @@ describe("interaction invariants", () => {
 
     // the released drag does not resume when the pointer comes back
     mouse.moveTo(200, 200);
-    expect(h.elements[0]).toEqual(expect.objectContaining({ x: 100, y: 50 }));
+    expect(h.elements[0]).toEqual(expect.objectContaining({ x: 120, y: 70 }));
   });
 
   it("disarms an armed bucket click when disabled", async () => {
