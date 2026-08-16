@@ -292,7 +292,9 @@
         [attr.aria-label]="option.text"
         (click)="execute(option.action, null)"
       >
-        <ng-icon [name]="actionIcon(option.action)" />
+        <div class="ToolIcon__icon" aria-hidden="true" aria-disabled="false">
+          <ng-icon [name]="actionIcon(option.action)" />
+        </div>
       </button>
       }
     </div>
