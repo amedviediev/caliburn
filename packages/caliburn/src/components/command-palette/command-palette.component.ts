@@ -677,6 +677,21 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
           app.toggleToolLock();
         },
       },
+      // upstream's neighbouring `labels.textToDiagram` entry is the AI half
+      // of the same dialog and stays out. Both carry `predicate:
+      // appProps.aiEnabled`, which `index.tsx` resolves as `aiEnabled !==
+      // false` — i.e. enabled unless a host opts out. Caliburn exposes no
+      // `aiEnabled` prop at all, so the mermaid entry is registered
+      // unconditionally, matching upstream's default.
+      {
+        label: `${t("toolBar.mermaidToExcalidraw")}...`,
+        category: DEFAULT_CATEGORIES.tools,
+        icon: "mermaidLogoIcon",
+        viewMode: false,
+        perform: () => {
+          app.setState({ openDialog: { name: "ttd", tab: "mermaid" } });
+        },
+      },
     ];
 
     this.allCommands = [

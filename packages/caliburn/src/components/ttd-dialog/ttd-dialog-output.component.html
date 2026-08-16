@@ -1,0 +1,60 @@
+<div
+  class="ttd-dialog-output-wrapper"
+  [class.ttd-dialog-output-wrapper--error]="!!error()"
+>
+  @if (error()) {
+    <div
+      data-testid="ttd-dialog-output-error"
+      class="ttd-dialog-output-error"
+    >
+      <div class="ttd-dialog-output-error-content">
+        <div class="ttd-dialog-output-error-icon">
+          <ng-icon name="alertTriangleIcon" />
+        </div>
+        @if (syntaxGuidance(); as guidance) {
+          <div class="ttd-dialog-output-error-summary">
+            <div class="ttd-dialog-output-error-summary__headline">
+              {{ guidance.summary }}
+            </div>
+            <div class="ttd-dialog-output-error-summary__label">
+              Likely causes:
+            </div>
+            <ul class="ttd-dialog-output-error-summary__causes">
+              @for (cause of guidance.likelyCauses; track cause) {
+                <li>{{ cause }}</li>
+              }
+            </ul>
+          </div>
+        }
+        <div class="ttd-dialog-output-error-message">
+          @for (line of errorMessageLines(); track $index) {
+            <span [class.ttd-dialog-output-error-message__caret]="isCaretLine(line)"
+              >{{ line }}{{ $last ? "" : "\n" }}</span
+            >
+          }
+        </div>
+        <div class="ttd-dialog-output-error-autofix-slot">
+          @if (autoFixAvailable()) {
+            <button
+              caliburn-button
+              class="ttd-dialog-panel-button ttd-dialog-output-error-autofix"
+              (select)="applyAutoFix.emit()"
+            >
+              {{ autoFixLabel }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+  @if (loaded()) {
+    <div
+      class="ttd-dialog-output-canvas-container"
+      [class.invisible]="!!error()"
+    >
+      <div #canvasContent class="ttd-dialog-output-canvas-content"></div>
+    </div>
+  } @else {
+    <caliburn-spinner size="2rem" />
+  }
+</div>

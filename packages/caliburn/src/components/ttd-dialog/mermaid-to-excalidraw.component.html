@@ -1,0 +1,48 @@
+<!-- the description's runs are written without surrounding whitespace: the
+     i18n string carries its own spacing (", " before each link, a trailing
+     space after "Currently only"), and Angular would otherwise emit text
+     nodes around every block boundary, rendering "Flowchart , Sequence" -->
+<div class="ttd-dialog-desc">@for (run of descriptionRuns; track $index) {@if (run.href) {<a [href]="run.href" target="_blank" rel="noreferrer">{{ run.text }}</a>} @else {{{ run.text }}}}</div>
+<div class="ttd-dialog-panels">
+  <div class="ttd-dialog-panel">
+    <textarea
+      #input
+      class="ttd-dialog-input"
+      [value]="text()"
+      [placeholder]="labels.inputPlaceholder"
+      (input)="onTextChange($any($event.target).value)"
+      (keydown)="onKeyDown($event)"
+    ></textarea>
+    <div
+      class="ttd-dialog-panel-button-container invisible"
+      style="justify-content: flex-start"
+    ></div>
+  </div>
+  <div class="ttd-dialog-panel">
+    <caliburn-ttd-dialog-output
+      [error]="error()"
+      [loaded]="mermaidLoaded()"
+      [sourceText]="text()"
+      [autoFixAvailable]="hasAutoFix()"
+      (applyAutoFix)="onApplyAutoFix()"
+    />
+    <div
+      class="ttd-dialog-panel-button-container"
+      style="justify-content: flex-start"
+    >
+      <button
+        caliburn-button
+        class="ttd-dialog-panel-button"
+        (select)="onInsertToEditor()"
+      >
+        <div>
+          {{ labels.insert }}<span><ng-icon name="arrowRightIcon" /></span>
+        </div>
+      </button>
+      <div class="ttd-dialog-submit-shortcut">
+        <div class="ttd-dialog-submit-shortcut__key">{{ labels.modifier }}</div>
+        <div class="ttd-dialog-submit-shortcut__key">{{ labels.enter }}</div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,5 +1,7 @@
+import * as MermaidToExcalidraw from "@excalidraw/mermaid-to-excalidraw";
 import { vi } from "vitest";
 
+import type { parseMermaidToExcalidraw } from "@excalidraw/mermaid-to-excalidraw";
 import type { throttleRAF as throttleRAFType } from "@excalidraw/common";
 
 type ThrottledFn<T extends unknown[]> = ((...args: T) => void) & {
@@ -18,6 +20,32 @@ export const mockThrottleRAF: typeof throttleRAFType = <T extends unknown[]>(
   ret.cancel = () => {};
 
   return ret;
+};
+
+/**
+ * Port of upstream `tests/helpers/mocks.ts`'s `mockMermaidToExcalidraw`,
+ * minus its `mockRef` branch — that one stubs `React.useRef` so
+ * `TTDPreviewPanel` reads the spy back, which has no caliburn counterpart.
+ */
+export const mockMermaidToExcalidraw = (opts: {
+  parseMermaidToExcalidraw: typeof parseMermaidToExcalidraw;
+}) => {
+  vi.mock("@excalidraw/mermaid-to-excalidraw", async (importActual) => {
+    const module = (await importActual()) as any;
+
+    return {
+      __esModule: true,
+      ...module,
+    };
+  });
+  const parseMermaidToExcalidrawSpy = vi.spyOn(
+    MermaidToExcalidraw,
+    "parseMermaidToExcalidraw",
+  );
+
+  parseMermaidToExcalidrawSpy.mockImplementation(opts.parseMermaidToExcalidraw);
+
+  return parseMermaidToExcalidrawSpy;
 };
 
 // Mock for HTMLImageElement (use with `vi.unstubAllGlobals()`)

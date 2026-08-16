@@ -77,6 +77,17 @@
             {{ item.label }}
           </button>
         }
+        <div style="margin: 6px 0; font-size: 14px; font-weight: 600">
+          Generate
+        </div>
+        <button
+          caliburn-dropdown-menu-item
+          icon="mermaidLogoIcon"
+          testId="toolbar-embeddable"
+          (select)="openMermaidToExcalidraw()"
+        >
+          {{ labels.mermaidToExcalidraw }}
+        </button>
       </caliburn-dropdown-menu-content>
     </caliburn-dropdown-menu>
   </caliburn-stack-row>

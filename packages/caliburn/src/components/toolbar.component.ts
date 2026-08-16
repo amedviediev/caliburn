@@ -55,8 +55,11 @@ type ToolButtonView = {
  * island. Ported for the desktop/full styles panel only: the compact
  * (tablet) tool popovers, the collab laser button and the pen-mode button
  * (which needs `togglePenMode`, not yet ported) are omitted rather than
- * stubbed. The `magicframe` entry is likewise omitted — upstream gates it
- * on `app.plugins.diagramToCode`, which has no caliburn equivalent.
+ * stubbed. Of the dropdown's "Generate" section only the un-gated
+ * mermaid-to-excalidraw entry is ported: the other two are AI surfaces
+ * upstream gates on `app.props.aiEnabled` — the `TTDDialogTriggerTunnel.Out`
+ * slot a Plus host fills, and `magicframe`, which additionally needs
+ * `app.plugins.diagramToCode`. Neither has a caliburn equivalent.
  */
 @Component({
   selector: "caliburn-toolbar",
@@ -86,6 +89,7 @@ export class CaliburnToolbarComponent {
     shapes: t("headings.shapes"),
     lock: t("toolBar.lock"),
     extraTools: t("toolBar.extraTools"),
+    mermaidToExcalidraw: t("toolBar.mermaidToExcalidraw"),
   };
 
   private readonly extraToolsMenuOpen = signal(false);
@@ -268,6 +272,15 @@ export class CaliburnToolbarComponent {
 
   protected setActiveTool(type: ToolbarToolType) {
     this.editor.setActiveTool({ type });
+  }
+
+  /** upstream's `app.setOpenDialog({ name: "ttd", tab: "mermaid" })`. The
+   * `data-testid="toolbar-embeddable"` this entry carries is upstream's own
+   * copy/paste of the embeddable item's testid — ported as-is. */
+  protected openMermaidToExcalidraw() {
+    this.editor.batchCommits(() =>
+      this.editor.setState({ openDialog: { name: "ttd", tab: "mermaid" } }),
+    );
   }
 
   protected onToolSelect(

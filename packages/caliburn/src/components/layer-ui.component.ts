@@ -40,6 +40,7 @@ import {
   DEFAULT_TOAST_TIMEOUT,
 } from "./toast.component";
 import { CaliburnToolbarComponent } from "./toolbar.component";
+import { CaliburnTTDDialogComponent } from "./ttd-dialog/ttd-dialog.component";
 import { CaliburnUserListComponent } from "./user-list.component";
 import { CaliburnViewportStatusBadgeComponent } from "./viewport-status-frame/viewport-status-badge.component";
 import { CaliburnWelcomeScreenCenterComponent } from "./welcome-screen/center.component";
@@ -102,6 +103,7 @@ let nextLayerUIId = 0;
     CaliburnStatsComponent,
     CaliburnToastComponent,
     CaliburnToolbarComponent,
+    CaliburnTTDDialogComponent,
     CaliburnUserListComponent,
     CaliburnViewportStatusBadgeComponent,
     CaliburnWelcomeScreenCenterComponent,

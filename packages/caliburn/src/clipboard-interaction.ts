@@ -57,6 +57,7 @@ import type {
 } from "@excalidraw/excalidraw/clipboard";
 import type { ExcalidrawLibraryIds } from "@excalidraw/excalidraw/data/types";
 import type { BinaryFiles, LibraryItems } from "@excalidraw/excalidraw/types";
+import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 
 import { addTextFromPaste } from "./text-paste";
 import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
@@ -145,6 +146,7 @@ export const addElementsFromPasteOrLibrary = (
     position: { clientX: number; clientY: number } | "cursor" | "center";
     retainSeed?: boolean;
     preserveFrameChildrenOrder?: boolean;
+    fit?: SetViewportOptions["fit"];
   },
 ) => {
   const elements = restoreElements(opts.elements, null, {
@@ -251,6 +253,15 @@ export const addElementsFromPasteOrLibrary = (
     { type: editor.state.preferredSelectionTool.type },
     { keepSelection: true },
   );
+
+  if (opts.fit) {
+    editor.viewport.setViewport({
+      target: duplicatedElements,
+      fit: opts.fit,
+      animation: false,
+      offsets: { ui: true },
+    });
+  }
 };
 
 const insertClipboardContent = async (

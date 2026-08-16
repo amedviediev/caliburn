@@ -9,6 +9,9 @@
 }
 <caliburn-active-confirm-dialog />
 <caliburn-overwrite-confirm />
+@if (state().openDialog?.name === "ttd") {
+  <caliburn-ttd-dialog />
+}
 @if (
   uiOptions.canvasActions.saveAsImage &&
   state().openDialog?.name === "imageExport"

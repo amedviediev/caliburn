@@ -60,6 +60,8 @@
 @use "../../excalidraw/components/ScrollableList.scss";
 @use "../../excalidraw/components/ViewportStatusFrame/ViewportStatusFrame.scss";
 @use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
+@use "../../excalidraw/components/TTDDialog/TTDDialog.scss";
+@use "../../excalidraw/components/TTDDialog/MermaidToExcalidraw.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
 // These host-bound primitives (`packages/caliburn/src/components/`)
@@ -207,6 +209,9 @@ caliburn-image-export-dialog,
 caliburn-json-export-dialog,
 caliburn-overwrite-confirm,
 caliburn-shareable-link-dialog,
+caliburn-ttd-dialog,
+caliburn-mermaid-to-excalidraw,
+caliburn-ttd-dialog-output,
 caliburn-library-menu-section {
   display: contents;
 }
@@ -266,5 +271,18 @@ caliburn-library-menu-section {
   .viewport-status-frame__badge-close ng-icon svg {
     width: 100%;
     height: 100%;
+  }
+}
+
+// `.ttd-dialog-output-error-icon svg` sizes the parse-error warning icon; the
+// `<ng-icon>` host wrapping it would otherwise clip it to `1em`.
+.excalidraw .ttd-dialog-output-error-icon ng-icon {
+  display: flex;
+  width: 52px;
+  height: 52px;
+
+  svg {
+    width: inherit;
+    height: inherit;
   }
 }

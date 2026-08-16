@@ -1,0 +1,15 @@
+<caliburn-dialog
+  class="ttd-dialog"
+  [size]="1520"
+  [title]="false"
+  [autofocus]="false"
+  [fullscreen]="isMobile"
+  (closeRequest)="handleClose()"
+>
+  <div class="ttd-dialog-tabs-root">
+    <p class="dialog-mermaid-title">{{ title }}</p>
+    <div class="ttd-dialog-content">
+      <caliburn-mermaid-to-excalidraw />
+    </div>
+  </div>
+</caliburn-dialog>
