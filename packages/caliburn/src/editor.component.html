@@ -13,6 +13,8 @@
   [class.excalidraw--allow-browser-zoom]="
     !isInteractionEnabled() && isBrowserZoomEnabled()
   "
+  [class.excalidraw--viewport-status-border]="!!viewportStatusFrame()?.border"
+  [class.excalidraw--viewport-status-label]="!!viewportStatusFrame()?.label"
   [class.excalidraw--zen-mode]="state.zenModeEnabled"
   [style.--ui-pointerEvents]="uiPointerEvents"
   tabindex="0"

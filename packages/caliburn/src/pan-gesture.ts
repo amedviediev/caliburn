@@ -69,6 +69,7 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
       // the snap-back starts from the pan's actual final viewport.
       editor.viewport.releaseOverscroll,
     );
+    editor.savePointer(event.clientX, event.clientY, "up");
     window.removeEventListener(EVENT.POINTER_MOVE, onPointerMove);
     window.removeEventListener(EVENT.POINTER_UP, teardown);
     window.removeEventListener(EVENT.BLUR, teardown);

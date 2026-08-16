@@ -1,0 +1,63 @@
+<ng-template #statusIcon>
+  @if (collaborator().isInCall) {
+    @if (collaborator().isSpeaking) {
+      <div
+        class="UserList__collaborator-status-icon-speaking-indicator"
+        [attr.title]="isSpeakingTitle"
+      >
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    } @else if (collaborator().isMuted) {
+      <div
+        class="UserList__collaborator-status-icon-microphone-muted"
+        [attr.title]="micMutedTitle"
+      >
+        <ng-icon name="microphoneMutedIcon" />
+      </div>
+    } @else {
+      <div [attr.title]="inCallTitle">
+        <ng-icon name="microphoneIcon" />
+      </div>
+    }
+  }
+</ng-template>
+@if (withName()) {
+  <div
+    caliburn-avatar
+    class="{{ statusClassNames() }}"
+    [color]="background()"
+    [name]="collaborator().username || ''"
+    [src]="collaborator().avatarUrl"
+  ></div>
+  <div class="UserList__collaborator-name">{{ collaborator().username }}</div>
+  <div class="UserList__collaborator-status-icons" aria-hidden="true">
+    @if (isBeingFollowed()) {
+      <div
+        class="UserList__collaborator-status-icon-is-followed"
+        [attr.title]="followStatusTitle"
+      >
+        <ng-icon name="eyeIcon" />
+      </div>
+    }
+    @if (collaborator().isCurrentUser) {
+      {{ " (" + youLabel + ")" }}
+    }
+    <ng-container [ngTemplateOutlet]="statusIcon" />
+  </div>
+} @else {
+  <div
+    caliburn-avatar
+    class="{{ statusClassNames() }}"
+    [color]="background()"
+    [name]="collaborator().username || ''"
+    [src]="collaborator().avatarUrl"
+    (select)="goToCollaborator()"
+  ></div>
+  @if (collaborator().isInCall) {
+    <div class="UserList__collaborator-status-icon">
+      <ng-container [ngTemplateOutlet]="statusIcon" />
+    </div>
+  }
+}

@@ -54,6 +54,11 @@
 @use "../../excalidraw/components/live-collaboration/LiveCollaborationTrigger.scss";
 @use "../../excalidraw/components/ShareableLinkDialog.scss";
 @use "../../excalidraw/components/Toast.scss";
+@use "../../excalidraw/components/Avatar.scss";
+@use "../../excalidraw/components/UserList.scss";
+@use "../../excalidraw/components/QuickSearch.scss";
+@use "../../excalidraw/components/ScrollableList.scss";
+@use "../../excalidraw/components/ViewportStatusFrame/ViewportStatusFrame.scss";
 @use "../../excalidraw/components/welcome-screen/WelcomeScreen.scss";
 
 // Custom elements default to `display: inline` unless styled otherwise.
@@ -223,4 +228,43 @@ caliburn-library-menu-section {
   display: flex;
   width: 1rem;
   height: 1rem;
+}
+
+// The UserList's icons are sized through `svg` rules upstream
+// (`.UserList__pill-chevron svg`, the avatar-only status icon's
+// `--size` box, `.viewport-status-frame__badge-close svg`); the `<ng-icon>`
+// host wrapping each of them would otherwise clip it to `1em`.
+.excalidraw {
+  .UserList__pill-chevron ng-icon,
+  .UserList__collaborator-status-icons ng-icon,
+  .UserList__collaborator--avatar-only
+    .UserList__collaborator-status-icon
+    ng-icon,
+  .viewport-status-frame__badge-icon ng-icon,
+  .viewport-status-frame__badge-close ng-icon {
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  .UserList__collaborator-status-icons ng-icon,
+  .viewport-status-frame__badge-icon ng-icon,
+  .viewport-status-frame__badge-close ng-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  // `<ng-icon>` sets `font-size: 1em` on its host and sizes the svg off it;
+  // these are boxed by their wrapper instead
+  .UserList__pill-chevron ng-icon svg,
+  .UserList__collaborator-status-icons ng-icon svg,
+  .UserList__collaborator--avatar-only
+    .UserList__collaborator-status-icon
+    ng-icon
+    svg,
+  .viewport-status-frame__badge-icon ng-icon svg,
+  .viewport-status-frame__badge-close ng-icon svg {
+    width: 100%;
+    height: 100%;
+  }
 }

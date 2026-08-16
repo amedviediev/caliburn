@@ -40,6 +40,8 @@ import {
   DEFAULT_TOAST_TIMEOUT,
 } from "./toast.component";
 import { CaliburnToolbarComponent } from "./toolbar.component";
+import { CaliburnUserListComponent } from "./user-list.component";
+import { CaliburnViewportStatusBadgeComponent } from "./viewport-status-frame/viewport-status-badge.component";
 import { CaliburnWelcomeScreenCenterComponent } from "./welcome-screen/center.component";
 import { CaliburnWelcomeScreenHeadingComponent } from "./welcome-screen/heading.component";
 import { CaliburnWelcomeScreenLogoComponent } from "./welcome-screen/logo.component";
@@ -100,6 +102,8 @@ let nextLayerUIId = 0;
     CaliburnStatsComponent,
     CaliburnToastComponent,
     CaliburnToolbarComponent,
+    CaliburnUserListComponent,
+    CaliburnViewportStatusBadgeComponent,
     CaliburnWelcomeScreenCenterComponent,
     CaliburnWelcomeScreenHeadingComponent,
     CaliburnWelcomeScreenLogoComponent,
@@ -136,6 +140,9 @@ export class CaliburnLayerUIComponent {
     this.editor.welcomeScreenToolbarHint;
   protected readonly topRightUI = this.editor.topRightUI;
   protected readonly sidebar = this.editor.sidebar;
+  protected readonly currentUserControls = this.editor.currentUserControls;
+  protected readonly userToFollow = this.editor.userToFollow;
+  protected readonly viewportStatusFrame = this.editor.viewportStatusFrame;
   protected readonly hostDefaultSidebars = this.editor.hostDefaultSidebars;
 
   protected state() {

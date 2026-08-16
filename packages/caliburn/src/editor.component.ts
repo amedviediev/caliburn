@@ -110,13 +110,17 @@ import type {
   AppState,
   BinaryFileData,
   BinaryFiles,
+  CollaboratorPointer,
+  Gesture,
   InteractionConfig,
   LibraryItems,
   LibraryItemsSource,
+  OnUserFollowedPayload,
   SceneData,
   SidebarName,
   SidebarTabName,
   ToolType,
+  UserToFollow,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
 import type {
@@ -164,6 +168,7 @@ import {
   actionupdateFrameRendering,
 } from "./actions/actionFrame";
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
+import { actionGoToCollaborator } from "./actions/actionNavigate";
 import { actionLink } from "./actions/actionLink";
 import { actionCopyStyles, actionPasteStyles } from "./actions/actionStyles";
 import { actionTextAutoResize } from "./actions/actionTextAutoResize";
@@ -300,6 +305,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { ElementRef, TemplateRef } from "@angular/core";
 
 import type { CommandPaletteItem } from "./components/command-palette/types";
+import type { CaliburnViewportStatusFrame } from "./components/viewport-status-frame/viewport-status-frame";
 import type { CursorHintView } from "./components/cursor-hints";
 import type { EyeDropperProperties } from "./components/eye-dropper";
 import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
@@ -342,6 +348,7 @@ export interface CaliburnImperativeAPI {
   onScrollChange: (
     cb: (scrollX: number, scrollY: number, zoom: AppState["zoom"]) => void,
   ) => () => void;
+  onUserFollow: (cb: (payload: OnUserFollowedPayload) => void) => () => void;
 }
 
 /** a props snapshot the `interaction` predicates can be evaluated against */
@@ -407,6 +414,30 @@ export class CaliburnEditorComponent
       ) => void)
     | null
   >(null);
+  readonly onPointerUpdate = input<
+    | ((payload: {
+        pointer: CollaboratorPointer;
+        button: "down" | "up";
+        pointersMap: Gesture["pointers"];
+      }) => void)
+    | null
+  >(null);
+  /**
+   * Host hook for follow/unfollow intents. The editor never owns the follow
+   * state — it emits intents here (and through the imperative API's
+   * `onUserFollow`) and renders the followed user from `userToFollow`.
+   */
+  readonly onUserFollow = input<
+    ((payload: OnUserFollowedPayload) => void) | null
+  >(null);
+  /**
+   * The user being followed on the canvas, if any. Controlled by the host.
+   */
+  readonly userToFollow = input<UserToFollow | null>(null);
+  /** the viewport-edge border + bottom-center badge (see follow mode) */
+  readonly viewportStatusFrame = input<CaliburnViewportStatusFrame | null>(
+    null,
+  );
   readonly imageOptions = input<{
     maxWidthOrHeight?: number;
     maxFileSizeBytes?: number;
@@ -453,6 +484,13 @@ export class CaliburnEditorComponent
   readonly footerCenter = input<TemplateRef<unknown> | null>(null);
   readonly topRightUI = input<TemplateRef<unknown> | null>(null);
   readonly sidebar = input<TemplateRef<unknown> | null>(null);
+  /**
+   * Upstream's `currentUserControls` prop, rendered inside the UserList
+   * "who's here" dropdown below a divider. Upstream also accepts a render
+   * function (called with `isMobile`); caliburn's LayerUI ports the desktop
+   * layout only, so the slot is a plain template.
+   */
+  readonly currentUserControls = input<TemplateRef<unknown> | null>(null);
 
   /**
    * Number of host-rendered `caliburn-default-sidebar`s, standing in for
@@ -683,6 +721,70 @@ export class CaliburnEditorComponent
   readonly onScrollChangeEmitter = new Emitter<
     [scrollX: number, scrollY: number, zoom: AppState["zoom"]]
   >();
+
+  readonly onUserFollowEmitter = new Emitter<
+    [payload: OnUserFollowedPayload]
+  >();
+
+  /** emits a follow/unfollow intent to the host (which owns the
+   *  `userToFollow` state) via both the `onUserFollow` prop and the
+   *  imperative API emitter */
+  emitUserFollowIntent = (payload: OnUserFollowedPayload) => {
+    this.onUserFollowEmitter.trigger(payload);
+    this.onUserFollow()?.(payload);
+  };
+
+  /** emits an UNFOLLOW intent if currently following someone — use on
+   *  user-initiated viewport changes which should break follow mode */
+  requestUnfollow = () => {
+    const userToFollow = this.userToFollow();
+    if (userToFollow) {
+      this.emitUserFollowIntent({
+        userToFollow,
+        action: "UNFOLLOW",
+      });
+    }
+  };
+
+  /**
+   * upstream `App.savePointer` — broadcasts the local pointer to the host
+   * (`props.onPointerUpdate`), which relays it to collaborators
+   */
+  savePointer = (x: number, y: number, button: "up" | "down") => {
+    // don't broadcast pointer updates (props.onPointerUpdate) when
+    // non-interactive, unless the active tool stays user-driven via
+    // `interaction.enabled.tools` — collaborators render e.g. a presenter's
+    // laser through these updates
+    if (
+      !this.isInteractionEnabled() &&
+      !this.isToolSupported(this.state.activeTool.type)
+    ) {
+      return;
+    }
+    if (!x || !y) {
+      return;
+    }
+    const { x: sceneX, y: sceneY } = viewportCoordsToSceneCoords(
+      { clientX: x, clientY: y },
+      this.state,
+    );
+
+    if (isNaN(sceneX) || isNaN(sceneY)) {
+      // sometimes the pointer goes off screen
+    }
+
+    const pointer: CollaboratorPointer = {
+      x: sceneX,
+      y: sceneY,
+      tool: this.state.activeTool.type === "laser" ? "laser" : "pointer",
+    };
+
+    this.onPointerUpdate()?.({
+      pointer,
+      button,
+      pointersMap: gesture.pointers,
+    });
+  };
 
   readonly drawShape = {
     hasPendingGesture: () => false,
@@ -955,6 +1057,7 @@ export class CaliburnEditorComponent
       actionChangeExportEmbedScene,
       actionChangeExportScale,
       actionExportWithDarkMode,
+      actionGoToCollaborator,
       this.undoAction,
       this.redoAction,
     ]);
@@ -2066,6 +2169,12 @@ export class CaliburnEditorComponent
 
     this.lastPointerDownEvent = event;
 
+    // laser pointer is a presentation aid, not an edit — using it while
+    // following someone shouldn't break follow
+    if (this.state.activeTool.type !== "laser") {
+      this.requestUnfollow();
+    }
+
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
     if (!event.ctrlKey) {
       const preferenceEnabled = this.state.bindingPreference === "enabled";
@@ -2106,6 +2215,14 @@ export class CaliburnEditorComponent
     }
 
     updateGestureOnPointerDown(this, event);
+
+    // upstream registers the pointer with the gesture before this, so
+    // `pointersMap` already carries it when the broadcast reads it
+    this.setState({
+      lastPointerDownWith: event.pointerType as AppState["lastPointerDownWith"],
+      cursorButton: "down",
+    });
+    this.savePointer(event.clientX, event.clientY, "down");
 
     // only handle left mouse button or touch
     if (
@@ -2203,6 +2320,12 @@ export class CaliburnEditorComponent
 
   private handleCanvasPointerMoveImpl(event: PointerEvent) {
     if (!this.isInteractionEnabled()) {
+      if (this.isToolSupported(this.state.activeTool.type)) {
+        // keep broadcasting the pointer (`props.onPointerUpdate`) between
+        // strokes of the enabled tool, so e.g. a presenter's cursor stays
+        // visible to collaborators while the laser isn't drawing
+        this.savePointer(event.clientX, event.clientY, this.state.cursorButton);
+      }
       if (this.isNavigationEnabled()) {
         // wheel zoom is anchored on `viewport.lastPosition`
         this.viewport.lastPosition.x = event.clientX;
@@ -2213,6 +2336,8 @@ export class CaliburnEditorComponent
       }
       return;
     }
+
+    this.savePointer(event.clientX, event.clientY, this.state.cursorButton);
 
     this.viewport.lastPosition.x = event.clientX;
     this.viewport.lastPosition.y = event.clientY;
@@ -2335,6 +2460,14 @@ export class CaliburnEditorComponent
     }
 
     removePointer(this, event);
+
+    // upstream resets `cursorButton` and broadcasts the released pointer
+    // from its single pointer-up handler; caliburn's per-interaction
+    // teardowns only cover some of the branches below, so both live here
+    if (this.state.cursorButton !== "up") {
+      this.setState({ cursorButton: "up" });
+    }
+    this.savePointer(event.clientX, event.clientY, "up");
 
     // an armed bucket fill commits only on a GENUINE pointer up: a tool
     // switch mid-press orphans the click, which must discard the fill
@@ -2474,6 +2607,7 @@ export class CaliburnEditorComponent
       onChange: (cb) => this.onChangeEmitter.on(cb),
       onIncrement: (cb) => this.store.onStoreIncrementEmitter.on(cb),
       onScrollChange: (cb) => this.onScrollChangeEmitter.on(cb),
+      onUserFollow: (cb) => this.onUserFollowEmitter.on(cb),
     };
   }
 
@@ -2910,8 +3044,6 @@ export class CaliburnEditorComponent
       this.state.currentItemStrokeWidthKey,
     );
   }
-
-  requestUnfollow() {}
 
   refreshEditorInterface() {}
 

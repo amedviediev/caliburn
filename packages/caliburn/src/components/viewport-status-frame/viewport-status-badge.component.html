@@ -1,0 +1,37 @@
+@if (label().onClick; as onClick) {
+  <button
+    type="button"
+    class="viewport-status-frame__badge-action"
+    [attr.aria-labelledby]="labelId"
+    (click)="onClick()"
+  ></button>
+}
+<div
+  class="viewport-status-frame__badge-label"
+  [attr.id]="label().onClick ? labelId : null"
+>
+  @if (label().icon) {
+    <span class="viewport-status-frame__badge-icon">
+      @if (iconName(); as name) {
+        <ng-icon [name]="name" />
+      } @else if (iconTemplate(); as icon) {
+        <ng-container *ngTemplateOutlet="icon" />
+      }
+    </span>
+  }
+  @if (labelTemplate(); as template) {
+    <ng-container *ngTemplateOutlet="template" />
+  } @else {
+    {{ label().label }}
+  }
+</div>
+@if (label().onClose; as onClose) {
+  <button
+    type="button"
+    class="viewport-status-frame__badge-close"
+    [attr.aria-label]="closeLabel"
+    (click)="onClose()"
+  >
+    <ng-icon name="closeIcon" />
+  </button>
+}

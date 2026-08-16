@@ -1,0 +1,79 @@
+<div class="UserList" [style.--max-avatars]="maxAvatars()">
+  @for (collaborator of firstNCollaborators(); track collaborator.socketId) {
+    @if (collaborator.isCurrentUser) {
+      <!-- current user's avatar is the single entry point for the "who's
+           here" list + currentUserControls dropdown -->
+      <div class="UserList__pill" (click)="togglePill($event)">
+        <caliburn-tooltip [label]="collaborator.username || unknownUserLabel">
+          <div
+            caliburn-user-list-collaborator
+            [socketId]="collaborator.socketId"
+            [collaborator]="collaborator"
+            [isBeingFollowed]="collaborator.socketId === userToFollow()"
+          ></div>
+        </caliburn-tooltip>
+        <div class="UserList__pill-chevron">
+          <ng-icon name="chevronDownIcon" />
+        </div>
+      </div>
+    } @else {
+      <caliburn-tooltip [label]="collaborator.username || unknownUserLabel">
+        <div
+          caliburn-user-list-collaborator
+          [socketId]="collaborator.socketId"
+          [collaborator]="collaborator"
+          [isBeingFollowed]="collaborator.socketId === userToFollow()"
+        ></div>
+      </caliburn-tooltip>
+    }
+  }
+</div>
+@if (isOpen()) {
+  <div
+    class="focus-visible-none"
+    style="
+      position: fixed;
+      z-index: 2;
+      width: 15rem;
+      text-align: left;
+      pointer-events: var(--ui-pointerEvents);
+    "
+    [style.top.px]="popoverTop()"
+    [style.right.px]="popoverRight()"
+  >
+    <caliburn-island [padding]="2">
+      @if (collaboratorsArray().length >= showCollaboratorsFilterAt) {
+        <div
+          caliburn-quick-search
+          [placeholder]="searchPlaceholder"
+          (termChange)="onSearchTermChange($event)"
+        ></div>
+      }
+      <div
+        caliburn-scrollable-list
+        class="dropdown-menu UserList__collaborators"
+        [placeholder]="emptyLabel"
+        [isEmpty]="!filteredCollaborators().length"
+      >
+        @if (filteredCollaborators().length) {
+          <div class="hint">{{ hintText }}</div>
+          @for (collaborator of filteredCollaborators(); track collaborator.socketId) {
+            <div
+              caliburn-user-list-collaborator
+              [socketId]="collaborator.socketId"
+              [collaborator]="collaborator"
+              [withName]="true"
+              [isBeingFollowed]="collaborator.socketId === userToFollow()"
+            ></div>
+          }
+        }
+      </div>
+      @if (currentUserControls(); as controls) {
+        <div class="UserList__menu-divider"></div>
+        <div class="dropdown-menu" (click)="close()">
+          <ng-container *ngTemplateOutlet="controls" />
+        </div>
+      }
+    </caliburn-island>
+  </div>
+}

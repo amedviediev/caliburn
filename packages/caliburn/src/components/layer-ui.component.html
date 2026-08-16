@@ -20,6 +20,17 @@
   <caliburn-element-link-dialog [sourceElementId]="sourceElementId" />
 }
 <caliburn-command-palette />
+@if (viewportStatusFrame()?.border; as border) {
+  <div
+    class="viewport-status-frame__border"
+    [style.borderColor]="border"
+    [style.right]="
+      isSidebarDockedAndFits()
+        ? 'calc(var(--right-sidebar-width) - var(--space-factor) * 2)'
+        : null
+    "
+  ></div>
+}
 <div
   class="layer-ui__wrapper"
   [style.width]="
@@ -91,6 +102,13 @@
         class="layer-ui__wrapper__top-right zen-mode-transition"
         [class.transition-right]="state().zenModeEnabled"
       >
+        @if (state().collaborators.size) {
+          <caliburn-user-list
+            [collaborators]="state().collaborators"
+            [userToFollow]="userToFollow()?.socketId ?? null"
+            [currentUserControls]="currentUserControls()"
+          />
+        }
         @if (topRightUI(); as topRight) {
           <ng-container *ngTemplateOutlet="topRight" />
         }
@@ -112,7 +130,9 @@
     </div>
   </caliburn-fixed-side-container>
   <caliburn-footer />
-  @if (state().toast || state().scrolledOutside) {
+  @if (
+    state().toast || state().scrolledOutside || viewportStatusFrame()?.label
+  ) {
     <div class="floating-status-stack">
       @if (state().toast; as toast) {
         <caliburn-toast
@@ -130,6 +150,13 @@
         >
           {{ scrollBackToContentLabel }}
         </button>
+      }
+      @if (viewportStatusFrame()?.label; as label) {
+        <div
+          caliburn-viewport-status-badge
+          [label]="label"
+          [border]="viewportStatusFrame()!.border"
+        ></div>
       }
     </div>
   }

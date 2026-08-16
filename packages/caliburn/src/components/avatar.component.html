@@ -1,0 +1,11 @@
+@if (loadImg(); as src) {
+  <img
+    class="Avatar-img"
+    [src]="src"
+    [alt]="shortName()"
+    referrerpolicy="no-referrer"
+    (error)="onError()"
+  />
+} @else {
+  {{ shortName() }}
+}
