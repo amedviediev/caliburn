@@ -6,18 +6,21 @@ The name is Excalibur's older form — Latin _Caliburnus_, from the Welsh _Caled
 
 ## Status
 
-The editor's interaction core is ported and green against the upstream test suite. What is in this repository today is Excalidraw's source at the pinned commit alongside `packages/caliburn`, the Angular editor being built against it. Nothing is published to npm yet; the planned package name is `ngx-caliburn`.
+The editor's full chrome is ported: toolbar, properties panel, context menu, main menu, command palette, search, library, stats panel, lasso selection, hyperlink and image/JSON export dialogs, the welcome screen, and the text-to-diagram (Mermaid) dialog — each driven by the upstream tests that gate it. `packages/caliburn` is the Angular editor package (Angular 22, zoneless), vendoring Excalidraw's element model, geometry engine and canvas renderers unchanged behind an Angular UI. Nothing is published to npm yet; the planned package name is `ngx-caliburn`.
 
-- [x] Repository setup: README, license, brand assets, font licenses
-- [x] Delete the React code that will never be used; measure what remains — after the cut, the editor package holds 44,408 lines of `.tsx` and 30,462 lines of `.ts` outside tests, and 1,733 upstream tests still pass
-- [x] Port the test harness so the upstream test suite drives the port — `render()` mounts the Angular editor (Angular 22, zoneless, AOT under vitest) and `window.h` exposes its state through the real element engine
-- [x] Port the editor in slices: selection and viewport; rectangle, ellipse, diamond; arrows and binding; text and the wysiwyg editor; freehand; images, frames and groups; clipboard paste and drag-and-drop; element locking; undo/redo and the core actions — 319 ported upstream tests pass against the Angular editor, and the creation-flow snapshots are byte-identical to upstream's
-- [x] Canvas rendering — the vendored static/new-element/interactive renderers drive three stacked canvases from the editor's commit path, with the rough hand-drawn pass and Excalifont text
-- [x] Runnable demo app — `yarn demo` starts a vite dev server with the editor full-screen (`examples/with-vite`)
-- [x] The full app — `yarn start` serves `caliburn-app`, the Angular port of excalidraw.com's free app: local persistence, shareable links, live collaboration, the library, the language selector and the light/dark/system theme. Excalidraw+ surfaces and the analytics scripts are not part of the port
-- [x] Properties panel, context menu, lasso selection — Angular ports of the upstream React surfaces, driven unchanged by the upstream tests that gate them
-- [x] Imperative API (`onExcalidrawAPI`), host-forced tool, view mode, and per-event commit batching mirroring React's update coalescing — `tool.test` and `viewMode.test` gates green
-- [ ] Remaining tail: the parked history suite at 58/64 (multiplayer delta conflicts, one linear-editor capture), the non-interactive `interaction` prop, frame-name editing, arrow endpoint labels, export dialogs — each with its upstream tests skipped in place as gates
+`caliburn-app` (`yarn start`) is the Angular port of excalidraw.com's free app: local persistence, the language selector (i18n), live collaboration, shareable links, the library, the command palette, search, and the Mermaid-to-Excalidraw dialog. Excalidraw+ (Pro) surfaces and the analytics scripts are not part of the port. A framework-agnostic demo lives at `examples/with-vite` (`yarn demo`), embedding the editor full-screen with no app chrome around it.
+
+The full workspace suite passes: 2,648 tests passed, 90 skipped (upstream's own skips), 1 todo, 0 failed, across 181 test files (`yarn vitest run`).
+
+Known gaps:
+
+- **Mobile chrome is unported.** `editorInterface.formFactor` is hardcoded to `"desktop"` and `userAgent.isMobileDevice` to `false` (`packages/caliburn/src/editor.component.ts`). The `formFactor === "phone"` branches scattered through the toolbar, dialogs and menus exist, mirroring upstream, but are unreachable — nothing ever sets `formFactor` to `"phone"`.
+- **Collaboration presence is verified against a protocol stand-in, not the production room server.** `excalidraw-room` isn't published to npm and Docker wasn't available during development, so the live two-client collaboration smoke test (remote cursors, selections, the user list, follow mode) ran against a stand-in server speaking the same socket protocol, not excalidraw.com's actual room server.
+- **The Mermaid dialog's text input is a textarea, not CodeMirror.** Upstream lazily imports a `CodeMirrorEditor`; that import isn't ported, so the dialog always renders the same textarea fallback upstream itself falls back to when the CodeMirror chunk fails to load, including the loss of CodeMirror's error-line decoration.
+- **Image crop's "move region" drag is unported.** Dragging a resize handle on a cropped image works; dragging inside the crop region to pan the underlying image without resizing the frame does not — `maybeHandleCrop` (`packages/caliburn/src/crop-interaction.ts`) requires a transform handle.
+- **`setPointerCapture` is never called.** Upstream captures the pointer to the canvas on pointer-down so a drag never reports a foreign target; Caliburn doesn't, so an off-canvas move can land on a toolbar `<svg>`. The pointer-session code compensates with a widened `instanceof Element` guard instead of porting capture itself.
+- **The `ui` prop doesn't exist.** Upstream's `<Excalidraw ui={...}>`, for hiding UI regions, was never implemented — the fan-out (13+ call sites in `App.tsx`, 20+ in `LayerUI`) is past what a mechanical port covers. Caliburn's chrome behaves as if `ui` were always the default, fully-shown value; a host that needs to hide regions can't yet.
+- **A class of chrome labels resolve their language once, at construction, not reactively.** `LayerUI`'s `scrollBackToContentLabel` (and siblings like `welcomeScreenHeading`) call `t()` in a field initializer. `caliburn-app` papers over this for its own top-level labels with `computed()` wrappers, and forces a full editor remount on language change (flipping between two branches of the same template) so the rest refresh incidentally — but the editor package itself has no mechanism to update these labels without a remount.
 
 ## Why a port
 
