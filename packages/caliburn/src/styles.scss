@@ -79,78 +79,24 @@ caliburn-text-field {
   display: block;
 }
 
-// Upstream's `.ExcTextField svg` is the field's icon, absolutely positioned
-// against the field; `<ng-icon>` wraps it in its own `1em`, `overflow:
-// hidden` host, which would clip it — position the host instead and let the
-// svg fill it (same treatment as the export-setting icon below).
-.excalidraw .ExcTextField {
-  ng-icon {
-    position: absolute;
-    top: 50%;
-    left: 0.75rem;
-    transform: translateY(-50%);
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--color-gray-40);
-    z-index: 1;
-  }
-
-  ng-icon svg {
-    position: static;
-    top: auto;
-    left: auto;
-    transform: none;
-    width: inherit;
-    height: inherit;
-  }
-}
-
-// Upstream sizes the export-setting tooltip icon with `& svg { width: 20px }`;
-// `<ng-icon>` wraps that svg in its own `1em`, `overflow: hidden` host, which
-// clips it. Give the host the same box (matching upstream's selector depth so
-// this wins) and let the svg fill it.
-.excalidraw
-  .ImageExportModal
-  .ImageExportModal__settings
-  .ImageExportModal__settings__setting
-  .ImageExportModal__settings__setting__label {
-  ng-icon {
-    width: 20px;
-    height: 20px;
-    margin-left: 10px;
-  }
-
-  ng-icon svg {
-    width: inherit;
-    height: inherit;
-    margin-left: 0;
-  }
-}
-
-// `.help-icon svg` sizes the footer's help button; `<ng-icon>` wraps that svg
-// in its own `1em`, `overflow: hidden` host, which clips it. Give the host
-// the same box and let the svg fill it.
-.excalidraw .help-icon ng-icon {
-  display: flex;
-  width: var(--lg-icon-size);
-  height: var(--lg-icon-size);
-}
-
-// `.Dialog__close svg` sizes the fullscreen dialog's close button; the
-// `<ng-icon>` host wrapping it inherits the button's `0.8333rem` font-size and
-// would clip the cross to that box.
-.excalidraw .Dialog__close ng-icon {
-  display: flex;
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-// `.OverwriteConfirm__Description__icon svg` sizes the modal's warning icon;
-// the `<ng-icon>` host would clip it to `1em`.
-.excalidraw .OverwriteConfirm__Description__icon ng-icon {
-  display: flex;
-  width: 1.5rem;
-  height: 1.5rem;
+// Upstream's icons are bare `<svg>` elements, laid out and sized by the
+// surrounding component's own `… svg { … }` rules in the vendored SCSS.
+// `<ng-icon>` renders each one inside a host element that is `display:
+// inline-block; width/height: var(--ng-icon__size, 1em); overflow: hidden`
+// (its own component styles), so every such rule ends up sizing an svg that
+// its own wrapper then clips — a `1rem` menu icon inside a `0.875rem` host,
+// a `var(--lg-icon-size)` help button inside a `1em` one, and the welcome
+// screen's decorative arrows (tens of px tall) inside 16px.
+//
+// `display: contents` takes the host out of box generation entirely: the svg
+// becomes the direct layout child its upstream counterpart is, so those rules
+// size and position it exactly as they do upstream, with nothing left to clip
+// it. Where upstream sizes nothing, ng-icon's own `svg { width/height:
+// inherit }` still resolves against the host's computed `1em` and the icon
+// keeps the size it had. Only genuinely per-case sizes — ones the vendored
+// SCSS does not state — stay below, retargeted at the svg.
+.excalidraw ng-icon {
+  display: contents;
 }
 
 // Angular components always render their own host element, where upstream
@@ -236,65 +182,12 @@ caliburn-library-menu-section {
   padding-right: 0.75rem;
 }
 
-// `.library-unit__dragger > svg` sizes the item preview; the caliburn unit
-// writes the exported svg into the same node, so nothing changes there — but
-// the `<ng-icon>` wrapping the pending-item plus sign needs the box upstream
-// gives that svg (`.library-unit__adder svg { width/height: 1rem }`), which
-// the icon host would otherwise clip to `1em`.
-.excalidraw .library-unit__adder ng-icon {
-  display: flex;
+// Upstream leaves the collaborator status icons (`eyeIcon`, `microphoneIcon`,
+// `microphoneMutedIcon`) unsized — `UserList.scss` states no rule for them and
+// no ancestor does either. Caliburn picks the `1rem` the neighbouring status
+// icons use, which is the one size here that does not come from the vendored
+// SCSS.
+.excalidraw .UserList__collaborator-status-icons ng-icon svg {
   width: 1rem;
   height: 1rem;
-}
-
-// The UserList's icons are sized through `svg` rules upstream
-// (`.UserList__pill-chevron svg`, the avatar-only status icon's
-// `--size` box, `.viewport-status-frame__badge-close svg`); the `<ng-icon>`
-// host wrapping each of them would otherwise clip it to `1em`.
-.excalidraw {
-  .UserList__pill-chevron ng-icon,
-  .UserList__collaborator-status-icons ng-icon,
-  .UserList__collaborator--avatar-only
-    .UserList__collaborator-status-icon
-    ng-icon,
-  .viewport-status-frame__badge-icon ng-icon,
-  .viewport-status-frame__badge-close ng-icon {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
-
-  .UserList__collaborator-status-icons ng-icon,
-  .viewport-status-frame__badge-icon ng-icon,
-  .viewport-status-frame__badge-close ng-icon {
-    width: 1rem;
-    height: 1rem;
-  }
-
-  // `<ng-icon>` sets `font-size: 1em` on its host and sizes the svg off it;
-  // these are boxed by their wrapper instead
-  .UserList__pill-chevron ng-icon svg,
-  .UserList__collaborator-status-icons ng-icon svg,
-  .UserList__collaborator--avatar-only
-    .UserList__collaborator-status-icon
-    ng-icon
-    svg,
-  .viewport-status-frame__badge-icon ng-icon svg,
-  .viewport-status-frame__badge-close ng-icon svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-// `.ttd-dialog-output-error-icon svg` sizes the parse-error warning icon; the
-// `<ng-icon>` host wrapping it would otherwise clip it to `1em`.
-.excalidraw .ttd-dialog-output-error-icon ng-icon {
-  display: flex;
-  width: 52px;
-  height: 52px;
-
-  svg {
-    width: inherit;
-    height: inherit;
-  }
 }

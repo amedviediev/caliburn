@@ -1247,6 +1247,14 @@ export const runSuite = async (browser, url, runner) => {
         await waitFor(
           page,
           () =>
+            !document.querySelector(
+              ".App-toolbar__extra-tools-dropdown .dropdown-menu-container",
+            ),
+          { message: "choosing a tool did not close the extra-tools dropdown" },
+        );
+        await waitFor(
+          page,
+          () =>
             !!document.querySelector(
               ".App-toolbar__extra-tools-trigger--selected",
             ),
