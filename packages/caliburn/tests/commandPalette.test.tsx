@@ -9,7 +9,15 @@ import { Excalidraw } from "../src/index";
 import { API } from "./helpers/api";
 import { Keyboard } from "./helpers/ui";
 import { updateTextEditor } from "./queries/dom";
-import { act, fireEvent, getByTestId, render, waitFor } from "./test-utils";
+import { CaliburnCommandPaletteMenuHostComponent } from "./helpers/main-menu-hosts.component";
+import {
+  act,
+  fireEvent,
+  getByTestId,
+  render,
+  renderHost,
+  waitFor,
+} from "./test-utils";
 
 import type { RenderResult } from "./test-utils";
 
@@ -81,7 +89,11 @@ describe("CommandPalette", () => {
     expect(dialog()).not.toBeNull();
   });
 
-  it("opens from the main menu item", () => {
+  it("opens from a host menu item", async () => {
+    // the built-in menu carries no palette item (neither does upstream's
+    // `DefaultMainMenu`) — a host composes one, as caliburn-app does
+    renderResult = await renderHost(CaliburnCommandPaletteMenuHostComponent);
+
     act(() => {
       fireEvent.click(getByTestId(renderResult.container, "main-menu-trigger"));
     });

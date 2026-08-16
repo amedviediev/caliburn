@@ -1505,8 +1505,10 @@ export class CaliburnEditorComponent
   }
 
   ngOnDestroy() {
-    // the API object is recreated so a host holding the old reference can
-    // still tell it apart from a live one
+    // upstream recreates the object so its `ExcalidrawAPIContext.Provider`
+    // picks the new one up; caliburn has no such provider, so the throwing
+    // getters and `isDestroyed` are only observable through
+    // `h.app.getApi()` after destruction
     const api = this.getApi();
     this.api = { ...api, isDestroyed: true };
     for (const key of Object.keys(this.api) as (keyof typeof api)[]) {

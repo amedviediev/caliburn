@@ -9,6 +9,7 @@ import { CaliburnDropdownMenuItemComponent } from "../../src/components/dropdown
 import { CaliburnFooterCenterComponent } from "../../src/components/footer-center.component";
 import {
   CaliburnMenuChangeCanvasBackgroundComponent,
+  CaliburnMenuCommandPaletteComponent,
   CaliburnMenuHelpComponent,
   CaliburnMenuLoadSceneComponent,
   CaliburnMenuToggleThemeComponent,
@@ -144,6 +145,32 @@ export class CaliburnHostMenuHostComponent {
     window.alert("custom menu item");
   }
 }
+
+/**
+ * The command-palette item is not part of the built-in menu (upstream's
+ * `DefaultMainMenu` has none either) — a host composes it, as caliburn-app
+ * does. This host stands in for that app menu in `commandPalette.test.tsx`.
+ */
+@Component({
+  selector: "caliburn-test-command-palette-menu-host",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CaliburnEditorComponent,
+    CaliburnMainMenuComponent,
+    CaliburnMenuCommandPaletteComponent,
+  ],
+  template: `<caliburn-editor
+    [handleKeyboardGlobally]="true"
+    [mainMenu]="mainMenuSlot"
+  >
+    <ng-template #mainMenuSlot>
+      <caliburn-main-menu>
+        <caliburn-menu-command-palette />
+      </caliburn-main-menu>
+    </ng-template>
+  </caliburn-editor>`,
+})
+export class CaliburnCommandPaletteMenuHostComponent {}
 
 @Component({
   selector: "caliburn-test-theme-toggle-menu-host",

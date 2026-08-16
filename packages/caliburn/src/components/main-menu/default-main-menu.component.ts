@@ -12,7 +12,6 @@ import { CaliburnDropdownMenuSeparatorComponent } from "../dropdown-menu/dropdow
 import {
   CaliburnMenuChangeCanvasBackgroundComponent,
   CaliburnMenuClearCanvasComponent,
-  CaliburnMenuCommandPaletteComponent,
   CaliburnMenuExportComponent,
   CaliburnMenuHelpComponent,
   CaliburnMenuLoadSceneComponent,
@@ -39,7 +38,6 @@ import type { CaliburnEditorComponent } from "../../editor.component";
     CaliburnMainMenuComponent,
     CaliburnMenuChangeCanvasBackgroundComponent,
     CaliburnMenuClearCanvasComponent,
-    CaliburnMenuCommandPaletteComponent,
     CaliburnMenuExportComponent,
     CaliburnMenuHelpComponent,
     CaliburnMenuLoadSceneComponent,

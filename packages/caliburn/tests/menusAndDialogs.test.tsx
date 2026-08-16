@@ -75,7 +75,6 @@ describe("MainMenu", () => {
       "load-button",
       "json-export-button",
       "image-export-button",
-      "command-palette-button",
       "search-menu-button",
       "help-menu-item",
       "clear-canvas-button",
