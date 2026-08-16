@@ -1,0 +1,875 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`<Excalidraw/> > <MainMenu/> > should render main menu with host menu items if passed from host 1`] = `
+<div
+  class="dropdown-menu main-menu"
+  data-testid="dropdown-menu"
+  style="position: fixed; top: 8px; left: 0px;"
+>
+  <!--container-->
+  <caliburn-island
+    class="Island dropdown-menu-container"
+    style="--padding: 2;"
+  >
+    <button
+      caliburn-dropdown-menu-item=""
+      class="dropdown-menu-item dropdown-menu-item-base"
+      type="button"
+    >
+      <caliburn-dropdown-menu-item-content
+        style="display: contents;"
+      >
+        <!--container-->
+        <div
+          class="dropdown-menu-item__text"
+          style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+        >
+           Click me 
+        </div>
+        <!--container-->
+        <!--container-->
+      </caliburn-dropdown-menu-item-content>
+    </button>
+    <a
+      caliburn-dropdown-menu-item-link=""
+      class="dropdown-menu-item dropdown-menu-item-base"
+      href="blog.excalidaw.com"
+      rel="noopener noopener"
+      target="_blank"
+    >
+      <caliburn-dropdown-menu-item-content
+        style="display: contents;"
+      >
+        <!--container-->
+        <div
+          class="dropdown-menu-item__text"
+          style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+        >
+           Excalidraw blog 
+        </div>
+        <!--container-->
+        <!--container-->
+      </caliburn-dropdown-menu-item-content>
+    </a>
+    <caliburn-dropdown-menu-item-custom
+      class="dropdown-menu-item-base dropdown-menu-item-custom"
+    >
+      <button
+        style="height: 2rem;"
+      >
+         custom menu item 
+      </button>
+    </caliburn-dropdown-menu-item-custom>
+    <caliburn-menu-help>
+      <button
+        aria-label="Help"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="help-menu-item"
+        icon="helpIcon"
+        shortcut="?"
+        testid="help-menu-item"
+        title="Help"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  stroke-width="1.5"
+                >
+                  <path
+                    d="M0 0h24v24H0z"
+                    fill="none"
+                    stroke="none"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                  />
+                  <line
+                    x1="12"
+                    x2="12"
+                    y1="17"
+                    y2="17.01"
+                  />
+                  <path
+                    d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4"
+                  />
+                </g>
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Help
+
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            ?
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+    </caliburn-menu-help>
+  </caliburn-island>
+  <!--container-->
+</div>
+`;
+
+exports[`<Excalidraw/> > Test UIOptions prop > Test canvasActions > should render menu with default items when "UIOPtions" is "undefined" 1`] = `
+<div
+  class="dropdown-menu main-menu"
+  data-testid="dropdown-menu"
+  style="position: fixed; top: 8px; left: 0px;"
+>
+  <!--container-->
+  <caliburn-island
+    class="Island dropdown-menu-container"
+    style="--padding: 2;"
+  >
+    <caliburn-menu-load-scene>
+      <button
+        aria-label="Open"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="load-button"
+        icon="loadIcon"
+        testid="load-button"
+        title="Open"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  d="m9.257 6.351.183.183H15.819c.34 0 .727.182 1.051.506.323.323.505.708.505 1.05v5.819c0 .316-.183.7-.52 1.035-.337.338-.723.522-1.037.522H4.182c-.352 0-.74-.181-1.058-.5-.318-.318-.499-.705-.499-1.057V5.182c0-.351.181-.736.5-1.054.32-.321.71-.503 1.057-.503H6.53l2.726 2.726Z"
+                  stroke-width="1.25"
+                />
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Open
+
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            Ctrl+O
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+      <!--container-->
+    </caliburn-menu-load-scene>
+    <caliburn-menu-save-to-active-file>
+      <!--container-->
+    </caliburn-menu-save-to-active-file>
+    <caliburn-menu-export>
+      <button
+        aria-label="Save to..."
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="json-export-button"
+        icon="exportIcon"
+        testid="json-export-button"
+        title="Save to..."
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  d="M3.333 14.167v1.666c0 .92.747 1.667 1.667 1.667h10c.92 0 1.667-.746 1.667-1.667v-1.666M5.833 9.167 10 13.333l4.167-4.166M10 3.333v10"
+                  stroke-width="1.25"
+                />
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Save to...
+
+          </div>
+          <!--container-->
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+    </caliburn-menu-export>
+    <!--container-->
+    <caliburn-menu-save-as-image>
+      <button
+        aria-label="Export image..."
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="image-export-button"
+        icon="exportImageIcon"
+        testid="image-export-button"
+        title="Export image..."
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  stroke-width="1.25"
+                >
+                  <path
+                    d="M0 0h24v24H0z"
+                    fill="none"
+                    stroke="none"
+                  />
+                  <path
+                    d="M15 8h.01"
+                  />
+                  <path
+                    d="M12 20h-5a3 3 0 0 1 -3 -3v-10a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v5"
+                  />
+                  <path
+                    d="M4 15l4 -4c.928 -.893 2.072 -.893 3 0l4 4"
+                  />
+                  <path
+                    d="M14 14l1 -1c.617 -.593 1.328 -.793 2.009 -.598"
+                  />
+                  <path
+                    d="M19 16v6"
+                  />
+                  <path
+                    d="M22 19l-3 3l-3 -3"
+                  />
+                </g>
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Export image...
+
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            Ctrl+Shift+E
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+    </caliburn-menu-save-as-image>
+    <!--container-->
+    <caliburn-menu-command-palette>
+      <button
+        aria-label="Command palette"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="command-palette-button"
+        icon="boltIcon"
+        testid="command-palette-button"
+        title="Command palette"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  stroke-width="1.25"
+                >
+                  <path
+                    d="M0 0h24v24H0z"
+                    fill="none"
+                    stroke="none"
+                  />
+                  <path
+                    d="M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11"
+                  />
+                </g>
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Command palette
+
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            Ctrl+/
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+    </caliburn-menu-command-palette>
+    <caliburn-menu-search>
+      <button
+        aria-label="Find on canvas"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="search-menu-button"
+        icon="searchIcon"
+        testid="search-menu-button"
+        title="Find on canvas"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  stroke-width="1.5"
+                >
+                  <path
+                    d="M0 0h24v24H0z"
+                    fill="none"
+                    stroke="none"
+                  />
+                  <path
+                    d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"
+                  />
+                  <path
+                    d="M21 21l-6 -6"
+                  />
+                </g>
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Find on canvas
+
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            Ctrl+F
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+    </caliburn-menu-search>
+    <caliburn-menu-help>
+      <button
+        aria-label="Help"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="help-menu-item"
+        icon="helpIcon"
+        shortcut="?"
+        testid="help-menu-item"
+        title="Help"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  stroke-width="1.5"
+                >
+                  <path
+                    d="M0 0h24v24H0z"
+                    fill="none"
+                    stroke="none"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                  />
+                  <line
+                    x1="12"
+                    x2="12"
+                    y1="17"
+                    y2="17.01"
+                  />
+                  <path
+                    d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4"
+                  />
+                </g>
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Help
+
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            ?
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+    </caliburn-menu-help>
+    <caliburn-menu-clear-canvas>
+      <button
+        aria-label="Reset the canvas"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="clear-canvas-button"
+        icon="trashIcon"
+        testid="clear-canvas-button"
+        title="Reset the canvas"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  d="M3.333 5.833h13.334M8.333 9.167v5M11.667 9.167v5M4.167 5.833l.833 10c0 .92.746 1.667 1.667 1.667h6.666c.92 0 1.667-.746 1.667-1.667l.833-10M7.5 5.833v-2.5c0-.46.373-.833.833-.833h3.334c.46 0 .833.373.833.833v2.5"
+                  stroke-width="1.25"
+                />
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Reset the canvas
+
+          </div>
+          <!--container-->
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+      <!--container-->
+    </caliburn-menu-clear-canvas>
+    <caliburn-dropdown-menu-separator
+      style="height: 1px; background-color: var(--default-border-color); margin: 6px 0; flex: 0 0 auto;"
+    />
+    <caliburn-dropdown-menu-group
+      class="dropdown-menu-group"
+      title="Caliburn links"
+    >
+      <p
+        class="dropdown-menu-group-title"
+      >
+        Caliburn links
+      </p>
+      <!--container-->
+      <caliburn-menu-socials>
+        <a
+          aria-label="GitHub"
+          arialabel="GitHub"
+          caliburn-dropdown-menu-item-link=""
+          class="dropdown-menu-item dropdown-menu-item-base"
+          href="https://github.com/amedviediev/caliburn"
+          icon="githubIcon"
+          rel="noopener noopener"
+          target="_blank"
+          title="GitHub"
+        >
+          <caliburn-dropdown-menu-item-content
+            style="display: contents;"
+          >
+            <div
+              class="dropdown-menu-item__icon"
+            >
+              <ng-icon
+                _nghost-a-c572653062=""
+                aria-hidden="true"
+                role="img"
+              >
+                <svg
+                  aria-hidden="true"
+                  class=""
+                  fill="none"
+                  focusable="false"
+                  role="img"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M7.5 15.833c-3.583 1.167-3.583-2.083-5-2.5m10 4.167v-2.917c0-.833.083-1.166-.417-1.666 2.334-.25 4.584-1.167 4.584-5a3.833 3.833 0 0 0-1.084-2.667 3.5 3.5 0 0 0-.083-2.667s-.917-.25-2.917 1.084a10.25 10.25 0 0 0-5.166 0C5.417 2.333 4.5 2.583 4.5 2.583a3.5 3.5 0 0 0-.083 2.667 3.833 3.833 0 0 0-1.084 2.667c0 3.833 2.25 4.75 4.584 5-.5.5-.5 1-.417 1.666V17.5"
+                    stroke-width="1.25"
+                  />
+                </svg>
+              </ng-icon>
+            </div>
+            <!--container-->
+            <div
+              class="dropdown-menu-item__text"
+              style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+            >
+               GitHub
+
+            </div>
+            <!--container-->
+            <!--container-->
+          </caliburn-dropdown-menu-item-content>
+        </a>
+      </caliburn-menu-socials>
+    </caliburn-dropdown-menu-group>
+    <caliburn-dropdown-menu-separator
+      style="height: 1px; background-color: var(--default-border-color); margin: 6px 0; flex: 0 0 auto;"
+    />
+    <caliburn-menu-toggle-theme>
+      <!--container-->
+      <button
+        aria-label="Dark mode"
+        caliburn-dropdown-menu-item=""
+        class="dropdown-menu-item dropdown-menu-item-base"
+        data-testid="toggle-dark-mode"
+        testid="toggle-dark-mode"
+        title="Dark mode"
+        type="button"
+      >
+        <caliburn-dropdown-menu-item-content
+          style="display: contents;"
+        >
+          <div
+            class="dropdown-menu-item__icon"
+          >
+            <ng-icon
+              _nghost-a-c572653062=""
+              aria-hidden="true"
+              role="img"
+            >
+              <svg
+                aria-hidden="true"
+                class=""
+                fill="none"
+                focusable="false"
+                role="img"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  clip-rule="evenodd"
+                  d="M10 2.5h.328a6.25 6.25 0 0 0 6.6 10.372A7.5 7.5 0 1 1 10 2.493V2.5Z"
+                  stroke="currentColor"
+                />
+              </svg>
+            </ng-icon>
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__text"
+            style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
+          >
+             Dark mode 
+          </div>
+          <!--container-->
+          <div
+            class="dropdown-menu-item__shortcut"
+          >
+            Shift+Alt+D
+          </div>
+          <!--container-->
+        </caliburn-dropdown-menu-item-content>
+      </button>
+      <!--container-->
+      <!--container-->
+    </caliburn-menu-toggle-theme>
+    <caliburn-menu-change-canvas-background>
+      <div
+        style="margin-top: 0.75rem;"
+      >
+        <div
+          data-testid="canvas-background-label"
+          style="font-size: 0.875rem; margin-bottom: 0.25rem; margin-left: 0.5rem;"
+        >
+           Canvas background 
+        </div>
+        <div
+          style="padding: 0 0.625rem;"
+        >
+          <caliburn-color-picker
+            type="canvasBackground"
+          >
+            <!--container-->
+            <div
+              aria-modal="true"
+              class="color-picker-container"
+              role="dialog"
+            >
+              <div
+                caliburn-top-picks=""
+                class="color-picker__top-picks"
+              >
+                <!--container-->
+                <button
+                  class="active color-picker__button has-outline"
+                  data-testid="color-top-pick-#ffffff"
+                  data-top-pick-index="0"
+                  style="--swatch-color: #ffffff;"
+                  title="#ffffff"
+                  type="button"
+                >
+                  <div
+                    class="color-picker__button-outline"
+                  />
+                </button>
+                <button
+                  class="color-picker__button has-outline"
+                  data-testid="color-top-pick-#f8f9fa"
+                  data-top-pick-index="1"
+                  style="--swatch-color: #f8f9fa;"
+                  title="#f8f9fa"
+                  type="button"
+                >
+                  <div
+                    class="color-picker__button-outline"
+                  />
+                </button>
+                <button
+                  class="color-picker__button has-outline"
+                  data-testid="color-top-pick-#f5faff"
+                  data-top-pick-index="2"
+                  style="--swatch-color: #f5faff;"
+                  title="#f5faff"
+                  type="button"
+                >
+                  <div
+                    class="color-picker__button-outline"
+                  />
+                </button>
+                <button
+                  class="color-picker__button has-outline"
+                  data-testid="color-top-pick-#fffce8"
+                  data-top-pick-index="3"
+                  style="--swatch-color: #fffce8;"
+                  title="#fffce8"
+                  type="button"
+                >
+                  <div
+                    class="color-picker__button-outline"
+                  />
+                </button>
+                <button
+                  class="color-picker__button has-outline"
+                  data-testid="color-top-pick-#fdf8f6"
+                  data-top-pick-index="4"
+                  style="--swatch-color: #fdf8f6;"
+                  title="#fdf8f6"
+                  type="button"
+                >
+                  <div
+                    class="color-picker__button-outline"
+                  />
+                </button>
+                <!--container-->
+                <!--container-->
+              </div>
+              <caliburn-button-separator
+                style="width: 1px; height: 1rem; background-color: var(--default-border-color); margin: 0 auto;"
+              />
+              <button
+                aria-label="Canvas background"
+                class="active-color color-picker__button has-outline properties-trigger"
+                data-openpopup="canvasBackground"
+                style="--swatch-color: #ffffff;"
+                title="Show background color picker"
+                type="button"
+              >
+                <div
+                  class="color-picker__button-outline"
+                >
+                  <!--container-->
+                </div>
+              </button>
+              <!--container-->
+            </div>
+          </caliburn-color-picker>
+        </div>
+      </div>
+      <!--container-->
+    </caliburn-menu-change-canvas-background>
+  </caliburn-island>
+  <!--container-->
+</div>
+`;

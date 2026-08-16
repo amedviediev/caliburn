@@ -1,0 +1,93 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Test <App/> > should show error modal when using brave and measureText API is not working 1`] = `
+<div
+  data-testid="brave-measure-text-error"
+>
+  <p>
+    <!--container-->
+    <!--container-->
+    Looks like you are using Brave browser with the 
+    <!--container-->
+    <!--container-->
+    <span
+      style="font-weight: 600;"
+    >
+      Aggressively Block Fingerprinting
+    </span>
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+     setting enabled.
+    <!--container-->
+    <!--container-->
+  </p>
+  <p>
+    <!--container-->
+    <!--container-->
+    This could result in breaking the 
+    <!--container-->
+    <!--container-->
+    <span
+      style="font-weight: 600;"
+    >
+      Text Elements
+    </span>
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+     in your drawings.
+    <!--container-->
+    <!--container-->
+  </p>
+  <p>
+    <!--container-->
+    <!--container-->
+    We strongly recommend disabling this setting. You can follow 
+    <!--container-->
+    <a
+      href="http://docs.excalidraw.com/docs/@excalidraw/excalidraw/faq#turning-off-aggresive-block-fingerprinting-in-brave-browser"
+    >
+      these steps
+    </a>
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+     on how to do so.
+    <!--container-->
+    <!--container-->
+  </p>
+  <p>
+    <!--container-->
+    <!--container-->
+    If disabling this setting doesn't fix the display of text elements, please open an 
+    <!--container-->
+    <a
+      href="https://github.com/excalidraw/excalidraw/issues/new"
+    >
+      issue
+    </a>
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+     on our GitHub, or write us on 
+    <!--container-->
+    <a
+      href="https://discord.gg/UexuTaE"
+    >
+      Discord.
+    </a>
+    <!--container-->
+    <!--container-->
+    <!--container-->
+    <!--container-->
+  </p>
+  <!--container-->
+</div>
+`;
