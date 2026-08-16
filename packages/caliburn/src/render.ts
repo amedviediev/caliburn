@@ -3,6 +3,10 @@ import { renderNewElementScene } from "@excalidraw/excalidraw/renderer/renderNew
 import { renderStaticScene } from "@excalidraw/excalidraw/renderer/staticScene";
 import { AnimationController } from "@excalidraw/excalidraw/renderer/animation";
 
+import { isGridModeEnabled } from "@excalidraw/excalidraw/snapping";
+
+import { sceneCoordsToViewportCoords } from "@excalidraw/common";
+
 import type {
   InteractiveCanvasRenderConfig,
   InteractiveSceneRenderAnimationState,
@@ -10,7 +14,7 @@ import type {
   StaticCanvasRenderConfig,
 } from "@excalidraw/excalidraw/scene/types";
 
-import { isGridModeEnabled } from "@excalidraw/excalidraw/snapping";
+import type { InteractiveCanvasAppState } from "@excalidraw/excalidraw/types";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 
@@ -48,6 +52,77 @@ const interactiveRendererParams = new WeakMap<
   CaliburnEditorComponent,
   InteractiveSceneRenderConfig
 >();
+
+/** the params the interactive scene was last rendered with — upstream keeps
+ * these in `InteractiveCanvas`'s `rendererParams` ref */
+export const getInteractiveRendererParams = (editor: CaliburnEditorComponent) =>
+  interactiveRendererParams.get(editor);
+
+/**
+ * Upstream `InteractiveCanvas.tsx`'s derivation of the remote-collaborator
+ * half of `InteractiveCanvasRenderConfig` from `appState.collaborators` — the
+ * remote cursors, their usernames/idle states and their selections.
+ */
+export const getRemoteCollaboratorRenderConfig = (
+  appState: InteractiveCanvasAppState,
+): Pick<
+  InteractiveCanvasRenderConfig,
+  | "remotePointerViewportCoords"
+  | "remotePointerButton"
+  | "remoteSelectedElementIds"
+  | "remotePointerUsernames"
+  | "remotePointerUserStates"
+> => {
+  const remotePointerButton: InteractiveCanvasRenderConfig["remotePointerButton"] =
+    new Map();
+  const remotePointerViewportCoords: InteractiveCanvasRenderConfig["remotePointerViewportCoords"] =
+    new Map();
+  const remoteSelectedElementIds: InteractiveCanvasRenderConfig["remoteSelectedElementIds"] =
+    new Map();
+  const remotePointerUsernames: InteractiveCanvasRenderConfig["remotePointerUsernames"] =
+    new Map();
+  const remotePointerUserStates: InteractiveCanvasRenderConfig["remotePointerUserStates"] =
+    new Map();
+
+  appState.collaborators.forEach((user, socketId) => {
+    if (user.selectedElementIds) {
+      for (const id of Object.keys(user.selectedElementIds)) {
+        if (!remoteSelectedElementIds.has(id)) {
+          remoteSelectedElementIds.set(id, []);
+        }
+        remoteSelectedElementIds.get(id)!.push(socketId);
+      }
+    }
+    if (!user.pointer || user.pointer.renderCursor === false) {
+      return;
+    }
+    if (user.username) {
+      remotePointerUsernames.set(socketId, user.username);
+    }
+    if (user.userState) {
+      remotePointerUserStates.set(socketId, user.userState);
+    }
+    remotePointerViewportCoords.set(
+      socketId,
+      sceneCoordsToViewportCoords(
+        {
+          sceneX: user.pointer.x,
+          sceneY: user.pointer.y,
+        },
+        appState,
+      ),
+    );
+    remotePointerButton.set(socketId, user.button);
+  });
+
+  return {
+    remotePointerViewportCoords,
+    remotePointerButton,
+    remoteSelectedElementIds,
+    remotePointerUsernames,
+    remotePointerUserStates,
+  };
+};
 
 /**
  * One full render pass over the three canvases — the Angular equivalent of
@@ -157,16 +232,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
       ?.clearRect(0, 0, newElementCanvas.width, newElementCanvas.height);
   }
 
-  const remotePointerButton: InteractiveCanvasRenderConfig["remotePointerButton"] =
-    new Map();
-  const remotePointerViewportCoords: InteractiveCanvasRenderConfig["remotePointerViewportCoords"] =
-    new Map();
-  const remoteSelectedElementIds: InteractiveCanvasRenderConfig["remoteSelectedElementIds"] =
-    new Map();
-  const remotePointerUsernames: InteractiveCanvasRenderConfig["remotePointerUsernames"] =
-    new Map();
-  const remotePointerUserStates: InteractiveCanvasRenderConfig["remotePointerUserStates"] =
-    new Map();
+  const remoteCollaborators = getRemoteCollaboratorRenderConfig(editor.state);
 
   const container = editor.containerRef()?.nativeElement;
   const selectionColor =
@@ -184,11 +250,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
     scale,
     appState: editor.state,
     renderConfig: {
-      remotePointerViewportCoords,
-      remotePointerButton,
-      remoteSelectedElementIds,
-      remotePointerUsernames,
-      remotePointerUserStates,
+      ...remoteCollaborators,
       selectionColor,
       renderScrollbars: false,
       // NOTE read live so we don't rerender on cursor move
