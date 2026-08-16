@@ -21,7 +21,7 @@ let browser = null;
 const shutdown = async () => {
   await browser?.close().catch(() => {});
   browser = null;
-  server?.stop();
+  await server?.stop();
   server = null;
 };
 
@@ -31,24 +31,30 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   });
 }
 
-let ok = false;
+const runner = new Runner();
+const started = Date.now();
+let crashed = null;
+
 try {
   const url = process.env.E2E_URL ?? (server = await startDevServer()).url;
   browser = await launchBrowser();
-  const runner = new Runner();
-  const started = Date.now();
   await runSuite(browser, url, runner);
-  ok = runner.report();
-  console.log(
-    `\nran in ${((Date.now() - started) / 1000).toFixed(
-      1,
-    )}s; artifacts: ${ARTIFACTS}`,
-  );
 } catch (error) {
-  console.error("\ne2e harness crashed:", error);
-  ok = false;
+  crashed = error;
 } finally {
   await shutdown();
 }
+
+// the table is printed even when the run died part-way, so the checks that did
+// complete — and their evidence — are never lost to an infrastructure throw
+const ok = runner.report({ partial: !!crashed }) && !crashed;
+if (crashed) {
+  console.error("\ne2e harness crashed:", crashed);
+}
+console.log(
+  `\nran in ${((Date.now() - started) / 1000).toFixed(
+    1,
+  )}s; artifacts: ${ARTIFACTS}`,
+);
 
 process.exit(ok ? 0 : 1);

@@ -1,5 +1,7 @@
 import { KNOWN_BROKEN } from "../known-broken.mjs";
 
+import { collectEvidence } from "./browser.mjs";
+
 const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
 const paint = (code, text) =>
   COLOR ? `\u001b[${code}m${text}\u001b[0m` : text;
@@ -35,6 +37,7 @@ const isExcused = (id) =>
 export class Runner {
   results = [];
   #group = null;
+  #printedLayers = new Set();
 
   group(name) {
     this.#group = name;
@@ -46,8 +49,14 @@ export class Runner {
    * in KNOWN_BROKEN records as `known-broken` when it fails and `unexpected
    * pass` when it succeeds; neither fails the run, so today's suite is green
    * while every defect stays visible in the table.
+   *
+   * `evidence: { page, selectors }` names the DOM nodes this check's defect
+   * lives at. On any failure they are probed while the page is still open, and
+   * `report()` prints the mount point, computed styles and hit-test winner —
+   * so the run's own output, not a one-off investigation, is what a fix task
+   * works from.
    */
-  async check(id, title, fn) {
+  async check(id, title, fn, { evidence } = {}) {
     const excused = isExcused(id);
     const started = Date.now();
     let error = null;
@@ -65,6 +74,18 @@ export class Runner {
       ? "xpass"
       : "pass";
 
+    let gathered = null;
+    if (error && evidence?.page) {
+      const selectors = [
+        ...new Set([...(evidence.selectors ?? []), ...(error.selectors ?? [])]),
+      ];
+      if (selectors.length) {
+        gathered = await collectEvidence(evidence.page, selectors).catch(
+          (thrown) => [{ selector: "(all)", error: thrown.message }],
+        );
+      }
+    }
+
     this.results.push({
       id,
       title,
@@ -74,6 +95,7 @@ export class Runner {
       detail: error ? String(error.message).split("\n")[0] : null,
       stack: error?.stack ?? null,
       note: excused ? KNOWN_BROKEN[id] : null,
+      evidence: gathered,
     });
 
     const badge = {
@@ -98,12 +120,111 @@ export class Runner {
     return status;
   }
 
-  report() {
+  /**
+   * The mount point / computed styles / hit-test winner block. Printed for
+   * every failing and expected-failing check so the run's stdout carries the
+   * full DOM evidence for the defect.
+   */
+  #printEvidence(result, indent = "    ") {
+    if (!result.evidence?.length) {
+      return;
+    }
+    for (const item of result.evidence) {
+      console.log(`${indent}${bold("evidence")} ${item.selector}`);
+      if (item.error) {
+        console.log(`${indent}  could not probe: ${item.error}`);
+        continue;
+      }
+      const { probe, occlusion, ancestry } = item;
+      if (!probe?.found) {
+        console.log(`${indent}  not in the DOM`);
+        continue;
+      }
+      console.log(
+        `${indent}  box       x=${probe.rect.x} y=${probe.rect.y} w=${probe.rect.width} h=${probe.rect.height}`,
+      );
+      console.log(
+        `${indent}  computed  position:${probe.position} z-index:${probe.zIndex} background-color:${probe.backgroundColor} opacity:${probe.opacity} pointer-events:${probe.pointerEvents} visibility:${probe.visibility}`,
+      );
+      if (occlusion?.found) {
+        console.log(
+          `${indent}  hit-test  at [${occlusion.point}] topmost=${occlusion.topmost} owns=${occlusion.ownsPoint}`,
+        );
+        console.log(
+          `${indent}            stack: ${occlusion.stack.join(" > ")}`,
+        );
+      }
+      if (ancestry?.found) {
+        console.log(`${indent}  mounted at`);
+        for (const [i, node] of ancestry.chain.entries()) {
+          console.log(
+            `${indent}    ${i === 0 ? " " : "<"} ${node.node} [position:${
+              node.position
+            } z-index:${node.zIndex} opacity:${node.opacity} transform:${
+              node.transform
+            } isolation:${node.isolation}]`,
+          );
+        }
+        // the paint-order tables repeat across every overlay defect; print
+        // each distinct one once and refer back to it afterwards
+        const layerTable = (label, rows) => {
+          if (!rows.length) {
+            return;
+          }
+          const key = `${label}\n${rows.join("\n")}`;
+          if (this.#printedLayers.has(key)) {
+            console.log(`${indent}  layers inside ${label} — as printed above`);
+            return;
+          }
+          this.#printedLayers.add(key);
+          console.log(`${indent}  layers inside ${label} (paint order)`);
+          for (const row of rows) {
+            console.log(`${indent}    ${row}`);
+          }
+        };
+        layerTable(ancestry.hostLayerName, ancestry.hostLayers);
+        layerTable(".excalidraw", ancestry.layers);
+      }
+    }
+  }
+
+  /**
+   * A typo'd `E2E_STRICT` id promotes nothing while the run still exits 0 —
+   * a false green, which is the one failure mode a gate cannot have. A stale
+   * `KNOWN_BROKEN` key silently excuses nothing. Both are hard errors.
+   */
+  #unclaimedIds() {
+    const executed = new Set(this.results.map((r) => r.id));
+    const problems = [];
+    for (const id of Object.keys(KNOWN_BROKEN)) {
+      if (!executed.has(id)) {
+        problems.push(`KNOWN_BROKEN key "${id}" matches no check`);
+      }
+    }
+    if (strictOverrides !== "all") {
+      for (const id of strictOverrides) {
+        if (!executed.has(id)) {
+          problems.push(`E2E_STRICT id "${id}" matches no check`);
+        }
+      }
+    }
+    return problems;
+  }
+
+  /** `partial` = the run died part-way, so "no check claimed this id" is a
+   * consequence of the crash rather than a stale id */
+  report({ partial = false } = {}) {
     const by = (status) => this.results.filter((r) => r.status === status);
     const pass = by("pass");
     const fail = by("fail");
     const broken = by("known-broken");
     const xpass = by("xpass");
+    const unclaimed = partial ? [] : this.#unclaimedIds();
+
+    if (!this.results.length) {
+      console.log(`\n${red("no checks ran")}`);
+      return false;
+    }
 
     const width = Math.max(...this.results.map((r) => r.id.length), 4);
     console.log(`\n${bold("check table")}`);
@@ -133,6 +254,7 @@ export class Runner {
         console.log(`  ${yellow(r.id)}`);
         console.log(`    why:      ${r.note}`);
         console.log(`    observed: ${r.detail}`);
+        this.#printEvidence(r);
       }
     }
     if (xpass.length) {
@@ -152,6 +274,14 @@ export class Runner {
         if (r.stack) {
           console.log(dim(r.stack.split("\n").slice(1, 4).join("\n")));
         }
+        this.#printEvidence(r);
+      }
+    }
+
+    if (unclaimed.length) {
+      console.log(`\n${red("STALE IDS")} — the run cannot be trusted:`);
+      for (const problem of unclaimed) {
+        console.log(`  ${red(problem)}`);
       }
     }
 
@@ -160,7 +290,7 @@ export class Runner {
         `${broken.length} known-broken`,
       )}, ${yellow(`${xpass.length} unexpected pass`)}, ${
         fail.length ? red(`${fail.length} FAIL`) : `${fail.length} fail`
-      }`,
+      }${unclaimed.length ? red(`, ${unclaimed.length} STALE ID`) : ""}`,
     );
     if (strictOverrides === "all") {
       console.log(
@@ -169,7 +299,7 @@ export class Runner {
     } else if (strictOverrides.size) {
       console.log(dim(`(E2E_STRICT=${[...strictOverrides].join(",")})`));
     }
-    return fail.length === 0;
+    return fail.length === 0 && unclaimed.length === 0;
   }
 }
 

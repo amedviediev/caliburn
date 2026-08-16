@@ -19,7 +19,7 @@ export const launchBrowser = async () => {
   await fs.mkdir(ARTIFACTS, { recursive: true });
   return puppeteer.launch({
     executablePath: CHROME,
-    headless: process.env.E2E_HEADFUL ? false : "new",
+    headless: !process.env.E2E_HEADFUL,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
     defaultViewport: VIEWPORT,
   });
@@ -97,6 +97,55 @@ const pageHelpers = () => {
         stack: stack.slice(0, 6).map(describe),
       };
     },
+    /**
+     * Where an element is actually mounted, and what it is stacked against.
+     * `chain` is the ancestor walk up to `<body>`; `layers` is the paint order
+     * inside the editor's own container; `hostLayers` is the paint order
+     * inside whichever of those layers hosts this element. Together they are
+     * the mount-point evidence a stacking defect has to be diagnosed from.
+     */
+    ancestry(selector) {
+      const el = document.querySelector(selector);
+      if (!el) {
+        return { selector, found: false };
+      }
+      const layer = (node) => {
+        const cs = getComputedStyle(node);
+        return `${describe(node)} [position:${cs.position} z-index:${
+          cs.zIndex
+        }]`;
+      };
+      const chain = [];
+      let editorHost = null;
+      let node = el;
+      while (node && node !== document.documentElement) {
+        const cs = getComputedStyle(node);
+        chain.push({
+          node: describe(node),
+          position: cs.position,
+          zIndex: cs.zIndex,
+          opacity: cs.opacity,
+          transform: cs.transform === "none" ? "none" : cs.transform,
+          filter: cs.filter,
+          isolation: cs.isolation,
+          overflow: cs.overflow,
+          pointerEvents: cs.pointerEvents,
+        });
+        if (node.parentElement?.classList.contains("excalidraw")) {
+          editorHost = node;
+        }
+        node = node.parentElement;
+      }
+      const editor = el.closest(".excalidraw");
+      return {
+        selector,
+        found: true,
+        chain,
+        layers: editor ? [...editor.children].map(layer) : [],
+        hostLayers: editorHost ? [...editorHost.children].map(layer) : [],
+        hostLayerName: editorHost ? describe(editorHost) : null,
+      };
+    },
     /** the appState fields the checks assert on (the full state is not cloneable) */
     appState() {
       const s = window.h?.state;
@@ -169,7 +218,11 @@ export const closePage = async (page) => {
   await page.__context.close().catch(() => {});
 };
 
-/** poll a page-side predicate; never a bare sleep */
+/**
+ * Poll a page-side predicate; never a bare sleep. The underlying error is
+ * always appended: a predicate that throws, or a crashed page, must never be
+ * misreported as the product defect `message` describes.
+ */
 export const waitFor = async (
   page,
   fn,
@@ -177,10 +230,10 @@ export const waitFor = async (
 ) => {
   try {
     await page.waitForFunction(fn, { timeout, polling: 50 }, ...args);
-  } catch {
-    throw new Error(
-      message ?? `timed out waiting for ${fn.toString().slice(0, 120)}`,
-    );
+  } catch (error) {
+    const what =
+      message ?? `timed out waiting for ${fn.toString().slice(0, 120)}`;
+    throw new Error(`${what} (${error.message.split("\n")[0]})`);
   }
 };
 
@@ -209,12 +262,37 @@ export const probe = (page, selector) =>
   page.evaluate((s) => window.__e2e.probe(s), selector);
 export const occlusion = (page, selector) =>
   page.evaluate((s) => window.__e2e.occlusion(s), selector);
+export const ancestry = (page, selector) =>
+  page.evaluate((s) => window.__e2e.ancestry(s), selector);
 export const appState = (page) => page.evaluate(() => window.__e2e.appState());
 export const elements = (page) => page.evaluate(() => window.__e2e.elements());
 export const rectOf = (page, selector) =>
   page.evaluate((s) => window.__e2e.rect(s), selector);
 export const cssVar = (page, selector, name) =>
   page.evaluate((s, n) => window.__e2e.cssVar(s, n), selector, name);
+
+/**
+ * Everything a fix task needs about the node a defect lives at: mount point
+ * (ancestry + the paint layers it competes in), computed styles, and the
+ * hit-test winner. Gathered while the page is still open and stored on the
+ * result, so `Runner.report()` can print it after teardown.
+ */
+export const collectEvidence = async (page, selectors) => {
+  const out = [];
+  for (const selector of selectors) {
+    try {
+      out.push({
+        selector,
+        probe: await probe(page, selector),
+        occlusion: await occlusion(page, selector),
+        ancestry: await ancestry(page, selector),
+      });
+    } catch (error) {
+      out.push({ selector, error: error.message.split("\n")[0] });
+    }
+  }
+  return out;
+};
 
 /** rgba()/rgb() alpha, 1 when the browser reports an opaque colour */
 export const alphaOf = (color) => {

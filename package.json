@@ -57,7 +57,7 @@
     "build:packages": "yarn build:common && yarn build:fractional-indexing && yarn build:laser-pointer && yarn build:math && yarn build:element && yarn build:excalidraw",
     "test:all": "yarn test:typecheck && yarn test:code && yarn test:other && yarn test:app --watch=false",
     "test:app": "vitest",
-    "test:code": "eslint --max-warnings=0 --ext .js,.ts,.tsx .",
+    "test:code": "eslint --max-warnings=0 --ext .js,.mjs,.ts,.tsx .",
     "test:other": "yarn prettier --list-different",
     "test:typecheck": "tsc",
     "test:update": "yarn test:app --update --watch=false",

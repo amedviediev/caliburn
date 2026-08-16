@@ -65,6 +65,7 @@ export const startDevServer = async ({ log = console.log } = {}) => {
   );
 
   let exited = null;
+  let spawnError = null;
   const output = [];
   const record = (chunk) => {
     const text = String(chunk);
@@ -81,23 +82,47 @@ export const startDevServer = async ({ log = console.log } = {}) => {
   child.on("exit", (code, signal) => {
     exited = `code=${code} signal=${signal}`;
   });
+  // spawn failures (yarn not on PATH, EACCES) surface here, not as a throw
+  child.on("error", (error) => {
+    spawnError = error.message;
+    exited = `spawn failed: ${error.message}`;
+  });
 
-  let stopped = false;
-  const stop = () => {
-    if (stopped) {
-      return;
-    }
-    stopped = true;
+  const signal = (name) => {
     try {
       // negative pid => the whole detached process group
-      process.kill(-child.pid, "SIGTERM");
+      process.kill(-child.pid, name);
+      return true;
     } catch {
       try {
-        child.kill("SIGTERM");
+        child.kill(name);
+        return true;
       } catch {
-        /* already gone */
+        return false;
       }
     }
+  };
+
+  let stopped = null;
+  /** SIGTERM, then a bounded wait, then SIGKILL — never fire-and-forget */
+  const stop = ({ grace = 5000 } = {}) => {
+    if (stopped) {
+      return stopped;
+    }
+    stopped = (async () => {
+      if (exited || !signal("SIGTERM")) {
+        return;
+      }
+      const deadline = Date.now() + grace;
+      while (!exited && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (!exited) {
+        log(`dev server ignored SIGTERM after ${grace}ms — sending SIGKILL`);
+        signal("SIGKILL");
+      }
+    })();
+    return stopped;
   };
 
   try {
@@ -105,7 +130,10 @@ export const startDevServer = async ({ log = console.log } = {}) => {
     await waitForHttp(url, { timeout: 120_000, signalDead: () => exited });
     log(`dev server ready on ${url}`);
   } catch (error) {
-    stop();
+    await stop();
+    if (spawnError) {
+      error.message += `\ncould not spawn \`yarn start\`: ${spawnError}`;
+    }
     error.message += `\n--- dev server output ---\n${output.join("")}`;
     throw error;
   }
