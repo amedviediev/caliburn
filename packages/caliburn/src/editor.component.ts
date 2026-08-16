@@ -2563,6 +2563,7 @@ export class CaliburnEditorComponent
     }
 
     if (collaborators) {
+      this.laserTrails.updateCollabTrails(collaborators);
       this.setState({ collaborators });
     }
   };
@@ -2965,10 +2966,15 @@ export class CaliburnEditorComponent
     }
   }
 
+  /** upstream `App.handleIframeLikeCenterClick` */
+  private handleIframeLikeCenterClick(): boolean {
+    return handleIframeLikeCenterClick(this);
+  }
+
   private handleInteractiveContentPointerUp(event: PointerEvent) {
     this.lastPointerUpEvent = event;
 
-    if (this.isEmbedsEnabled() && handleIframeLikeCenterClick(this)) {
+    if (this.isEmbedsEnabled() && this.handleIframeLikeCenterClick()) {
       return;
     }
 
@@ -2991,15 +2997,30 @@ export class CaliburnEditorComponent
     scenePointer: { x: number; y: number },
     event: PointerEvent,
   ) {
-    this.hitLinkElement = this.isLinksEnabled()
-      ? getElementLinkAtPosition(
-          this,
-          scenePointer,
-          getElementAtPosition(this, scenePointer.x, scenePointer.y, {
-            includeLockedElements: true,
-          }),
-        )
-      : undefined;
+    const hitElementMightBeLocked = getElementAtPosition(
+      this,
+      scenePointer.x,
+      scenePointer.y,
+      { includeLockedElements: true },
+    );
+
+    // upstream's `if (!this.handleIframeLikeElementHover(...))` — an
+    // iframe-like element taking the hover owns the pointer, element links
+    // included. Unguarded, as upstream is: only the fully interactive editor
+    // reaches here, and there embeds are always enabled.
+    if (
+      !handleIframeLikeElementHover(this, {
+        hitElement: hitElementMightBeLocked?.locked
+          ? null
+          : hitElementMightBeLocked,
+        scenePointer,
+        moveEvent: event,
+      })
+    ) {
+      this.hitLinkElement = this.isLinksEnabled()
+        ? getElementLinkAtPosition(this, scenePointer, hitElementMightBeLocked)
+        : undefined;
+    }
 
     if (applyElementLinkHoverAffordance(this)) {
       return;
@@ -3117,7 +3138,17 @@ export class CaliburnEditorComponent
 
     this.lastPointerMoveCoords = viewportCoordsToSceneCoords(event, this.state);
 
+    // upstream runs this from `handleCanvasPointerUp`, whose `return` only
+    // ends that handler — the gesture's own `onPointerUp`, which the rest of
+    // this method stands in for, still runs — so it consumes the element-link
+    // click below and nothing else
+    const iframeLikeCenterClickHandled =
+      isGenuinePointerUp &&
+      this.isEmbedsEnabled() &&
+      this.handleIframeLikeCenterClick();
+
     if (
+      !iframeLikeCenterClickHandled &&
       isGenuinePointerUp &&
       this.isLinksEnabled() &&
       maybeHandleElementLinkClick(

@@ -24,6 +24,7 @@ import {
   hitElementItself,
   isElbowArrow,
   isEmbeddableElement,
+  isIframeLikeElement,
   isLinearElement,
   isSelectedViaGroup,
   isSomeElementSelected,
@@ -34,7 +35,12 @@ import {
 } from "@excalidraw/element";
 import { pointFrom } from "@excalidraw/math";
 
-import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
+import type {
+  ExcalidrawElement,
+  ExcalidrawIframeLikeElement,
+  NonDeleted,
+  Ordered,
+} from "@excalidraw/element/types";
 
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
 import { originInGridFromEvent } from "./create-interaction";
@@ -207,6 +213,8 @@ export const getElementsAtPosition = (
     includeLockedElements?: boolean;
   },
 ): NonDeleted<ExcalidrawElement>[] => {
+  const iframeLikes: Ordered<NonDeleted<ExcalidrawIframeLikeElement>>[] = [];
+
   return (
     opts?.includeBoundTextElement && opts?.includeLockedElements
       ? editor.scene.getNonDeletedElements()
@@ -218,7 +226,20 @@ export const getElementsAtPosition = (
               (opts?.includeBoundTextElement ||
                 !(isTextElement(element) && element.containerId)),
           )
-  ).filter((el) => hitElement(editor, x, y, el));
+  )
+    .filter((el) => hitElement(editor, x, y, el))
+    .filter((el) => {
+      // The parameter elements comes ordered from lower z-index to higher.
+      // We want to preserve that order on the returned array.
+      // Exception being embeddables which should be on top of everything else in
+      // terms of hit testing.
+      if (isIframeLikeElement(el)) {
+        iframeLikes.push(el);
+        return false;
+      }
+      return true;
+    })
+    .concat(iframeLikes) as NonDeleted<ExcalidrawElement>[];
 };
 
 export const getElementAtPosition = (
