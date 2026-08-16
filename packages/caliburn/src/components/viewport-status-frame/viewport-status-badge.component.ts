@@ -11,6 +11,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { provideCaliburnIcons } from "../icons";
 
+import { translated } from "../../i18n";
+
 import type { CaliburnViewportStatusFrame } from "./viewport-status-frame";
 import type { TemplateRef } from "@angular/core";
 
@@ -43,7 +45,7 @@ export class CaliburnViewportStatusBadgeComponent {
   readonly border = input<CaliburnViewportStatusFrame["border"]>(false);
 
   protected readonly labelId = `caliburn-viewport-status-badge-${nextBadgeId++}`;
-  protected readonly closeLabel = t("buttons.close");
+  protected readonly closeLabel = translated(() => t("buttons.close"));
 
   protected readonly background = computed(
     () => this.label().background || this.border() || "var(--color-primary)",

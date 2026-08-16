@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, output } from "@angular/core";
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
+import { translated } from "../../i18n";
+
 import { CaliburnWelcomeScreenMenuItemComponent } from "./menu-item.component";
 
 /**
@@ -23,5 +25,5 @@ import { CaliburnWelcomeScreenMenuItemComponent } from "./menu-item.component";
 export class CaliburnWelcomeScreenMenuItemLiveCollaborationTriggerComponent {
   readonly select = output<void>();
 
-  protected readonly label = t("labels.liveCollaboration");
+  protected readonly label = translated(() => t("labels.liveCollaboration"));
 }

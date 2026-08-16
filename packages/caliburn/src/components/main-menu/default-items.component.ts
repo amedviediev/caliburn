@@ -48,8 +48,12 @@ import {
 } from "../dropdown-menu/dropdown-menu-sub.component";
 import { openConfirmModal } from "../overwrite-confirm/overwrite-confirm-state";
 
+import { translated } from "../../i18n";
+
 import type { CaliburnEditorComponent } from "../../editor.component";
 import type { RadioGroupChoice } from "../radio-group.component";
+
+import type { Signal } from "@angular/core";
 
 /**
  * Angular ports of upstream `main-menu/DefaultItems.tsx` — the composable
@@ -74,7 +78,7 @@ const injectEditor = () =>
 export class CaliburnMenuLoadSceneComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("buttons.load");
+  protected readonly label = translated(() => t("buttons.load"));
   protected readonly shortcut = getShortcutFromShortcutName("loadScene");
 
   protected enabled() {
@@ -107,7 +111,7 @@ export class CaliburnMenuLoadSceneComponent {
 export class CaliburnMenuSaveToActiveFileComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("buttons.save");
+  protected readonly label = translated(() => t("buttons.save"));
   protected readonly shortcut = getShortcutFromShortcutName("saveScene");
 
   protected enabled() {
@@ -129,7 +133,7 @@ export class CaliburnMenuSaveToActiveFileComponent {
 export class CaliburnMenuSaveAsImageComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("buttons.exportImage");
+  protected readonly label = translated(() => t("buttons.exportImage"));
   protected readonly shortcut = getShortcutFromShortcutName("imageExport");
 
   protected handleSelect() {
@@ -157,7 +161,7 @@ export class CaliburnMenuCommandPaletteComponent {
 
   readonly extraClass = input<string>("", { alias: "class" });
 
-  protected readonly label = t("commandPalette.title");
+  protected readonly label = translated(() => t("commandPalette.title"));
   protected readonly shortcut = getShortcutFromShortcutName("commandPalette");
 
   protected handleSelect() {
@@ -179,7 +183,7 @@ export class CaliburnMenuSearchComponent {
 
   readonly extraClass = input<string>("", { alias: "class" });
 
-  protected readonly label = t("search.title");
+  protected readonly label = translated(() => t("search.title"));
   protected readonly shortcut = getShortcutFromShortcutName("searchMenu");
 
   protected handleSelect() {
@@ -196,7 +200,7 @@ export class CaliburnMenuSearchComponent {
 export class CaliburnMenuHelpComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("helpDialog.title");
+  protected readonly label = translated(() => t("helpDialog.title"));
 
   protected handleSelect() {
     this.editor.actionManager.executeAction(actionShortcuts, "ui");
@@ -212,7 +216,7 @@ export class CaliburnMenuHelpComponent {
 export class CaliburnMenuClearCanvasComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("buttons.clearReset");
+  protected readonly label = translated(() => t("buttons.clearReset"));
 
   protected enabled() {
     this.editor.changeGeneration();
@@ -247,11 +251,13 @@ export class CaliburnMenuToggleThemeComponent {
   readonly theme = input<Theme | "system">(THEME.LIGHT);
 
   protected readonly shortcut = getShortcutFromShortcutName("toggleTheme");
-  protected readonly themeLabel = t("labels.theme");
+  protected readonly themeLabel = translated(() => t("labels.theme"));
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";
 
-  protected readonly themeChoices: RadioGroupChoice<Theme | "system">[] = [
+  protected readonly themeChoices: Signal<
+    RadioGroupChoice<Theme | "system">[]
+  > = translated(() => [
     {
       value: THEME.LIGHT,
       icon: "sunIcon",
@@ -267,7 +273,7 @@ export class CaliburnMenuToggleThemeComponent {
       icon: "deviceDesktopIcon",
       ariaLabel: t("buttons.systemMode"),
     },
-  ];
+  ]);
 
   protected setTheme(theme: Theme | "system") {
     const onThemeChange = this.editor.props.onThemeChange;
@@ -316,7 +322,7 @@ export class CaliburnMenuToggleThemeComponent {
 export class CaliburnMenuChangeCanvasBackgroundComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("labels.canvasBackground");
+  protected readonly label = translated(() => t("labels.canvasBackground"));
   protected readonly canvasBackgroundPicks = DEFAULT_CANVAS_BACKGROUND_PICKS;
 
   protected visible() {
@@ -356,7 +362,7 @@ export class CaliburnMenuChangeCanvasBackgroundComponent {
 export class CaliburnMenuExportComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("buttons.export");
+  protected readonly label = translated(() => t("buttons.export"));
 
   protected handleSelect() {
     this.editor.batchCommits(() =>
@@ -376,7 +382,7 @@ export class CaliburnMenuLiveCollaborationTriggerComponent {
 
   readonly select = output<void>();
 
-  protected readonly label = t("labels.liveCollaboration");
+  protected readonly label = translated(() => t("labels.liveCollaboration"));
 
   protected readonly itemClass = computed(() =>
     this.isCollaborating() ? "active-collab" : "",
@@ -440,14 +446,16 @@ type PreferencesToggle = {
 export class CaliburnMenuPreferencesComponent {
   private readonly editor = injectEditor();
 
-  protected readonly label = t("labels.preferences");
-  protected readonly boxSelectionLabel = t("labels.boxSelectionMode");
+  protected readonly label = translated(() => t("labels.preferences"));
+  protected readonly boxSelectionLabel = translated(() =>
+    t("labels.boxSelectionMode"),
+  );
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";
 
-  protected readonly boxSelectionChoices: RadioGroupChoice<
-    "contain" | "overlap"
-  >[] = [
+  protected readonly boxSelectionChoices: Signal<
+    RadioGroupChoice<"contain" | "overlap">[]
+  > = translated(() => [
     {
       value: "contain",
       label: t("labels.boxSelectionContain"),
@@ -458,7 +466,7 @@ export class CaliburnMenuPreferencesComponent {
       label: t("labels.boxSelectionOverlap"),
       ariaLabel: t("labels.boxSelectionOverlap"),
     },
-  ];
+  ]);
 
   protected boxSelectionMode() {
     this.editor.changeGeneration();

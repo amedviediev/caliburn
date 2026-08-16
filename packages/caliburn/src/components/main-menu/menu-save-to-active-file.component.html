@@ -4,9 +4,9 @@
   icon="save"
   testId="save-button"
   [shortcut]="shortcut"
-  [ariaLabel]="label"
+  [ariaLabel]="label()"
   (select)="handleSelect()"
 >
-  {{ label }}
+  {{ label() }}
 </button>
 }

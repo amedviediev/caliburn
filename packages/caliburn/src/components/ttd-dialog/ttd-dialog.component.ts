@@ -10,6 +10,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnDialogComponent } from "../dialog.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnMermaidToExcalidrawComponent } from "./mermaid-to-excalidraw.component";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
@@ -47,7 +49,7 @@ export class CaliburnTTDDialogComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly title = t("mermaid.title");
+  protected readonly title = translated(() => t("mermaid.title"));
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";
 

@@ -16,6 +16,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { Collaborator, SocketId } from "@excalidraw/excalidraw/types";
 
+import { translated } from "../i18n";
+
 import { provideCaliburnIcons } from "./icons";
 import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnQuickSearchComponent } from "./quick-search.component";
@@ -79,9 +81,11 @@ export class CaliburnUserListComponent implements AfterViewInit, OnDestroy {
   readonly currentUserControls = input<TemplateRef<unknown> | null>(null);
 
   protected readonly showCollaboratorsFilterAt = SHOW_COLLABORATORS_FILTER_AT;
-  protected readonly searchPlaceholder = t("quickSearch.placeholder");
-  protected readonly emptyLabel = t("userList.empty");
-  protected readonly hintText = t("userList.hint.text");
+  protected readonly searchPlaceholder = translated(() =>
+    t("quickSearch.placeholder"),
+  );
+  protected readonly emptyLabel = translated(() => t("userList.empty"));
+  protected readonly hintText = translated(() => t("userList.hint.text"));
   protected readonly unknownUserLabel = "Unknown user";
 
   protected readonly searchTerm = signal("");

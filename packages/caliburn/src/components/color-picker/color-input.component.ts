@@ -22,6 +22,8 @@ import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPic
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnColorPickerSection } from "./color-picker-section";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
@@ -68,9 +70,12 @@ export class CaliburnColorInputComponent {
   protected readonly showEyeDropper =
     this.editor.editorInterface.formFactor !== "phone";
 
-  protected readonly eyeDropperTitle = `${t(
-    "labels.eyeDropper",
-  )} — ${KEYS.I.toLocaleUpperCase()} or ${getShortcutKey("Alt")} `;
+  protected readonly eyeDropperTitle = translated(
+    () =>
+      `${t(
+        "labels.eyeDropper",
+      )} — ${KEYS.I.toLocaleUpperCase()} or ${getShortcutKey("Alt")} `,
+  );
 
   protected isEyeDropperActive() {
     return !!this.editor.activeEyeDropper();

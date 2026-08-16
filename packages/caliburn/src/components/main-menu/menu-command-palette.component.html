@@ -3,9 +3,9 @@
   icon="boltIcon"
   testId="command-palette-button"
   [shortcut]="shortcut"
-  [ariaLabel]="label"
+  [ariaLabel]="label()"
   [class]="extraClass()"
   (select)="handleSelect()"
 >
-  {{ label }}
+  {{ label() }}
 </button>

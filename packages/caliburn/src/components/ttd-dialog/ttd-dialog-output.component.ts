@@ -19,6 +19,8 @@ import { NgIcon } from "@ng-icons/core";
 import { CaliburnButtonComponent } from "../button.component";
 import { CaliburnSpinnerComponent } from "../spinner.component";
 
+import { translated } from "../../i18n";
+
 import type { ElementRef } from "@angular/core";
 
 /**
@@ -50,7 +52,9 @@ export class CaliburnTTDDialogOutputComponent {
 
   readonly applyAutoFix = output<void>();
 
-  protected readonly autoFixLabel = t("mermaid.autoFixAvailable");
+  protected readonly autoFixLabel = translated(() =>
+    t("mermaid.autoFixAvailable"),
+  );
 
   private readonly canvasContent =
     viewChild<ElementRef<HTMLDivElement>>("canvasContent");

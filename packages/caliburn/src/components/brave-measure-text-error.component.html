@@ -1,3 +1,3 @@
 <!-- the runs are written without surrounding whitespace so the rendered
      sentence keeps upstream's spacing exactly -->
-<div data-testid="brave-measure-text-error">@for (line of lines; track $index) {<p>@for (run of line; track $index) {@if (run.href) {<a [href]="run.href">{{ run.text }}</a>} @else if (run.bold) {<span style="font-weight: 600">{{ run.text }}</span>} @else {{{ run.text }}}}</p>}</div>
+<div data-testid="brave-measure-text-error">@for (line of lines(); track $index) {<p>@for (run of line; track $index) {@if (run.href) {<a [href]="run.href">{{ run.text }}</a>} @else if (run.bold) {<span style="font-weight: 600">{{ run.text }}</span>} @else {{{ run.text }}}}</p>}</div>

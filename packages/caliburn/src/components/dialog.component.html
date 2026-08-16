@@ -16,8 +16,8 @@
       <button
         class="Dialog__close"
         (click)="onClose()"
-        [title]="closeLabel"
-        [attr.aria-label]="closeLabel"
+        [title]="closeLabel()"
+        [attr.aria-label]="closeLabel()"
         type="button"
       >
         <ng-icon name="closeIcon" />

@@ -17,6 +17,8 @@ import type { Collaborator, SocketId } from "@excalidraw/excalidraw/types";
 import { actionGoToCollaborator } from "../actions/actionNavigate";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnAvatarComponent } from "./avatar.component";
 import { provideCaliburnIcons } from "./icons";
 
@@ -64,11 +66,17 @@ export class CaliburnUserListCollaboratorComponent {
   readonly withName = input(false);
   readonly isBeingFollowed = input(false);
 
-  protected readonly youLabel = t("labels.you");
-  protected readonly isSpeakingTitle = t("userList.hint.isSpeaking");
-  protected readonly micMutedTitle = t("userList.hint.micMuted");
-  protected readonly inCallTitle = t("userList.hint.inCall");
-  protected readonly followStatusTitle = t("userList.hint.followStatus");
+  protected readonly youLabel = translated(() => t("labels.you"));
+  protected readonly isSpeakingTitle = translated(() =>
+    t("userList.hint.isSpeaking"),
+  );
+  protected readonly micMutedTitle = translated(() =>
+    t("userList.hint.micMuted"),
+  );
+  protected readonly inCallTitle = translated(() => t("userList.hint.inCall"));
+  protected readonly followStatusTitle = translated(() =>
+    t("userList.hint.followStatus"),
+  );
 
   protected readonly background = computed(() =>
     getClientColor(this.socketId(), this.collaborator()),

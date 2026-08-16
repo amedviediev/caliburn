@@ -4,15 +4,9 @@
   [class.is-collaborating]="isCollaborating()"
 >
   <!-- held back until the detected language is loaded (upstream's
-       `<InitializeApp langCode>`); the two branches then render the same
-       template, and flipping between them is how a language change rebuilds
-       the editor (see `editorGeneration`) -->
+       `<InitializeApp langCode>`) -->
   @if (languageLoaded()) {
-    @if (editorGeneration() % 2 === 0) {
-      <ng-container *ngTemplateOutlet="editor" />
-    } @else {
-      <ng-container *ngTemplateOutlet="editor" />
-    }
+    <ng-container *ngTemplateOutlet="editor" />
   }
 </div>
 

@@ -17,7 +17,7 @@
         testId="lib-dropdown--load"
         (select)="onLibraryImport()"
       >
-        {{ loadLabel }}
+        {{ loadLabel() }}
       </button>
     }
     @if (items().length) {
@@ -27,7 +27,7 @@
         testId="lib-dropdown--export"
         (select)="onLibraryExport()"
       >
-        {{ exportLabel }}
+        {{ exportLabel() }}
       </button>
     }
     @if (items().length) {

@@ -3,9 +3,9 @@
   href="https://plus.excalidraw.com/blog/end-to-end-encryption"
   target="_blank"
   rel="noopener"
-  [attr.aria-label]="linkLabel"
+  [attr.aria-label]="linkLabel()"
 >
-  <caliburn-tooltip [label]="tooltipLabel" [long]="true">
+  <caliburn-tooltip [label]="tooltipLabel()" [long]="true">
     <ng-icon name="shield" />
   </caliburn-tooltip>
 </a>

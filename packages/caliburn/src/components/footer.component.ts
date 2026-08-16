@@ -21,6 +21,8 @@ import { actionShortcuts } from "../actions/actionMenu";
 import { actionToggleZenMode } from "../actions/actionToggleZenMode";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnHelpButtonComponent } from "./help-button.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 import { CaliburnSectionComponent } from "./section.component";
@@ -71,7 +73,7 @@ export class CaliburnFooterComponent {
   protected readonly MIN_ZOOM = MIN_ZOOM;
   protected readonly MAX_ZOOM = MAX_ZOOM;
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     zoomIn: t("buttons.zoomIn"),
     zoomInTitle: `${t("buttons.zoomIn")} — ${getShortcutKey("CtrlOrCmd++")}`,
     zoomOut: t("buttons.zoomOut"),
@@ -80,7 +82,7 @@ export class CaliburnFooterComponent {
     undo: t("buttons.undo"),
     redo: t("buttons.redo"),
     exitZenMode: t("buttons.exitZenMode"),
-  };
+  }));
 
   protected state() {
     this.editor.changeGeneration();

@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component } from "@angular/core";
 
 import { languages, t } from "@excalidraw/excalidraw/i18n";
 
+import { translated } from "../../../packages/caliburn/src/index";
+
 import { loadedLangCode, setAppLangCode } from "./language-state";
 
 /**
@@ -23,7 +25,9 @@ import { loadedLangCode, setAppLangCode } from "./language-state";
 export class CaliburnAppLanguageListComponent {
   protected readonly languages = languages;
   protected readonly langCode = loadedLangCode;
-  protected readonly selectLanguageLabel = t("buttons.selectLanguage");
+  protected readonly selectLanguageLabel = translated(() =>
+    t("buttons.selectLanguage"),
+  );
 
   protected onChange(event: Event) {
     setAppLangCode((event.target as HTMLSelectElement).value);

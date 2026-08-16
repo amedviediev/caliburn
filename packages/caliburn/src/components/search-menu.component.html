@@ -2,7 +2,7 @@
   <caliburn-text-field
     [class]="inputWrapperClass"
     [value]="inputValue()"
-    [placeholder]="placeholder"
+    [placeholder]="placeholder()"
     icon="searchIcon"
     [selectOnRender]="true"
     (valueChange)="handleInputChange($event)"
@@ -37,7 +37,7 @@
   @if (
     searchMatches().items.length === 0 && searchQuery() && searchedQuery()
   ) {
-    <div style="margin: 1rem auto">{{ noMatchLabel }}</div>
+    <div style="margin: 1rem auto">{{ noMatchLabel() }}</div>
   }
 </div>
 
@@ -46,7 +46,7 @@
     <div class="layer-ui__search-result-container">
       <div class="layer-ui__search-result-title">
         <div class="title-icon"><ng-icon name="frameToolIcon" /></div>
-        <div>{{ framesLabel }}</div>
+        <div>{{ framesLabel() }}</div>
       </div>
       @for (
         searchMatch of frameNameMatches();
@@ -73,7 +73,7 @@
     <div class="layer-ui__search-result-container">
       <div class="layer-ui__search-result-title">
         <div class="title-icon"><ng-icon name="textIcon" /></div>
-        <div>{{ textsLabel }}</div>
+        <div>{{ textsLabel() }}</div>
       </div>
       @for (
         searchMatch of textMatches();

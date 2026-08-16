@@ -4,16 +4,16 @@
   (closeRequest)="handleClose()"
 >
   <div class="ImageExportModal">
-    <h3>{{ labels.header }}</h3>
+    <h3>{{ labels().header }}</h3>
     <div class="ImageExportModal__preview">
       <div class="ImageExportModal__preview__canvas" #preview>
         @if (renderError()) {
           <div>
-            <h3>{{ labels.cannotShowPreview }}</h3>
+            <h3>{{ labels().cannotShowPreview }}</h3>
             <p>
-              <span>{{ labels.canvasTooBig }}</span>
+              <span>{{ labels().canvasTooBig }}</span>
             </p>
-            <em>({{ labels.canvasTooBigTip }})</em>
+            <em>({{ labels().canvasTooBigTip }})</em>
           </div>
         }
       </div>
@@ -30,10 +30,10 @@
       </div>
     </div>
     <div class="ImageExportModal__settings">
-      <h3>{{ labels.header }}</h3>
+      <h3>{{ labels().header }}</h3>
       @if (hasSelection) {
         <caliburn-export-setting
-          [label]="labels.onlySelected"
+          [label]="labels().onlySelected"
           name="exportOnlySelected"
         >
           <caliburn-switch
@@ -44,7 +44,7 @@
         </caliburn-export-setting>
       }
       <caliburn-export-setting
-        [label]="labels.withBackground"
+        [label]="labels().withBackground"
         name="exportBackgroundSwitch"
       >
         <caliburn-switch
@@ -54,7 +54,7 @@
         />
       </caliburn-export-setting>
       <caliburn-export-setting
-        [label]="labels.darkMode"
+        [label]="labels().darkMode"
         name="exportDarkModeSwitch"
       >
         <caliburn-switch
@@ -64,8 +64,8 @@
         />
       </caliburn-export-setting>
       <caliburn-export-setting
-        [label]="labels.embedScene"
-        [tooltip]="labels.embedSceneTooltip"
+        [label]="labels().embedScene"
+        [tooltip]="labels().embedSceneTooltip"
         name="exportEmbedSwitch"
       >
         <caliburn-switch
@@ -74,7 +74,7 @@
           (valueChange)="setEmbedScene($event)"
         />
       </caliburn-export-setting>
-      <caliburn-export-setting [label]="labels.scale" name="exportScale">
+      <caliburn-export-setting [label]="labels().scale" name="exportScale">
         <caliburn-radio-group
           name="exportScale"
           [value]="exportScale()"
@@ -87,31 +87,31 @@
         <button
           caliburn-filled-button
           class="ImageExportModal__settings__buttons__button"
-          [label]="labels.exportToPngTitle"
+          [label]="labels().exportToPngTitle"
           [onClick]="exportToPng"
           icon="downloadIcon"
         >
-          {{ labels.exportToPng }}
+          {{ labels().exportToPng }}
         </button>
         <button
           caliburn-filled-button
           class="ImageExportModal__settings__buttons__button"
-          [label]="labels.exportToSvgTitle"
+          [label]="labels().exportToSvgTitle"
           [onClick]="exportToSvg"
           icon="downloadIcon"
         >
-          {{ labels.exportToSvg }}
+          {{ labels().exportToSvg }}
         </button>
         @if (canCopyToClipboard) {
           <button
             caliburn-filled-button
             class="ImageExportModal__settings__buttons__button"
-            [label]="labels.copyPngToClipboardTitle"
+            [label]="labels().copyPngToClipboardTitle"
             [status]="copyStatus()"
             [onClick]="copyPngToClipboard"
             icon="copyIcon"
           >
-            {{ labels.copyPngToClipboard }}
+            {{ labels().copyPngToClipboard }}
           </button>
         }
       </div>

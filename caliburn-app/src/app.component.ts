@@ -56,6 +56,7 @@ import {
   CaliburnShareableLinkDialogComponent,
   CaliburnWelcomeScreenMenuHintComponent,
   openConfirmModal,
+  translated,
 } from "../../packages/caliburn/src/index";
 
 import {
@@ -324,14 +325,6 @@ export class CaliburnAppComponent implements OnDestroy {
 
   private readonly editorRef = viewChild(CaliburnEditorComponent);
 
-  /**
-   * Bumped to rebuild the editor on a language change: caliburn's chrome
-   * resolves its labels when each component is constructed (upstream resolves
-   * them on every render), so a language switch only reaches the UI by
-   * rebuilding it. The scene travels across the rebuild as `initialData`.
-   */
-  protected readonly editorGeneration = signal(0);
-
   protected readonly initialData = signal<{
     elements?: readonly OrderedExcalidrawElement[];
     appState?: Partial<AppState>;
@@ -368,40 +361,34 @@ export class CaliburnAppComponent implements OnDestroy {
   protected readonly appTheme = this.appThemeService.appTheme;
   protected readonly editorTheme = this.appThemeService.editorTheme;
   protected readonly setAppTheme = this.appThemeService.setAppTheme;
-  /** the app's own labels live outside the rebuilt editor subtree, so they
-   * are resolved per render against the loaded language */
-  protected readonly menuHintLabel = computed(() => {
-    loadedLangCode();
-    return t("welcomeScreen.app.menuHint");
-  });
-  protected readonly collabOfflineWarning = computed(() => {
-    loadedLangCode();
-    return t("alerts.collabOfflineWarning");
-  });
-  protected readonly localStorageQuotaExceededWarning = computed(() => {
-    loadedLangCode();
-    return t("alerts.localStorageQuotaExceeded");
-  });
+  protected readonly menuHintLabel = translated(() =>
+    t("welcomeScreen.app.menuHint"),
+  );
+  protected readonly collabOfflineWarning = translated(() =>
+    t("alerts.collabOfflineWarning"),
+  );
+  protected readonly localStorageQuotaExceededWarning = translated(() =>
+    t("alerts.localStorageQuotaExceeded"),
+  );
 
   /**
    * Upstream's `<InitializeApp langCode>` gate: the editor is held back until
-   * the detected language is loaded, because caliburn's chrome resolves its
-   * labels when each component is constructed. Upstream shows a
-   * `LoadingMessage` meanwhile; caliburn has no port of it, so nothing is
-   * rendered for the (usually sub-frame) duration of the locale fetch.
+   * the detected language is loaded, so the first paint is already in the
+   * right locale. Upstream shows a `LoadingMessage` meanwhile; caliburn has no
+   * port of it, so nothing is rendered for the (usually sub-frame) duration of
+   * the locale fetch.
    */
   protected readonly languageLoaded = signal(false);
 
   protected readonly latestShareableLink = signal<string | null>(null);
   protected readonly errorMessage = signal<string>("");
 
-  protected readonly commandPaletteItems = computed(() => {
-    loadedLangCode();
-    return buildCommandPaletteItems({
+  protected readonly commandPaletteItems = translated(() =>
+    buildCommandPaletteItems({
       collab: this.isCollabDisabled ? null : this.collab,
       openShareDialog: (type) => shareDialogState.set({ isOpen: true, type }),
-    });
-  });
+    }),
+  );
 
   private excalidrawAPI: CaliburnImperativeAPI | null = null;
   private pendingFiles: BinaryFiles | null = null;
@@ -466,9 +453,9 @@ export class CaliburnAppComponent implements OnDestroy {
 
   /**
    * The language select (and the browser-tab sync) only write `appLangCode`;
-   * loading the locale and rebuilding the editor around the current scene
-   * happens here, as upstream's `langCode` prop does on the React side. The
-   * startup load is the constructor's, so this only fires on a change.
+   * fetching the locale happens here, as upstream's `langCode` prop does on
+   * the React side. The startup load is the constructor's, so this only fires
+   * on a change.
    */
   private readonly applyLanguage = effect(() => {
     const langCode = appLangCode();
@@ -893,20 +880,5 @@ export class CaliburnAppComponent implements OnDestroy {
     this.loadingLangCode = langCode;
     await loadLanguage(langCode);
     this.loadingLangCode = null;
-
-    const excalidrawAPI = this.excalidrawAPI;
-    if (!excalidrawAPI) {
-      // nothing to rebuild before the editor has mounted once
-      return;
-    }
-
-    this.initialData.set({
-      elements:
-        excalidrawAPI.getSceneElementsIncludingDeleted() as readonly OrderedExcalidrawElement[],
-      appState: excalidrawAPI.getAppState(),
-    });
-    this.pendingFiles = excalidrawAPI.getFiles();
-
-    this.editorGeneration.update((generation) => generation + 1);
   }
 }

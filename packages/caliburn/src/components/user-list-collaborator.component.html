@@ -3,7 +3,7 @@
     @if (collaborator().isSpeaking) {
       <div
         class="UserList__collaborator-status-icon-speaking-indicator"
-        [attr.title]="isSpeakingTitle"
+        [attr.title]="isSpeakingTitle()"
       >
         <div></div>
         <div></div>
@@ -12,12 +12,12 @@
     } @else if (collaborator().isMuted) {
       <div
         class="UserList__collaborator-status-icon-microphone-muted"
-        [attr.title]="micMutedTitle"
+        [attr.title]="micMutedTitle()"
       >
         <ng-icon name="microphoneMutedIcon" />
       </div>
     } @else {
-      <div [attr.title]="inCallTitle">
+      <div [attr.title]="inCallTitle()">
         <ng-icon name="microphoneIcon" />
       </div>
     }
@@ -36,13 +36,13 @@
     @if (isBeingFollowed()) {
       <div
         class="UserList__collaborator-status-icon-is-followed"
-        [attr.title]="followStatusTitle"
+        [attr.title]="followStatusTitle()"
       >
         <ng-icon name="eyeIcon" />
       </div>
     }
     @if (collaborator().isCurrentUser) {
-      {{ " (" + youLabel + ")" }}
+      {{ " (" + youLabel() + ")" }}
     }
     <ng-container [ngTemplateOutlet]="statusIcon" />
   </div>

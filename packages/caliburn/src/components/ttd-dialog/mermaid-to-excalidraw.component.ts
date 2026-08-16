@@ -35,6 +35,8 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../e
 import { addElementsFromPasteOrLibrary } from "../../clipboard-interaction";
 import { CaliburnButtonComponent } from "../button.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnTTDDialogInputComponent } from "./ttd-dialog-input.component";
 import { CaliburnTTDDialogOutputComponent } from "./ttd-dialog-output.component";
 
@@ -137,17 +139,19 @@ export class CaliburnMermaidToExcalidrawComponent implements OnDestroy {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     inputPlaceholder: t("mermaid.inputPlaceholder"),
     insert: t("mermaid.button"),
     modifier: getShortcutKey("CtrlOrCmd"),
     enter: getShortcutKey("Enter"),
-  };
+  }));
   // upstream's copy says "rendered as image in Excalidraw"; the target is
   // this app's own scene, not upstream's — safe ahead of parseDescription
   // since it only scans for `<tag>…</tag>` markers, none of which match
-  protected readonly descriptionRuns = parseDescription(
-    t("mermaid.description").replace(/Excalidraw/g, "Caliburn"),
+  protected readonly descriptionRuns = translated(() =>
+    parseDescription(
+      t("mermaid.description").replace(/Excalidraw/g, "Caliburn"),
+    ),
   );
 
   protected readonly text = signal(

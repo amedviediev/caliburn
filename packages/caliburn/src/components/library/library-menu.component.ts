@@ -33,6 +33,8 @@ import type { LibraryItem, LibraryItems } from "@excalidraw/excalidraw/types";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnSpinnerComponent } from "../spinner.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnLibraryMenuControlButtonsComponent } from "./library-menu-control-buttons.component";
 import { CaliburnLibraryMenuItemsComponent } from "./library-menu-items.component";
 
@@ -66,7 +68,9 @@ export class CaliburnLibraryMenuComponent implements OnDestroy {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly loadingMessage = t("labels.libraryLoadingMessage");
+  protected readonly loadingMessage = translated(() =>
+    t("labels.libraryLoadingMessage"),
+  );
 
   protected readonly selectedItems = signal<LibraryItem["id"][]>([]);
   protected readonly pendingElements = signal<LibraryItem["elements"]>([]);

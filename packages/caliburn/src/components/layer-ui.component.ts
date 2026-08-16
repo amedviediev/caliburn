@@ -16,6 +16,8 @@ import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnActiveConfirmDialogComponent } from "./active-confirm-dialog.component";
 import { CaliburnBraveMeasureTextErrorComponent } from "./brave-measure-text-error.component";
 import { CaliburnCommandPaletteComponent } from "./command-palette/command-palette.component";
@@ -128,12 +130,14 @@ export class CaliburnLayerUIComponent {
   protected readonly defaultToastDuration = DEFAULT_TOAST_TIMEOUT;
   protected readonly defaultSidebarName = DEFAULT_SIDEBAR.name;
   protected readonly defaultSidebarTab = DEFAULT_SIDEBAR.defaultTab;
-  protected readonly libraryTitle = capitalizeString(t("toolBar.library"));
-  protected readonly welcomeScreenHeading = t(
-    "welcomeScreen.defaults.center_heading",
+  protected readonly libraryTitle = translated(() =>
+    capitalizeString(t("toolBar.library")),
   );
-  protected readonly scrollBackToContentLabel = t(
-    "buttons.scrollBackToContent",
+  protected readonly welcomeScreenHeading = translated(() =>
+    t("welcomeScreen.defaults.center_heading"),
+  );
+  protected readonly scrollBackToContentLabel = translated(() =>
+    t("buttons.scrollBackToContent"),
   );
 
   protected readonly mainMenu = this.editor.mainMenu;

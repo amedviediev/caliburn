@@ -54,7 +54,7 @@
       <caliburn-welcome-screen-center>
         <caliburn-welcome-screen-logo />
         <caliburn-welcome-screen-heading>{{
-          welcomeScreenHeading
+          welcomeScreenHeading()
         }}</caliburn-welcome-screen-heading>
         <caliburn-welcome-screen-menu>
           <caliburn-welcome-screen-menu-item-load-scene />
@@ -134,7 +134,7 @@
             icon="sidebarRightIcon"
             [name]="defaultSidebarName"
             [tab]="defaultSidebarTab"
-            [title]="libraryTitle"
+            [title]="libraryTitle()"
             (toggle)="onSidebarToggle($event)"
           ></button>
         }
@@ -169,7 +169,7 @@
           class="scroll-back-to-content"
           (click)="scrollBackToContent()"
         >
-          {{ scrollBackToContentLabel }}
+          {{ scrollBackToContentLabel() }}
         </button>
       }
       @if (viewportStatusFrame()?.label; as label) {

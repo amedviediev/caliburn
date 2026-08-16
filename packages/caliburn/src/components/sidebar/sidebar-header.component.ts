@@ -7,6 +7,8 @@ import { NgIcon } from "@ng-icons/core";
 import { CaliburnButtonComponent } from "../button.component";
 import { CaliburnTooltipComponent } from "../tooltip.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnSidebarComponent } from "./sidebar.component";
 
 /**
@@ -31,6 +33,6 @@ import { CaliburnSidebarComponent } from "./sidebar.component";
 export class CaliburnSidebarHeaderComponent {
   protected readonly sidebar = inject(CaliburnSidebarComponent);
 
-  protected readonly lockLabel = t("labels.sidebarLock");
-  protected readonly closeLabel = t("buttons.close");
+  protected readonly lockLabel = translated(() => t("labels.sidebarLock"));
+  protected readonly closeLabel = translated(() => t("buttons.close"));
 }

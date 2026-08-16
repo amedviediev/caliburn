@@ -10,6 +10,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import { actionClearCanvas } from "../actions/actionCanvas";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnConfirmDialogComponent } from "./confirm-dialog.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
@@ -30,8 +32,8 @@ export class CaliburnActiveConfirmDialogComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly title = t("clearCanvasDialog.title");
-  protected readonly content = t("alerts.clearReset");
+  protected readonly title = translated(() => t("clearCanvasDialog.title"));
+  protected readonly content = translated(() => t("alerts.clearReset"));
 
   protected handleConfirm() {
     this.editor.actionManager.executeAction(actionClearCanvas, "ui");

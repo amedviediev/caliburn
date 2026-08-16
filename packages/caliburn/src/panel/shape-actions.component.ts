@@ -72,7 +72,11 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../edit
 import { getActionIconName } from "../components/action-icons";
 import { CaliburnColorPickerComponent } from "../components/color-picker/color-picker.component";
 
+import { translated } from "../i18n";
+
 import type { CaliburnEditorComponent } from "../editor.component";
+
+import type { Signal } from "@angular/core";
 
 interface RadioOption {
   value: unknown;
@@ -102,7 +106,7 @@ export class CaliburnShapeActionsComponent {
 
   readonly shapeActionsMenuClass = CLASSES.SHAPE_ACTIONS_MENU;
 
-  readonly labels = {
+  readonly labels = translated(() => ({
     stroke: t("labels.stroke"),
     background: t("labels.background"),
     fill: t("labels.fill"),
@@ -117,7 +121,7 @@ export class CaliburnShapeActionsComponent {
     opacity: t("labels.opacity"),
     layers: t("labels.layers"),
     actions: t("labels.actions"),
-  };
+  }));
 
   readonly strokePalette = DEFAULT_ELEMENT_STROKE_COLOR_PALETTE;
   readonly backgroundPalette = DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
@@ -155,7 +159,7 @@ export class CaliburnShapeActionsComponent {
     ];
   }
 
-  readonly strokeWidthOptions: RadioOption[] = [
+  readonly strokeWidthOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: "thin",
       text: t("labels.thin"),
@@ -174,9 +178,9 @@ export class CaliburnShapeActionsComponent {
       icon: "strokeWidthExtraBoldIcon",
       testId: "strokeWidth-bold",
     },
-  ];
+  ]);
 
-  readonly strokeStyleOptions: RadioOption[] = [
+  readonly strokeStyleOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: "solid",
       text: t("labels.strokeStyle_solid"),
@@ -192,9 +196,9 @@ export class CaliburnShapeActionsComponent {
       text: t("labels.strokeStyle_dotted"),
       icon: "strokeStyleDottedIcon",
     },
-  ];
+  ]);
 
-  readonly freedrawModeOptions: RadioOption[] = [
+  readonly freedrawModeOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: "constant",
       text: t("labels.pressure_constant"),
@@ -205,9 +209,9 @@ export class CaliburnShapeActionsComponent {
       text: t("labels.pressure_variable"),
       icon: "strokeVariabilityVariableIcon",
     },
-  ];
+  ]);
 
-  readonly sloppinessOptions: RadioOption[] = [
+  readonly sloppinessOptions: Signal<RadioOption[]> = translated(() => [
     { value: 0, text: t("labels.architect"), icon: "sloppinessArchitectIcon" },
     { value: 1, text: t("labels.artist"), icon: "sloppinessArtistIcon" },
     {
@@ -215,14 +219,14 @@ export class CaliburnShapeActionsComponent {
       text: t("labels.cartoonist"),
       icon: "sloppinessCartoonistIcon",
     },
-  ];
+  ]);
 
-  readonly roundnessOptions: RadioOption[] = [
+  readonly roundnessOptions: Signal<RadioOption[]> = translated(() => [
     { value: "sharp", text: t("labels.sharp"), icon: "edgeSharpIcon" },
     { value: "round", text: t("labels.round"), icon: "edgeRoundIcon" },
-  ];
+  ]);
 
-  readonly fontFamilyOptions: RadioOption[] = [
+  readonly fontFamilyOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: FONT_FAMILY.Excalifont,
       text: t("labels.handDrawn"),
@@ -241,9 +245,9 @@ export class CaliburnShapeActionsComponent {
       icon: "fontFamilyCodeIcon",
       testId: "font-family-code",
     },
-  ];
+  ]);
 
-  readonly fontSizeOptions: RadioOption[] = [
+  readonly fontSizeOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: FONT_SIZES.sm,
       text: t("labels.small"),
@@ -268,9 +272,9 @@ export class CaliburnShapeActionsComponent {
       icon: "fontSizeExtraLargeIcon",
       testId: "fontSize-veryLarge",
     },
-  ];
+  ]);
 
-  readonly textAlignOptions: RadioOption[] = [
+  readonly textAlignOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: "left",
       text: t("labels.left"),
@@ -289,12 +293,12 @@ export class CaliburnShapeActionsComponent {
       icon: "textAlignRightIcon",
       testId: "align-right",
     },
-  ];
+  ]);
 
   /** upstream themes these (`<TextAlignTopIcon theme={appState.theme} />`),
    * so the icon name is resolved per-render by `verticalAlignIcon()` rather
    * than baked in here. */
-  readonly verticalAlignOptions: RadioOption[] = [
+  readonly verticalAlignOptions: Signal<RadioOption[]> = translated(() => [
     {
       value: VERTICAL_ALIGN.TOP,
       text: t("labels.alignTop"),
@@ -310,21 +314,21 @@ export class CaliburnShapeActionsComponent {
       text: t("labels.alignBottom"),
       testId: "align-bottom",
     },
-  ];
+  ]);
 
-  readonly layerOptions = [
+  readonly layerOptions = translated(() => [
     { action: actionSendToBack, text: t("labels.sendToBack") },
     { action: actionSendBackward, text: t("labels.sendBackward") },
     { action: actionBringForward, text: t("labels.bringForward") },
     { action: actionBringToFront, text: t("labels.bringToFront") },
-  ];
+  ]);
 
-  readonly extraActionOptions = [
+  readonly extraActionOptions = translated(() => [
     { action: actionDuplicateSelection, text: t("labels.duplicateSelection") },
     { action: actionDeleteSelected, text: t("labels.delete") },
     { action: actionGroup, text: t("labels.group") },
     { action: actionUngroup, text: t("labels.ungroup") },
-  ];
+  ]);
 
   /** upstream's `<TextAlignTopIcon theme={appState.theme} />` triple —
    * themed, so resolved per-render rather than baked into the option. */

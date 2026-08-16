@@ -4,6 +4,7 @@ export { CaliburnEditorComponent } from "./editor.component";
 export type { CaliburnImperativeAPI } from "./editor.component";
 export { createTestHook, h } from "./test-hook";
 export type { TestHandle } from "./test-hook";
+export { setEditorLanguage, translated } from "./i18n";
 
 // host-composition surfaces: everything a host app needs to fill the
 // editor's slots (see `editor.component.ts`) or its projected children

@@ -4,8 +4,9 @@ import {
   defaultLang,
   getLanguage,
   languages,
-  setLanguage,
 } from "@excalidraw/excalidraw/i18n";
+
+import { setEditorLanguage } from "../../../packages/caliburn/src/index";
 
 import { getPreferredLanguage, languageDetector } from "./language-detector";
 
@@ -32,10 +33,12 @@ export const setAppLangCode = (langCode: string) => {
 export const loadedLangCode = signal(getLanguage().code);
 
 /** loads a locale and reports it, the way upstream's `InitializeApp` and
- * `App.updateLanguage` both do */
+ * `App.updateLanguage` both do. The editor's own `setEditorLanguage` wraps the
+ * vendored `setLanguage`, so the chrome's labels re-resolve off the same
+ * call. */
 export const loadLanguage = async (langCode: string) => {
   const lang =
     languages.find((language) => language.code === langCode) || defaultLang;
-  await setLanguage(lang);
+  await setEditorLanguage(lang);
   loadedLangCode.set(lang.code);
 };

@@ -4,7 +4,7 @@
       class="library-menu-items-container__search"
       [class.hideCancelButton]="!isPhone"
       type="search"
-      [placeholder]="searchPlaceholder"
+      [placeholder]="searchPlaceholder()"
       [value]="searchInputValue()"
       (valueChange)="searchInputValue.set($event)"
     />
@@ -33,18 +33,18 @@
   @if (!isSearching()) {
     @if (!isLibraryEmpty()) {
       <div class="library-menu-items-container__header">
-        {{ personalLibLabel }}
+        {{ personalLibLabel() }}
       </div>
     }
     @if (!pendingElements().length && !unpublishedItems().length) {
       <div class="library-menu-items__no-items">
         @if (!publishedItems().length) {
           <div class="library-menu-items__no-items__label">
-            {{ noItemsLabel }}
+            {{ noItemsLabel() }}
           </div>
         }
         <div class="library-menu-items__no-items__hint">
-          {{ publishedItems().length > 0 ? emptyPrivateHint : emptyLibraryHint }}
+          {{ publishedItems().length > 0 ? emptyPrivateHint() : emptyLibraryHint() }}
         </div>
       </div>
     } @else {
@@ -72,7 +72,7 @@
 
     @if (publishedItems().length > 0) {
       <div class="library-menu-items-container__header" style="margin-top: 0.75rem">
-        {{ excalidrawLibLabel }}
+        {{ excalidrawLibLabel() }}
       </div>
       <div class="library-menu-items-container__grid">
         <caliburn-library-menu-section
@@ -87,7 +87,7 @@
     }
   } @else {
     <div class="library-menu-items-container__header">
-      {{ searchHeading }}
+      {{ searchHeading() }}
       @if (!isLoading()) {
         <div
           class="library-menu-items-container__header__hint"
@@ -113,7 +113,7 @@
     } @else {
       <div class="library-menu-items__no-items">
         <div class="library-menu-items__no-items__hint">
-          {{ searchNoResults }}
+          {{ searchNoResults() }}
         </div>
         <button
           caliburn-button
@@ -121,7 +121,7 @@
           (pointerdown)="preventDefault($event)"
           (select)="clearSearch()"
         >
-          {{ searchClear }}
+          {{ searchClear() }}
         </button>
       </div>
     }

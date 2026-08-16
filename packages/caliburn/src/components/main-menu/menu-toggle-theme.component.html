@@ -3,10 +3,10 @@
     <caliburn-dropdown-menu-item-content-radio
       name="theme"
       [value]="theme()"
-      [choices]="themeChoices"
+      [choices]="themeChoices()"
       [mobile]="isMobile"
       (valueChange)="setTheme($event)"
-      >{{ themeLabel }}</caliburn-dropdown-menu-item-content-radio
+      >{{ themeLabel() }}</caliburn-dropdown-menu-item-content-radio
     >
   } @else {
     <button

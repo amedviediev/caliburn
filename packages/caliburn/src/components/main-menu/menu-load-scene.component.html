@@ -4,9 +4,9 @@
   icon="loadIcon"
   testId="load-button"
   [shortcut]="shortcut"
-  [ariaLabel]="label"
+  [ariaLabel]="label()"
   (select)="handleSelect()"
 >
-  {{ label }}
+  {{ label() }}
 </button>
 }

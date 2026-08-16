@@ -29,6 +29,8 @@ import type { ColorPaletteCustom } from "@excalidraw/common";
 import type { ExcalidrawElement, Theme } from "@excalidraw/element/types";
 import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
 
+import { translated } from "../../i18n";
+
 import { CaliburnColorPickerSection } from "./color-picker-section";
 import { CaliburnCustomColorListComponent } from "./custom-color-list.component";
 import { CaliburnPickerColorListComponent } from "./picker-color-list.component";
@@ -85,12 +87,14 @@ export class CaliburnPickerComponent implements OnInit, OnDestroy {
   private readonly contentRef =
     viewChild.required<ElementRef<HTMLDivElement>>("pickerContent");
 
-  protected readonly colorPickerLabel = t("labels.colorPicker");
-  protected readonly headings = {
+  protected readonly colorPickerLabel = translated(() =>
+    t("labels.colorPicker"),
+  );
+  protected readonly headings = translated(() => ({
     mostUsedCustomColors: t("colorPicker.mostUsedCustomColors"),
     colors: t("colorPicker.colors"),
     shades: t("colorPicker.shades"),
-  };
+  }));
 
   protected readonly customColors = signal<string[]>([]);
   protected readonly activeShade = signal(0);

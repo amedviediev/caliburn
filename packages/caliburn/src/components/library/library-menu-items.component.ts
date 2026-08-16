@@ -34,6 +34,8 @@ import { CaliburnSpinnerComponent } from "../spinner.component";
 import { CaliburnStackColComponent } from "../stack.component";
 import { CaliburnTextFieldComponent } from "../text-field.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnLibraryDropdownMenuComponent } from "./library-dropdown-menu.component";
 import { libraryItemSvgCache } from "./library-item-svg";
 import { CaliburnLibraryMenuControlButtonsComponent } from "./library-menu-control-buttons.component";
@@ -99,15 +101,31 @@ export class CaliburnLibraryMenuItemsComponent
   readonly addToLibrary = output<LibraryItem["elements"]>();
   readonly insertLibraryItems = output<LibraryItems>();
 
-  protected readonly personalLibLabel = t("labels.personalLib");
-  protected readonly excalidrawLibLabel = t("labels.excalidrawLib");
-  protected readonly noItemsLabel = t("library.noItems");
-  protected readonly emptyPrivateHint = t("library.hint_emptyPrivateLibrary");
-  protected readonly emptyLibraryHint = t("library.hint_emptyLibrary");
-  protected readonly searchHeading = t("library.search.heading");
-  protected readonly searchNoResults = t("library.search.noResults");
-  protected readonly searchClear = t("library.search.clearSearch");
-  protected readonly searchPlaceholder = t("library.search.inputPlaceholder");
+  protected readonly personalLibLabel = translated(() =>
+    t("labels.personalLib"),
+  );
+  protected readonly excalidrawLibLabel = translated(() =>
+    t("labels.excalidrawLib"),
+  );
+  protected readonly noItemsLabel = translated(() => t("library.noItems"));
+  protected readonly emptyPrivateHint = translated(() =>
+    t("library.hint_emptyPrivateLibrary"),
+  );
+  protected readonly emptyLibraryHint = translated(() =>
+    t("library.hint_emptyLibrary"),
+  );
+  protected readonly searchHeading = translated(() =>
+    t("library.search.heading"),
+  );
+  protected readonly searchNoResults = translated(() =>
+    t("library.search.noResults"),
+  );
+  protected readonly searchClear = translated(() =>
+    t("library.search.clearSearch"),
+  );
+  protected readonly searchPlaceholder = translated(() =>
+    t("library.search.inputPlaceholder"),
+  );
   protected readonly isPhone =
     this.editor.editorInterface.formFactor === "phone";
 

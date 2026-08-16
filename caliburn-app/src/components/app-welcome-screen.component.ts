@@ -17,6 +17,8 @@ import {
   CaliburnWelcomeScreenMenuItemLoadSceneComponent,
 } from "../../../packages/caliburn/src/index";
 
+import { translated } from "../../../packages/caliburn/src/index";
+
 /**
  * Angular port of upstream
  * `excalidraw-app/components/AppWelcomeScreen.tsx`. The Excalidraw+
@@ -52,9 +54,9 @@ export class CaliburnAppWelcomeScreenComponent {
 
   readonly collabDialogOpen = output<void>();
 
-  protected readonly headingLines = [
+  protected readonly headingLines = translated(() => [
     t("welcomeScreen.app.center_heading"),
     t("welcomeScreen.app.center_heading_line2"),
     t("welcomeScreen.app.center_heading_line3"),
-  ];
+  ]);
 }

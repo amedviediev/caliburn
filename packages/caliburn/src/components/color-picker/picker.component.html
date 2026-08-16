@@ -8,19 +8,19 @@
   <div class="color-picker__title">{{ title }}</div>
   } @if (customColors().length) {
   <div>
-    <div caliburn-picker-heading>{{ headings.mostUsedCustomColors }}</div>
+    <div caliburn-picker-heading>{{ headings().mostUsedCustomColors }}</div>
     <div
       caliburn-custom-color-list
       [theme]="theme()"
       [colors]="customColors()"
       [color]="color()"
-      [label]="headings.mostUsedCustomColors"
+      [label]="headings().mostUsedCustomColors"
       (colorChange)="colorChange.emit($event)"
     ></div>
   </div>
   }
   <div>
-    <div caliburn-picker-heading>{{ headings.colors }}</div>
+    <div caliburn-picker-heading>{{ headings().colors }}</div>
     <div
       caliburn-picker-color-list
       [theme]="theme()"
@@ -33,7 +33,7 @@
     ></div>
   </div>
   <div>
-    <div caliburn-picker-heading>{{ headings.shades }}</div>
+    <div caliburn-picker-heading>{{ headings().shades }}</div>
     <div
       caliburn-shade-list
       [theme]="theme()"

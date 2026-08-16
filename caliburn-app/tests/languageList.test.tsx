@@ -4,6 +4,8 @@ import { UI } from "../../packages/caliburn/tests/helpers/ui";
 
 import { act, fireEvent, render, screen, waitFor } from "./test-utils";
 
+const { h } = window;
+
 /**
  * Port of upstream `excalidraw-app/tests/LanguageList.test.tsx`. Upstream
  * builds a small host around `<Excalidraw langCode>` + a `<MainMenu>` holding
@@ -39,5 +41,48 @@ describe("Test LanguageList", () => {
     );
     // switching back to English
     await waitFor(() => expect(screen.queryByTitle(/thin/i)).not.toBeNull());
+  });
+
+  it("relabels in place, without remounting the editor", async () => {
+    const { container } = await render();
+
+    UI.createElement("rectangle", { x: 10, y: 10 });
+
+    const canvas = container.querySelector("canvas.interactive");
+    const editor = container.querySelector(".excalidraw");
+    const app = h.app;
+    expect(canvas).not.toBeNull();
+    expect(h.elements.length).toBe(1);
+
+    fireEvent.click(document.querySelector(".dropdown-menu-button")!);
+    await act(() =>
+      fireEvent.change(document.querySelector(".dropdown-select__language")!, {
+        target: { value: TEST_LANG_CODE },
+      }),
+    );
+
+    // `labels.canvasBackground` in fr-FR.json
+    await waitFor(() =>
+      expect(
+        container.querySelector(".dropdown-menu-container")!.textContent,
+      ).toContain("Arrière-plan du canevas"),
+    );
+
+    // the same nodes, the same editor instance, the same scene: no remount
+    expect(container.querySelector("canvas.interactive")).toBe(canvas);
+    expect(container.querySelector(".excalidraw")).toBe(editor);
+    expect(h.app).toBe(app);
+    expect(h.elements.length).toBe(1);
+
+    await act(() =>
+      fireEvent.change(document.querySelector(".dropdown-select__language")!, {
+        target: { value: defaultLang.code },
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        container.querySelector(".dropdown-menu-container")!.textContent,
+      ).toContain("Canvas background"),
+    );
   });
 });

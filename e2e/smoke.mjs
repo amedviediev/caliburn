@@ -238,6 +238,18 @@ const openHelpDialog = async (page) => {
   await waitForAnimations(page, ".HelpDialog .Modal__content");
 };
 
+const LANGUAGE_PICKER =
+  ".dropdown-menu-container select.dropdown-select__language";
+
+/** the main menu's canvas-background heading, the label a language switch is
+ * read off */
+const backgroundLabel = (page) =>
+  page.evaluate(() =>
+    document
+      .querySelector('[data-testid="canvas-background-label"]')
+      ?.textContent?.trim(),
+  );
+
 const drawRectangle = async (page, from = [500, 400], to = [700, 550]) => {
   await clickCenter(page, '[data-testid="toolbar-rectangle"]');
   await waitFor(page, () => window.h.state.activeTool.type === "rectangle", {
@@ -1717,6 +1729,102 @@ export const runSuite = async (browser, url, runner) => {
           selectors: [
             ".dropdown-menu-container caliburn-menu-toggle-theme .RadioGroup__choice",
             ".dropdown-menu-container select.dropdown-select__language",
+          ],
+        },
+      },
+    );
+
+    await runner.check(
+      "links.language-relabels-in-place",
+      "picking a language relabels the chrome in place, without rebuilding the editor",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page);
+
+        // stamp the live nodes: a rebuilt subtree brings fresh DOM, which
+        // carries no stamp, so identity is the honest remount detector
+        await page.evaluate(() => {
+          document.querySelector(
+            "canvas.excalidraw__canvas.interactive",
+          ).__e2eStamp = "before";
+          document.querySelector(".excalidraw").__e2eStamp = "before";
+        });
+        const before = (await elements(page)).length;
+        expect(before > 0, "no element on the canvas to survive the switch");
+
+        await openMainMenu(page);
+        expectEqual(
+          await backgroundLabel(page),
+          "Canvas background",
+          "canvas background label before the switch",
+        );
+
+        await page.select(LANGUAGE_PICKER, "fr-FR");
+        await waitFor(
+          page,
+          () =>
+            document
+              .querySelector('[data-testid="canvas-background-label"]')
+              ?.textContent?.trim() === "Arrière-plan du canevas",
+          { message: "the chrome did not relabel after the language change" },
+        );
+
+        const french = await page.evaluate(() => ({
+          canvas: document.querySelector(
+            "canvas.excalidraw__canvas.interactive",
+          )?.__e2eStamp,
+          editor: document.querySelector(".excalidraw")?.__e2eStamp,
+          dir: document.documentElement.dir,
+          lang: document.documentElement.lang,
+        }));
+        expectEqual(french.canvas, "before", "interactive canvas identity");
+        expectEqual(french.editor, "before", "editor root identity");
+        expectEqual(french.lang, "fr-FR", "document language");
+        expectEqual(french.dir, "ltr", "writing direction of an LTR locale");
+        expectEqual(
+          (await elements(page)).length,
+          before,
+          "scene elements across the language change",
+        );
+
+        // an RTL locale flips the document's direction, still without a rebuild
+        await page.select(LANGUAGE_PICKER, "ar-SA");
+        await waitFor(page, () => document.documentElement.dir === "rtl", {
+          message: "an RTL locale did not flip the writing direction",
+        });
+        expectEqual(
+          await backgroundLabel(page),
+          "خلفية اللوحة",
+          "canvas background label in an RTL locale",
+        );
+        expectEqual(
+          await page.evaluate(
+            () =>
+              document.querySelector("canvas.excalidraw__canvas.interactive")
+                ?.__e2eStamp,
+          ),
+          "before",
+          "interactive canvas identity across the RTL switch",
+        );
+
+        // back to English, so every later check reads its own labels
+        await page.select(LANGUAGE_PICKER, "en");
+        await waitFor(
+          page,
+          () =>
+            document.documentElement.dir === "ltr" &&
+            document
+              .querySelector('[data-testid="canvas-background-label"]')
+              ?.textContent?.trim() === "Canvas background",
+          { message: "the chrome did not return to English" },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [
+            ".dropdown-menu-container select.dropdown-select__language",
+            '[data-testid="canvas-background-label"]',
           ],
         },
       },

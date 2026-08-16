@@ -12,6 +12,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnDialogActionButtonComponent } from "./dialog-action-button.component";
 import { CaliburnDialogComponent } from "./dialog.component";
 
@@ -35,12 +37,21 @@ export class CaliburnConfirmDialogComponent {
   );
 
   readonly title = input<string | false>(false);
-  readonly confirmText = input(t("buttons.confirm"));
-  readonly cancelText = input(t("buttons.cancel"));
+  readonly confirmText = input<string>();
+  readonly cancelText = input<string>();
   readonly extraClass = input<string>("", { alias: "class" });
 
   readonly confirm = output<void>();
   readonly cancel = output<void>();
+
+  /** upstream defaults both props to `t(...)` in its render body, so an unset
+   * input follows the language rather than freezing at construction */
+  protected readonly confirmLabel = translated(
+    () => this.confirmText() ?? t("buttons.confirm"),
+  );
+  protected readonly cancelLabel = translated(
+    () => this.cancelText() ?? t("buttons.cancel"),
+  );
 
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";

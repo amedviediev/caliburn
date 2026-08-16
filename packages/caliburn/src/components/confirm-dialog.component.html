@@ -9,12 +9,12 @@
   <div class="confirm-dialog-buttons">
     <button
       caliburn-dialog-action-button
-      [label]="cancelText()"
+      [label]="cancelLabel()"
       (select)="handleCancel()"
     ></button>
     <button
       caliburn-dialog-action-button
-      [label]="confirmText()"
+      [label]="confirmLabel()"
       actionType="danger"
       (select)="handleConfirm()"
     ></button>

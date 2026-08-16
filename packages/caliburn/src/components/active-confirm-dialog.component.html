@@ -1,9 +1,9 @@
 @if (editor.activeConfirmDialog() === "clearCanvas") {
 <caliburn-confirm-dialog
-  [title]="title"
+  [title]="title()"
   (confirm)="handleConfirm()"
   (cancel)="editor.activeConfirmDialog.set(null)"
 >
-  <p class="clear-canvas__content">{{ content }}</p>
+  <p class="clear-canvas__content">{{ content() }}</p>
 </caliburn-confirm-dialog>
 }

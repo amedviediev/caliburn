@@ -3,10 +3,10 @@
     caliburn-dropdown-menu-sub-trigger
     icon="settingsIcon"
     testId="preferences-menu-item"
-    [ariaLabel]="label"
+    [ariaLabel]="label()"
     [mobile]="isMobile"
   >
-    {{ label }}
+    {{ label() }}
   </button>
   <caliburn-dropdown-menu-sub-content
     class="excalidraw-main-menu-preferences-submenu"
@@ -16,11 +16,11 @@
       icon="emptyIcon"
       name="boxSelectionMode"
       [value]="boxSelectionMode()"
-      [choices]="boxSelectionChoices"
+      [choices]="boxSelectionChoices()"
       [mobile]="isMobile"
       (valueChange)="setBoxSelectionMode($event)"
     >
-      {{ boxSelectionLabel }}
+      {{ boxSelectionLabel() }}
     </caliburn-dropdown-menu-item-content-radio>
     @for (row of toggles(); track row.id) {
       <button

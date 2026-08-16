@@ -29,7 +29,7 @@
       #eyeDropperTrigger
       class="excalidraw-eye-dropper-trigger"
       [class.selected]="isEyeDropperActive()"
-      [attr.title]="eyeDropperTitle"
+      [attr.title]="eyeDropperTitle()"
       (click)="toggleEyeDropper()"
     >
       <ng-icon name="eyeDropperIcon" />

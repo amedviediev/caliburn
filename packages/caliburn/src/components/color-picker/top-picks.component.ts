@@ -28,6 +28,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import type { Theme } from "@excalidraw/element/types";
 import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
 
+import { translated } from "../../i18n";
+
 import { CaliburnTopPicksDnD } from "./top-picks-dnd";
 
 import type { AfterViewInit, OnDestroy } from "@angular/core";
@@ -71,7 +73,9 @@ export class CaliburnTopPicksComponent implements AfterViewInit, OnDestroy {
   readonly colorChange = output<string>();
   readonly reset = output<void>();
 
-  protected readonly resetLabel = t("colorPicker.resetTopPicks");
+  protected readonly resetLabel = translated(() =>
+    t("colorPicker.resetTopPicks"),
+  );
   protected readonly dragState = this.dnd.dragState;
   protected readonly contextMenuOpen = signal(false);
   protected readonly contextMenuPosition = signal({ x: 0, y: 0 });

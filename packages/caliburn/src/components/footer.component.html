@@ -14,18 +14,18 @@
               class="zoom-out-button zoom-button"
               mode="button"
               icon="zoomOutIcon"
-              [title]="labels.zoomOutTitle"
-              [ariaLabel]="labels.zoomOut"
+              [title]="labels().zoomOutTitle"
+              [ariaLabel]="labels().zoomOut"
               [disabled]="state().zoom.value <= MIN_ZOOM"
               [onClick]="zoomOut"
             ></button>
-            <caliburn-tooltip [label]="labels.resetZoom">
+            <caliburn-tooltip [label]="labels().resetZoom">
               <button
                 caliburn-icon-button
                 class="reset-zoom-button zoom-button"
                 mode="button"
-                [title]="labels.resetZoom"
-                [ariaLabel]="labels.resetZoom"
+                [title]="labels().resetZoom"
+                [ariaLabel]="labels().resetZoom"
                 [onClick]="resetZoom"
               >
                 {{ zoomPercentage() }}%
@@ -36,8 +36,8 @@
               class="zoom-in-button zoom-button"
               mode="button"
               icon="zoomInIcon"
-              [title]="labels.zoomInTitle"
-              [ariaLabel]="labels.zoomIn"
+              [title]="labels().zoomInTitle"
+              [ariaLabel]="labels().zoomIn"
               [disabled]="state().zoom.value >= MAX_ZOOM"
               [onClick]="zoomIn"
             ></button>
@@ -46,12 +46,12 @@
         } @if (defaultUIEnabled() && !state().viewModeEnabled) {
         <div class="undo-redo-buttons zen-mode-transition">
           <div class="undo-button-container">
-            <caliburn-tooltip [label]="labels.undo">
+            <caliburn-tooltip [label]="labels().undo">
               <button
                 caliburn-icon-button
                 mode="button"
                 icon="undoIcon"
-                [ariaLabel]="labels.undo"
+                [ariaLabel]="labels().undo"
                 testId="button-undo"
                 [disabled]="isUndoStackEmpty()"
                 [onClick]="undo"
@@ -59,12 +59,12 @@
             </caliburn-tooltip>
           </div>
           <div class="redo-button-container">
-            <caliburn-tooltip [label]="labels.redo">
+            <caliburn-tooltip [label]="labels().redo">
               <button
                 caliburn-icon-button
                 mode="button"
                 icon="redoIcon"
-                [ariaLabel]="labels.redo"
+                [ariaLabel]="labels().redo"
                 testId="button-redo"
                 [disabled]="isRedoStackEmpty()"
                 [onClick]="redo"
@@ -103,7 +103,7 @@
       [class.disable-zen-mode--visible]="showExitZenModeBtn()"
       (click)="exitZenMode()"
     >
-      {{ labels.exitZenMode }}
+      {{ labels().exitZenMode }}
     </button>
   }
 </footer>

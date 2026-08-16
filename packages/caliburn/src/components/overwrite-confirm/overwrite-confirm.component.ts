@@ -20,6 +20,8 @@ import {
 import { CaliburnDialogComponent } from "../dialog.component";
 import { CaliburnFilledButtonComponent } from "../filled-button.component";
 
+import { translated } from "../../i18n";
+
 import type { CaliburnEditorComponent } from "../../editor.component";
 
 /** the `<bold>…</bold>` / `<br></br>` markers upstream's `<Trans>` resolves
@@ -51,7 +53,7 @@ export class CaliburnOverwriteConfirmComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     saveToDiskTitle: t("overwriteConfirm.action.saveToDisk.title"),
     saveToDiskButton: t("overwriteConfirm.action.saveToDisk.button"),
     saveToDiskDescription: t("overwriteConfirm.action.saveToDisk.description"),
@@ -60,7 +62,7 @@ export class CaliburnOverwriteConfirmComponent {
     exportToImageDescription: t(
       "overwriteConfirm.action.exportToImage.description",
     ),
-  };
+  }));
 
   protected readonly state = computed(() => this.editor.overwriteConfirm());
 

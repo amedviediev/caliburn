@@ -1,11 +1,11 @@
 @if (visible()) { @if (isBucketFillTool()) {
 <div class="selected-shape-actions {{ shapeActionsMenuClass }}">
   <div>
-    <h3 aria-hidden="true">{{ labels.background }}</h3>
+    <h3 aria-hidden="true">{{ labels().background }}</h3>
     <caliburn-color-picker
       type="elementBackground"
       customizableTopPicks="bucketFill"
-      [label]="labels.background"
+      [label]="labels().background"
       [color]="bucketFillBackgroundColor()"
       [palette]="backgroundPalette"
       [topPicks]="bucketFillTopPicks"
@@ -15,7 +15,7 @@
     />
   </div>
   <fieldset>
-    <legend>{{ labels.fill }}</legend>
+    <legend>{{ labels().fill }}</legend>
     <div class="buttonList">
       @for (option of fillOptions(); track option.value) {
       <button
@@ -31,7 +31,7 @@
     </div>
   </fieldset>
   <fieldset>
-    <legend>{{ labels.opacity }}</legend>
+    <legend>{{ labels().opacity }}</legend>
     <input
       type="range"
       min="0"
@@ -48,11 +48,11 @@
 <div class="selected-shape-actions {{ shapeActionsMenuClass }}">
   <div>
     @if (predicates().strokeColor) {
-    <h3 aria-hidden="true">{{ labels.stroke }}</h3>
+    <h3 aria-hidden="true">{{ labels().stroke }}</h3>
     <caliburn-color-picker
       type="elementStroke"
       customizableTopPicks="elementStroke"
-      [label]="labels.stroke"
+      [label]="labels().stroke"
       [color]="currentStrokeColor()"
       [palette]="strokePalette"
       [topPicks]="strokeTopPicks"
@@ -63,11 +63,11 @@
   </div>
   @if (predicates().backgroundColor) {
   <div>
-    <h3 aria-hidden="true">{{ labels.background }}</h3>
+    <h3 aria-hidden="true">{{ labels().background }}</h3>
     <caliburn-color-picker
       type="elementBackground"
       customizableTopPicks="elementBackground"
-      [label]="labels.background"
+      [label]="labels().background"
       [color]="currentBackgroundColor()"
       [palette]="backgroundPalette"
       [topPicks]="backgroundTopPicks"
@@ -77,7 +77,7 @@
   </div>
   } @if (predicates().fill) {
   <fieldset>
-    <legend>{{ labels.fill }}</legend>
+    <legend>{{ labels().fill }}</legend>
     <div class="buttonList">
       @for (option of fillOptions(); track option.value) {
       <button
@@ -94,9 +94,9 @@
   </fieldset>
   } @if (predicates().strokeWidth) {
   <fieldset>
-    <legend>{{ labels.strokeWidth }}</legend>
+    <legend>{{ labels().strokeWidth }}</legend>
     <div class="buttonList">
-      @for (option of strokeWidthOptions; track option.text) {
+      @for (option of strokeWidthOptions(); track option.text) {
       <label
         [class.active]="strokeWidthValue() === option.value"
         [attr.title]="option.text"
@@ -115,9 +115,9 @@
   </fieldset>
   } @if (predicates().strokeStyle) {
   <fieldset>
-    <legend>{{ labels.strokeStyle }}</legend>
+    <legend>{{ labels().strokeStyle }}</legend>
     <div class="buttonList">
-      @for (option of strokeStyleOptions; track option.text) {
+      @for (option of strokeStyleOptions(); track option.text) {
       <label
         [class.active]="strokeStyleValue() === option.value"
         [attr.title]="option.text"
@@ -135,9 +135,9 @@
   </fieldset>
   } @if (predicates().freedrawMode) {
   <fieldset>
-    <legend>{{ labels.pressure }}</legend>
+    <legend>{{ labels().pressure }}</legend>
     <div class="buttonList">
-      @for (option of freedrawModeOptions; track option.text) {
+      @for (option of freedrawModeOptions(); track option.text) {
       <label
         [class.active]="freedrawModeValue() === option.value"
         [attr.title]="option.text"
@@ -155,9 +155,9 @@
   </fieldset>
   } @if (predicates().sloppiness) {
   <fieldset>
-    <legend>{{ labels.sloppiness }}</legend>
+    <legend>{{ labels().sloppiness }}</legend>
     <div class="buttonList">
-      @for (option of sloppinessOptions; track option.text) {
+      @for (option of sloppinessOptions(); track option.text) {
       <label
         [class.active]="sloppinessValue() === option.value"
         [attr.title]="option.text"
@@ -175,9 +175,9 @@
   </fieldset>
   } @if (predicates().roundness) {
   <fieldset>
-    <legend>{{ labels.edges }}</legend>
+    <legend>{{ labels().edges }}</legend>
     <div class="buttonList">
-      @for (option of roundnessOptions; track option.text) {
+      @for (option of roundnessOptions(); track option.text) {
       <label
         [class.active]="roundnessValue() === option.value"
         [attr.title]="option.text"
@@ -195,9 +195,9 @@
   </fieldset>
   } @if (predicates().text) {
   <fieldset>
-    <legend>{{ labels.fontFamily }}</legend>
+    <legend>{{ labels().fontFamily }}</legend>
     <div class="buttonList">
-      @for (option of fontFamilyOptions; track option.text) {
+      @for (option of fontFamilyOptions(); track option.text) {
       <button
         type="button"
         [attr.title]="option.text"
@@ -211,9 +211,9 @@
     </div>
   </fieldset>
   <fieldset>
-    <legend>{{ labels.fontSize }}</legend>
+    <legend>{{ labels().fontSize }}</legend>
     <div class="buttonList">
-      @for (option of fontSizeOptions; track option.text) {
+      @for (option of fontSizeOptions(); track option.text) {
       <label
         [class.active]="fontSizeValue() === option.value"
         [attr.title]="option.text"
@@ -232,9 +232,9 @@
   </fieldset>
   @if (predicates().textAlign) {
   <fieldset>
-    <legend>{{ labels.textAlign }}</legend>
+    <legend>{{ labels().textAlign }}</legend>
     <div class="buttonList">
-      @for (option of textAlignOptions; track option.text) {
+      @for (option of textAlignOptions(); track option.text) {
       <label
         [class.active]="textAlignValue() === option.value"
         [attr.title]="option.text"
@@ -254,7 +254,7 @@
   } } @if (predicates().verticalAlign) {
   <fieldset>
     <div class="buttonList">
-      @for (option of verticalAlignOptions; track option.text) {
+      @for (option of verticalAlignOptions(); track option.text) {
       <label
         [class.active]="verticalAlignValue() === option.value"
         [attr.title]="option.text"
@@ -273,7 +273,7 @@
   </fieldset>
   } @if (predicates().opacity) {
   <fieldset>
-    <legend>{{ labels.opacity }}</legend>
+    <legend>{{ labels().opacity }}</legend>
     <input
       type="range"
       min="0"
@@ -287,9 +287,9 @@
   </fieldset>
   } @if (predicates().layers) {
   <fieldset>
-    <legend>{{ labels.layers }}</legend>
+    <legend>{{ labels().layers }}</legend>
     <div class="buttonList">
-      @for (option of layerOptions; track option.text) {
+      @for (option of layerOptions(); track option.text) {
       <button
         type="button"
         [attr.title]="option.text"
@@ -303,9 +303,9 @@
   </fieldset>
   } @if (predicates().showExtraActions) {
   <fieldset>
-    <legend>{{ labels.actions }}</legend>
+    <legend>{{ labels().actions }}</legend>
     <div class="buttonList">
-      @for (option of extraActionOptions; track option.text) {
+      @for (option of extraActionOptions(); track option.text) {
       <button
         type="button"
         [attr.title]="option.text"

@@ -36,6 +36,8 @@ import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPic
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnButtonSeparatorComponent } from "../button-separator.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnColorPickerSection } from "./color-picker-section";
 import { CaliburnTopPicksDnD } from "./top-picks-dnd";
 import { CaliburnColorInputComponent } from "./color-input.component";
@@ -110,8 +112,10 @@ export class CaliburnColorPickerComponent {
   private readonly triggerRef =
     viewChild.required<ElementRef<HTMLButtonElement>>("trigger");
 
-  protected readonly hexCodeLabel = t("colorPicker.hexCode");
-  protected readonly colorPlaceholder = t("colorPicker.color");
+  protected readonly hexCodeLabel = translated(() => t("colorPicker.hexCode"));
+  protected readonly colorPlaceholder = translated(() =>
+    t("colorPicker.color"),
+  );
 
   protected readonly theme = computed(() => {
     this.editor.changeGeneration();

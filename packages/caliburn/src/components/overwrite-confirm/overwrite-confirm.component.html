@@ -28,9 +28,9 @@
     </div>
     <div class="OverwriteConfirm__Actions">
       <div class="OverwriteConfirm__Actions__Action">
-        <h4>{{ labels.saveToDiskTitle }}</h4>
+        <h4>{{ labels().saveToDiskTitle }}</h4>
         <div class="OverwriteConfirm__Actions__Action__content">
-          {{ labels.saveToDiskDescription }}
+          {{ labels().saveToDiskDescription }}
         </div>
         <button
           caliburn-filled-button
@@ -38,14 +38,14 @@
           color="muted"
           size="large"
           [fullWidth]="true"
-          [label]="labels.saveToDiskButton"
+          [label]="labels().saveToDiskButton"
           [onClick]="saveToDisk"
         ></button>
       </div>
       <div class="OverwriteConfirm__Actions__Action">
-        <h4>{{ labels.exportToImageTitle }}</h4>
+        <h4>{{ labels().exportToImageTitle }}</h4>
         <div class="OverwriteConfirm__Actions__Action__content">
-          {{ labels.exportToImageDescription }}
+          {{ labels().exportToImageDescription }}
         </div>
         <button
           caliburn-filled-button
@@ -53,7 +53,7 @@
           color="muted"
           size="large"
           [fullWidth]="true"
-          [label]="labels.exportToImageButton"
+          [label]="labels().exportToImageButton"
           [onClick]="exportToImage"
         ></button>
       </div>

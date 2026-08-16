@@ -4,6 +4,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { NgIcon } from "@ng-icons/core";
 
+import { translated } from "../../i18n";
+
 /**
  * Angular port of upstream `welcome-screen/WelcomeScreen.Hints.tsx`'s
  * `MenuHint`. Host-bound (no wrapper element) — LayerUI renders it at the
@@ -21,5 +23,11 @@ import { NgIcon } from "@ng-icons/core";
   templateUrl: "./menu-hint.component.html",
 })
 export class CaliburnWelcomeScreenMenuHintComponent {
-  readonly label = input(t("welcomeScreen.defaults.menuHint"));
+  readonly label = input<string>();
+
+  /** upstream defaults the slot to `t(...)` in its render body, so an unset
+   * input follows the language rather than freezing at construction */
+  protected readonly labelText = translated(
+    () => this.label() ?? t("welcomeScreen.defaults.menuHint"),
+  );
 }

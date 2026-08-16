@@ -22,6 +22,8 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnDialogActionButtonComponent } from "./dialog-action-button.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 import { CaliburnTextFieldComponent } from "./text-field.component";
@@ -55,11 +57,11 @@ export class CaliburnElementLinkDialogComponent implements OnInit, OnDestroy {
 
   readonly sourceElementId = input.required<ExcalidrawElement["id"]>();
 
-  protected readonly title = t("elementLink.title");
-  protected readonly desc = t("elementLink.desc");
-  protected readonly removeLabel = t("buttons.remove");
-  protected readonly cancelLabel = t("buttons.cancel");
-  protected readonly confirmLabel = t("buttons.confirm");
+  protected readonly title = translated(() => t("elementLink.title"));
+  protected readonly desc = translated(() => t("elementLink.desc"));
+  protected readonly removeLabel = translated(() => t("buttons.remove"));
+  protected readonly cancelLabel = translated(() => t("buttons.cancel"));
+  protected readonly confirmLabel = translated(() => t("buttons.confirm"));
 
   protected readonly nextLink = signal<string | null>(null);
   private linkEdited = false;

@@ -3,9 +3,9 @@
   caliburn-dropdown-menu-item
   icon="trashIcon"
   testId="clear-canvas-button"
-  [ariaLabel]="label"
+  [ariaLabel]="label()"
   (select)="handleSelect()"
 >
-  {{ label }}
+  {{ label() }}
 </button>
 }

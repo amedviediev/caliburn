@@ -47,6 +47,8 @@ import type { SearchMatch } from "@excalidraw/excalidraw/types";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnButtonComponent } from "./button.component";
 import { CaliburnTextFieldComponent } from "./text-field.component";
 
@@ -115,10 +117,10 @@ export class CaliburnSearchMenuComponent implements OnDestroy {
   private readonly textField = viewChild(CaliburnTextFieldComponent);
 
   protected readonly inputWrapperClass = CLASSES.SEARCH_MENU_INPUT_WRAPPER;
-  protected readonly placeholder = t("search.placeholder");
-  protected readonly noMatchLabel = t("search.noMatch");
-  protected readonly framesLabel = t("search.frames");
-  protected readonly textsLabel = t("search.texts");
+  protected readonly placeholder = translated(() => t("search.placeholder"));
+  protected readonly noMatchLabel = translated(() => t("search.noMatch"));
+  protected readonly framesLabel = translated(() => t("search.frames"));
+  protected readonly textsLabel = translated(() => t("search.texts"));
 
   protected readonly inputValue = this.editor.searchQuery;
   protected readonly focusIndex = this.editor.searchItemInFocus;

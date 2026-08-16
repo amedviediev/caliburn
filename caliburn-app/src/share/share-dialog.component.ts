@@ -22,6 +22,8 @@ import {
 import { activeRoomLink, shareDialogState } from "../app-state";
 import { CollabService } from "../collab/collab.service";
 
+import { translated } from "../../../packages/caliburn/src/index";
+
 import { CaliburnAppQRCodeComponent } from "./qrcode.component";
 
 import type { OnDestroy } from "@angular/core";
@@ -80,7 +82,7 @@ export class CaliburnAppShareDialogComponent implements OnDestroy {
   protected readonly copyStatus = signal<"success" | null>(null);
   protected readonly username = signal(this.collab.getUsername());
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     liveCollaboration: t("labels.liveCollaboration").replace(/\./g, ""),
     copyLink: t("buttons.copyLink"),
     descPrivacy: t("roomDialog.desc_privacy"),
@@ -92,7 +94,7 @@ export class CaliburnAppShareDialogComponent implements OnDestroy {
     linkDetails: t("exportDialog.link_details"),
     linkButton: t("exportDialog.link_button"),
     or: t("shareDialog.or"),
-  };
+  }));
 
   private copyStatusTimeout = 0;
 

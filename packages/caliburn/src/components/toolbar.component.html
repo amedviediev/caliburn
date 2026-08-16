@@ -5,7 +5,7 @@
   viewportUi="top"
 >
   <caliburn-hint-viewer />
-  <h2 class="visually-hidden" [id]="headingId()">{{ labels.shapes }}</h2>
+  <h2 class="visually-hidden" [id]="headingId()">{{ labels().shapes }}</h2>
   <caliburn-stack-row [gap]="1">
     @if (forcedTool() === null) {
       <button
@@ -14,8 +14,8 @@
         mode="toggle"
         [icon]="state().activeTool.locked ? 'lockedIcon' : 'unlockedIcon'"
         [checked]="state().activeTool.locked"
-        [title]="labels.lock + ' — Q'"
-        [ariaLabel]="labels.lock"
+        [title]="labels().lock + ' — Q'"
+        [ariaLabel]="labels().lock"
         testId="toolbar-lock"
         (select)="toggleLock()"
       ></button>
@@ -53,7 +53,7 @@
           isExtraToolSelected()
         "
         [mobile]="isMobile"
-        [title]="labels.extraTools"
+        [title]="labels().extraTools"
         (toggle)="toggleExtraTools()"
       >
         <ng-icon [name]="extraToolsIcon()" />
@@ -86,7 +86,7 @@
           testId="toolbar-embeddable"
           (select)="openMermaidToExcalidraw()"
         >
-          {{ labels.mermaidToExcalidraw }}
+          {{ labels().mermaidToExcalidraw }}
         </button>
       </caliburn-dropdown-menu-content>
     </caliburn-dropdown-menu>

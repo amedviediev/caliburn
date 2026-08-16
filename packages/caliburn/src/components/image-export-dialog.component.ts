@@ -42,6 +42,8 @@ import {
 } from "../actions/actionExport";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnDialogComponent } from "./dialog.component";
 import { CaliburnFilledButtonComponent } from "./filled-button.component";
 import { CaliburnRadioGroupComponent } from "./radio-group.component";
@@ -95,7 +97,7 @@ export class CaliburnImageExportDialogComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     header: t("imageExportDialog.header"),
     onlySelected: t("imageExportDialog.label.onlySelected"),
     withBackground: t("imageExportDialog.label.withBackground"),
@@ -112,7 +114,7 @@ export class CaliburnImageExportDialogComponent {
     cannotShowPreview: t("canvasError.cannotShowPreview"),
     canvasTooBig: t("canvasError.canvasTooBig"),
     canvasTooBigTip: t("canvasError.canvasTooBigTip"),
-  };
+  }));
 
   protected readonly nativeFileSystemSupported = nativeFileSystemSupported;
   protected readonly canCopyToClipboard =

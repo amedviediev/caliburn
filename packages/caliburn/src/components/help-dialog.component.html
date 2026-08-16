@@ -1,11 +1,11 @@
 <caliburn-dialog
   class="HelpDialog"
-  [title]="title"
+  [title]="title()"
   [fullscreen]="isMobile"
   (closeRequest)="close.emit()"
 >
   <div class="HelpDialog__header">
-    @for (link of links; track link.href) {
+    @for (link of links(); track link.href) {
       <a
         class="HelpDialog__btn"
         [href]="link.href"
@@ -19,7 +19,7 @@
       </a>
     }
   </div>
-  <h3>{{ shortcutsTitle }}</h3>
+  <h3>{{ shortcutsTitle() }}</h3>
   <div class="HelpDialog__islands-container">
     @for (island of islands(); track island.className) {
       <div class="HelpDialog__island {{ island.className }}">

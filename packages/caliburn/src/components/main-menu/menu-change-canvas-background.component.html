@@ -4,14 +4,14 @@
     data-testid="canvas-background-label"
     style="font-size: 0.875rem; margin-bottom: 0.25rem; margin-left: 0.5rem"
   >
-    {{ label }}
+    {{ label() }}
   </div>
   <div style="padding: 0 0.625rem">
     <caliburn-color-picker
       type="canvasBackground"
       [palette]="null"
       [topPicks]="canvasBackgroundPicks"
-      [label]="label"
+      [label]="label()"
       [color]="currentColor()"
       [updateData]="updateViewBackgroundColor"
       (colorChange)="setColor($event)"

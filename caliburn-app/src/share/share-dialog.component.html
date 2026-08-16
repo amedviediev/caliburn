@@ -7,7 +7,7 @@
     <div class="ShareDialog">
       @if (isActiveRoom()) {
         <h3 class="ShareDialog__active__header">
-          {{ labels.liveCollaboration }}
+          {{ labels().liveCollaboration }}
         </h3>
         <caliburn-text-field
           label="Your name"
@@ -38,7 +38,7 @@
             caliburn-filled-button
             size="large"
             icon="copyIcon"
-            [label]="labels.copyLink"
+            [label]="labels().copyLink"
             [status]="copyStatus()"
             [onClick]="copyRoomLink"
           ></button>
@@ -52,9 +52,9 @@
               class="ShareDialog__active__description__emoji"
               >🔒
             </span>
-            {{ labels.descPrivacy }}
+            {{ labels().descPrivacy }}
           </p>
-          <p>{{ labels.descExitSession }}</p>
+          <p>{{ labels().descExitSession }}</p>
         </div>
         <div class="ShareDialog__active__actions">
           <button
@@ -63,45 +63,45 @@
             variant="outlined"
             color="danger"
             icon="playerStopFilledIcon"
-            [label]="labels.stopSession"
+            [label]="labels().stopSession"
             [onClick]="stopCollaboration"
           ></button>
         </div>
       } @else {
         @if (collabEnabled()) {
           <div class="ShareDialog__picker__header">
-            {{ labels.liveCollaboration }}
+            {{ labels().liveCollaboration }}
           </div>
           <div class="ShareDialog__picker__description">
-            <div style="margin-bottom: 1em">{{ labels.descIntro }}</div>
-            {{ labels.descPrivacy }}
+            <div style="margin-bottom: 1em">{{ labels().descIntro }}</div>
+            {{ labels().descPrivacy }}
           </div>
           <div class="ShareDialog__picker__button">
             <button
               caliburn-filled-button
               size="large"
               icon="playerPlayIcon"
-              [label]="labels.startSession"
+              [label]="labels().startSession"
               [onClick]="startCollaboration"
             ></button>
           </div>
           @if (state().isOpen && $any(state()).type === "share") {
             <div class="ShareDialog__separator">
-              <span>{{ labels.or }}</span>
+              <span>{{ labels().or }}</span>
             </div>
           }
         }
         @if (state().isOpen && $any(state()).type === "share") {
-          <div class="ShareDialog__picker__header">{{ labels.linkTitle }}</div>
+          <div class="ShareDialog__picker__header">{{ labels().linkTitle }}</div>
           <div class="ShareDialog__picker__description">
-            {{ labels.linkDetails }}
+            {{ labels().linkDetails }}
           </div>
           <div class="ShareDialog__picker__button">
             <button
               caliburn-filled-button
               size="large"
               icon="linkIcon"
-              [label]="labels.linkButton"
+              [label]="labels().linkButton"
               [onClick]="exportToBackend"
             ></button>
           </div>

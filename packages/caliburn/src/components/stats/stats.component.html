@@ -1,7 +1,7 @@
 <div class="exc-stats">
   <caliburn-island [padding]="3">
     <div class="title">
-      <h2>{{ labels.title }}</h2>
+      <h2>{{ labels().title }}</h2>
       <div class="close" (click)="close()">
         <ng-icon name="closeIcon" />
       </div>
@@ -11,22 +11,22 @@
       [open]="generalStatsOpen()"
       (openTrigger)="toggleGeneralStats()"
     >
-      <h3 ngProjectAs="[collapsibleLabel]">{{ labels.generalStats }}</h3>
+      <h3 ngProjectAs="[collapsibleLabel]">{{ labels().generalStats }}</h3>
       <div class="exc-stats__rows">
         <div
           class="exc-stats__row exc-stats__row--heading"
           style="grid-template-columns: repeat(1, 1fr)"
-        >{{ labels.scene }}</div>
+        >{{ labels().scene }}</div>
         <div class="exc-stats__row" style="grid-template-columns: repeat(2, 1fr)">
-          <div>{{ labels.shapes }}</div>
+          <div>{{ labels().shapes }}</div>
           <div>{{ elementCount() }}</div>
         </div>
         <div class="exc-stats__row" style="grid-template-columns: repeat(2, 1fr)">
-          <div>{{ labels.width }}</div>
+          <div>{{ labels().width }}</div>
           <div>{{ sceneDimension().width }}</div>
         </div>
         <div class="exc-stats__row" style="grid-template-columns: repeat(2, 1fr)">
-          <div>{{ labels.height }}</div>
+          <div>{{ labels().height }}</div>
           <div>{{ sceneDimension().height }}</div>
         </div>
         @if (gridModeEnabled()) {
@@ -47,7 +47,7 @@
         [open]="elementPropertiesOpen()"
         (openTrigger)="toggleElementProperties()"
       >
-        <h3 ngProjectAs="[collapsibleLabel]">{{ labels.elementProperties }}</h3>
+        <h3 ngProjectAs="[collapsibleLabel]">{{ labels().elementProperties }}</h3>
         <div class="exc-stats__rows">
           @if (singleElement(); as element) {
           <div
@@ -81,14 +81,14 @@
           <div
             class="exc-stats__row exc-stats__row--heading"
             style="grid-template-columns: repeat(1, 1fr)"
-          >{{ labels.group }}</div>
+          >{{ labels().group }}</div>
           }
 
           <div
             class="exc-stats__row"
             style="grid-template-columns: repeat(2, 1fr); margin: 0.3125rem 0"
           >
-            <div>{{ labels.shapes }}</div>
+            <div>{{ labels().shapes }}</div>
             <div>{{ elements.length }}</div>
           </div>
 

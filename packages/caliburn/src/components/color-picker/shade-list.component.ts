@@ -19,6 +19,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import type { ColorPaletteCustom } from "@excalidraw/common";
 import type { Theme } from "@excalidraw/element/types";
 
+import { translated } from "../../i18n";
+
 import { CaliburnColorPickerSection } from "./color-picker-section";
 import { CaliburnHotkeyLabelComponent } from "./hotkey-label.component";
 
@@ -51,7 +53,9 @@ export class CaliburnShadeListComponent {
 
   readonly colorChange = output<string>();
 
-  protected readonly noShadesLabel = t("colorPicker.noShades");
+  protected readonly noShadesLabel = translated(() =>
+    t("colorPicker.noShades"),
+  );
 
   private readonly colorObj = computed(() =>
     getColorNameAndShadeFromColor({

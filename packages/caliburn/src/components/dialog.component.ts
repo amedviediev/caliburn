@@ -16,6 +16,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { NgIcon } from "@ng-icons/core";
 
+import { translated } from "../i18n";
+
 import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnModalComponent } from "./modal.component";
 
@@ -65,7 +67,7 @@ let nextDialogId = 0;
 export class CaliburnDialogComponent implements AfterViewInit, OnDestroy {
   private readonly id = `caliburn-dialog-${nextDialogId++}`;
   readonly titleId = `${this.id}-dialog-title`;
-  readonly closeLabel = t("buttons.close");
+  readonly closeLabel = translated(() => t("buttons.close"));
 
   readonly title = input<string | false>(false);
   readonly size = input<DialogSize>();

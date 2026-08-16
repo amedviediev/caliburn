@@ -1,6 +1,6 @@
 @if (visible()) {
   <caliburn-dialog
-    [title]="title"
+    [title]="title()"
     [fullscreen]="isMobile"
     (closeRequest)="handleClose()"
   >
@@ -11,12 +11,12 @@
             <div class="Card-icon">
               <ng-icon name="exportToFileIcon" />
             </div>
-            <h2>{{ diskTitle }}</h2>
+            <h2>{{ diskTitle() }}</h2>
             <div class="Card-details">
-              {{ diskDetails }}
+              {{ diskDetails() }}
               @if (!nativeFileSystemSupported) {
                 <caliburn-project-name
-                  [label]="fileTitleLabel"
+                  [label]="fileTitleLabel()"
                   [value]="projectName()"
                   (valueChange)="setProjectName($event)"
                 />
@@ -26,8 +26,8 @@
               caliburn-icon-button
               class="Card-button"
               mode="button"
-              [title]="diskButton"
-              [ariaLabel]="diskButton"
+              [title]="diskButton()"
+              [ariaLabel]="diskButton()"
               [showAriaLabel]="true"
               [onClick]="saveFileToDisk"
             ></button>

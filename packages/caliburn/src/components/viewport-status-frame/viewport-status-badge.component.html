@@ -29,7 +29,7 @@
   <button
     type="button"
     class="viewport-status-frame__badge-close"
-    [attr.aria-label]="closeLabel"
+    [attr.aria-label]="closeLabel()"
     (click)="onClose()"
   >
     <ng-icon name="closeIcon" />

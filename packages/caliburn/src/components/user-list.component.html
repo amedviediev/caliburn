@@ -45,18 +45,18 @@
       @if (collaboratorsArray().length >= showCollaboratorsFilterAt) {
         <div
           caliburn-quick-search
-          [placeholder]="searchPlaceholder"
+          [placeholder]="searchPlaceholder()"
           (termChange)="onSearchTermChange($event)"
         ></div>
       }
       <div
         caliburn-scrollable-list
         class="dropdown-menu UserList__collaborators"
-        [placeholder]="emptyLabel"
+        [placeholder]="emptyLabel()"
         [isEmpty]="!filteredCollaborators().length"
       >
         @if (filteredCollaborators().length) {
-          <div class="hint">{{ hintText }}</div>
+          <div class="hint">{{ hintText() }}</div>
           @for (collaborator of filteredCollaborators(); track collaborator.socketId) {
             <div
               caliburn-user-list-collaborator

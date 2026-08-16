@@ -29,6 +29,8 @@ import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnIslandComponent } from "../island.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnStatsAngleComponent } from "./angle.component";
 import { CaliburnStatsCanvasGridComponent } from "./canvas-grid.component";
 import { CaliburnStatsCollapsibleComponent } from "./collapsible.component";
@@ -80,7 +82,7 @@ export class CaliburnStatsComponent implements OnDestroy {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     title: t("stats.title"),
     generalStats: t("stats.generalStats"),
     elementProperties: t("stats.elementProperties"),
@@ -89,7 +91,7 @@ export class CaliburnStatsComponent implements OnDestroy {
     width: t("stats.width"),
     height: t("stats.height"),
     group: t("element.group"),
-  };
+  }));
 
   private readonly sceneDimensionValue = signal({ width: 0, height: 0 });
 

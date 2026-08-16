@@ -16,6 +16,8 @@ import {
 } from "../actions/actionExport";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnCardComponent } from "./card.component";
 import { CaliburnDialogComponent } from "./dialog.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
@@ -47,11 +49,15 @@ export class CaliburnJSONExportDialogComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly title = t("buttons.export");
-  protected readonly diskTitle = t("exportDialog.disk_title");
-  protected readonly diskDetails = t("exportDialog.disk_details");
-  protected readonly diskButton = t("exportDialog.disk_button");
-  protected readonly fileTitleLabel = t("labels.fileTitle");
+  protected readonly title = translated(() => t("buttons.export"));
+  protected readonly diskTitle = translated(() => t("exportDialog.disk_title"));
+  protected readonly diskDetails = translated(() =>
+    t("exportDialog.disk_details"),
+  );
+  protected readonly diskButton = translated(() =>
+    t("exportDialog.disk_button"),
+  );
+  protected readonly fileTitleLabel = translated(() => t("labels.fileTitle"));
   protected readonly nativeFileSystemSupported = nativeFileSystemSupported;
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";

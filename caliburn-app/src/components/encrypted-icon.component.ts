@@ -6,6 +6,8 @@ import { NgIcon } from "@ng-icons/core";
 
 import { CaliburnTooltipComponent } from "../../../packages/caliburn/src/index";
 
+import { translated } from "../../../packages/caliburn/src/index";
+
 /**
  * Angular port of upstream
  * `excalidraw-app/components/EncryptedIcon.tsx` — the footer's end-to-end
@@ -22,12 +24,11 @@ import { CaliburnTooltipComponent } from "../../../packages/caliburn/src/index";
   templateUrl: "./encrypted-icon.component.html",
 })
 export class CaliburnAppEncryptedIconComponent {
-  protected readonly linkLabel = t("encrypted.link");
+  protected readonly linkLabel = translated(() => t("encrypted.link"));
   // upstream's copy names "Excalidraw's servers"; this app's own servers are
   // the ones actually holding the encrypted data, whatever this deployment's
   // backend is configured to be
-  protected readonly tooltipLabel = t("encrypted.tooltip").replace(
-    /Excalidraw/g,
-    "Caliburn",
+  protected readonly tooltipLabel = translated(() =>
+    t("encrypted.tooltip").replace(/Excalidraw/g, "Caliburn"),
   );
 }

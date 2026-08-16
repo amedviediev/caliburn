@@ -1,13 +1,13 @@
 <ng-content />
 <div class="sidebar__header__buttons">
   @if (sidebar.shouldRenderDockButton()) {
-    <caliburn-tooltip [label]="lockLabel">
+    <caliburn-tooltip [label]="lockLabel()">
       <button
         caliburn-button
         class="sidebar__dock"
         [selected]="!!sidebar.docked()"
         [testId]="'sidebar-dock'"
-        [ariaLabel]="lockLabel"
+        [ariaLabel]="lockLabel()"
         (select)="sidebar.handleDock(!sidebar.docked())"
       >
         <ng-icon name="pinIcon" />
@@ -18,7 +18,7 @@
     caliburn-button
     class="sidebar__close"
     [testId]="'sidebar-close'"
-    [ariaLabel]="closeLabel"
+    [ariaLabel]="closeLabel()"
     (select)="sidebar.onCloseRequest()"
   >
     <ng-icon name="closeIcon" />

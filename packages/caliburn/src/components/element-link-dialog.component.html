@@ -1,7 +1,7 @@
 <div class="ElementLinkDialog">
   <div class="ElementLinkDialog__header">
-    <h2>{{ title }}</h2>
-    <p>{{ desc }}</p>
+    <h2>{{ title() }}</h2>
+    <p>{{ desc() }}</p>
   </div>
 
   <div class="ElementLinkDialog__input">
@@ -19,9 +19,9 @@
       mode="button"
       class="ElementLinkDialog__remove"
       icon="trashIcon"
-      [title]="removeLabel"
-      [ariaLabel]="removeLabel"
-      [labelText]="removeLabel"
+      [title]="removeLabel()"
+      [ariaLabel]="removeLabel()"
+      [labelText]="removeLabel()"
       [onClick]="onRemove"
     ></button>
     }
@@ -30,14 +30,14 @@
   <div class="ElementLinkDialog__actions">
     <button
       caliburn-dialog-action-button
-      [label]="cancelLabel"
+      [label]="cancelLabel()"
       style="margin-right: 10px"
       (select)="onClose()"
     ></button>
 
     <button
       caliburn-dialog-action-button
-      [label]="confirmLabel"
+      [label]="confirmLabel()"
       actionType="primary"
       (select)="onConfirm()"
     ></button>

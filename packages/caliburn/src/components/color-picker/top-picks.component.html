@@ -28,7 +28,7 @@
     [attr.data-disabled]="isCustomized() ? null : ''"
     (click)="onResetSelected()"
   >
-    {{ resetLabel }}
+    {{ resetLabel() }}
   </div>
 </div>
 }

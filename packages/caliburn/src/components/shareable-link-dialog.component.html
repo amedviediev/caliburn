@@ -17,13 +17,13 @@
         caliburn-filled-button
         size="large"
         icon="copyIcon"
-        [label]="copyLinkLabel"
+        [label]="copyLinkLabel()"
         [status]="copyStatus()"
         [onClick]="copyLink"
       ></button>
     </div>
     <div class="ShareableLinkDialog__description">
-      🔒 {{ uploadedSecurelyLabel }}
+      🔒 {{ uploadedSecurelyLabel() }}
     </div>
   </div>
 </caliburn-dialog>

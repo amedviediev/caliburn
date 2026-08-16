@@ -11,6 +11,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { AppState } from "@excalidraw/excalidraw/types";
 
+import { translated } from "../../i18n";
+
 /**
  * Angular port of upstream `LibraryMenuBrowseButton.tsx`. The host element IS
  * upstream's `<a class="library-menu-browse-button">`.
@@ -30,7 +32,7 @@ export class CaliburnLibraryMenuBrowseButtonComponent {
   readonly theme = input.required<AppState["theme"]>();
   readonly libraryReturnUrl = input<string>();
 
-  protected readonly label = t("labels.libraries");
+  protected readonly label = translated(() => t("labels.libraries"));
 
   protected readonly href = computed(() => {
     const referrer =

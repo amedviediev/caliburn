@@ -16,6 +16,8 @@ import { NgIcon } from "@ng-icons/core";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnButtonComponent } from "./button.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
@@ -40,8 +42,8 @@ export class CaliburnLiveCollaborationTriggerComponent {
 
   readonly select = output<void>();
 
-  protected readonly title = t("labels.liveCollaboration");
-  protected readonly shareLabel = t("labels.share");
+  protected readonly title = translated(() => t("labels.liveCollaboration"));
+  protected readonly shareLabel = translated(() => t("labels.share"));
 
   protected state() {
     this.editor.changeGeneration();

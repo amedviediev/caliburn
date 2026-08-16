@@ -11,6 +11,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import { actionLoadScene } from "../../actions/actionExport";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnWelcomeScreenMenuItemComponent } from "./menu-item.component";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
@@ -32,7 +34,7 @@ export class CaliburnWelcomeScreenMenuItemLoadSceneComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly label = t("buttons.load");
+  protected readonly label = translated(() => t("buttons.load"));
   protected readonly shortcut = getShortcutFromShortcutName("loadScene");
 
   protected state() {

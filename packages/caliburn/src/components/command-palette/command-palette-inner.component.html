@@ -7,7 +7,7 @@
 >
   <caliburn-text-field
     [value]="commandSearch()"
-    [placeholder]="placeholder"
+    [placeholder]="placeholder()"
     [selectOnRender]="true"
     (valueChange)="handleSearchChange($event)"
   />
@@ -15,13 +15,13 @@
   @if (!isPhone) {
     <div class="shortcuts-wrapper">
       <caliburn-command-shortcut-hint shortcut="↑↓">{{
-        selectLabel
+        selectLabel()
       }}</caliburn-command-shortcut-hint>
       <caliburn-command-shortcut-hint shortcut="↵">{{
-        confirmLabel
+        confirmLabel()
       }}</caliburn-command-shortcut-hint>
       <caliburn-command-shortcut-hint [shortcut]="escapeShortcut">{{
-        closeLabel
+        closeLabel()
       }}</caliburn-command-shortcut-hint>
     </div>
   }
@@ -31,7 +31,7 @@
       @if (!commandSearch()) {
         <div class="command-category">
           <div class="command-category-title">
-            {{ recentsLabel }}
+            {{ recentsLabel() }}
             <div class="icon" style="margin-left: 6px">
               <ng-icon name="historyCommandIcon" />
             </div>
@@ -68,7 +68,7 @@
     } @else {
       <div class="no-match">
         <div class="icon"><ng-icon name="searchIcon" /></div>
-        {{ noMatchLabel }}
+        {{ noMatchLabel() }}
       </div>
     }
   </div>
@@ -85,7 +85,7 @@
     [class.item-selected]="command.label === currentCommand()?.label"
     [class.item-disabled]="disabled"
     [class.command-item-large]="large"
-    [attr.title]="disabled ? itemNotAvailableLabel : ''"
+    [attr.title]="disabled ? itemNotAvailableLabel() : ''"
     (click)="onItemClick(command, disabled, $event)"
     (mousemove)="onItemMouseMove(command, disabled)"
   >

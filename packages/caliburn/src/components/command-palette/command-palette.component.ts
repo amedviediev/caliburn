@@ -56,6 +56,8 @@ import { CaliburnLibraryItemIconComponent } from "../library/library-item-icon.c
 import { CaliburnTextFieldComponent } from "../text-field.component";
 import { TOOL_ICONS } from "../tools";
 
+import { translated } from "../../i18n";
+
 import { DEFAULT_CATEGORIES } from "./categories";
 
 import type { CommandPaletteItem } from "./types";
@@ -150,14 +152,26 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
 
   protected readonly isPhone =
     this.editor.editorInterface.formFactor === "phone";
-  protected readonly placeholder = t("commandPalette.search.placeholder");
-  protected readonly noMatchLabel = t("commandPalette.search.noMatch");
-  protected readonly recentsLabel = t("commandPalette.recents");
-  protected readonly selectLabel = t("commandPalette.shortcuts.select");
-  protected readonly confirmLabel = t("commandPalette.shortcuts.confirm");
-  protected readonly closeLabel = t("commandPalette.shortcuts.close");
-  protected readonly itemNotAvailableLabel = t(
-    "commandPalette.itemNotAvailable",
+  protected readonly placeholder = translated(() =>
+    t("commandPalette.search.placeholder"),
+  );
+  protected readonly noMatchLabel = translated(() =>
+    t("commandPalette.search.noMatch"),
+  );
+  protected readonly recentsLabel = translated(() =>
+    t("commandPalette.recents"),
+  );
+  protected readonly selectLabel = translated(() =>
+    t("commandPalette.shortcuts.select"),
+  );
+  protected readonly confirmLabel = translated(() =>
+    t("commandPalette.shortcuts.confirm"),
+  );
+  protected readonly closeLabel = translated(() =>
+    t("commandPalette.shortcuts.close"),
+  );
+  protected readonly itemNotAvailableLabel = translated(() =>
+    t("commandPalette.itemNotAvailable"),
   );
   protected readonly escapeShortcut = getShortcutKey("Esc");
 

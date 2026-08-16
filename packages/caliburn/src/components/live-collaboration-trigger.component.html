@@ -4,13 +4,13 @@
   [class.active]="isCollaborating()"
   [style.position]="'relative'"
   [style.width]="showIconOnly() ? null : 'auto'"
-  [title]="title"
+  [title]="title()"
   (select)="select.emit()"
 >
   @if (showIconOnly()) {
     <ng-icon name="share" />
   } @else {
-    {{ shareLabel }}
+    {{ shareLabel() }}
   }
   @if (collaboratorCount() > 0) {
     <div class="CollabButton-collaborators">{{ collaboratorCount() }}</div>

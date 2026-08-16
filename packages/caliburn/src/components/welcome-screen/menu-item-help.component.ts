@@ -10,6 +10,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 import { actionShortcuts } from "../../actions/actionMenu";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
+import { translated } from "../../i18n";
+
 import { CaliburnWelcomeScreenMenuItemComponent } from "./menu-item.component";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
@@ -29,7 +31,7 @@ export class CaliburnWelcomeScreenMenuItemHelpComponent {
     forwardRef(() => CaliburnEditorComponentToken),
   );
 
-  protected readonly label = t("helpDialog.title");
+  protected readonly label = translated(() => t("helpDialog.title"));
 
   protected isMobile() {
     return this.editor.editorInterface.formFactor === "phone";

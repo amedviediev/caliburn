@@ -44,6 +44,8 @@ import type { AppState } from "@excalidraw/excalidraw/types";
 import { CaliburnIconButtonComponent } from "../icon-button.component";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
+import { translated } from "../../i18n";
+
 import type { CaliburnEditorComponent } from "../../editor.component";
 
 import type { AfterViewInit, ElementRef, OnDestroy } from "@angular/core";
@@ -141,11 +143,13 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
 
   protected readonly popupWidth = POPUP_WIDTH;
   protected readonly popupPadding = POPUP_PADDING;
-  protected readonly hintLabel = t("labels.link.hint");
-  protected readonly emptyLabel = t("labels.link.empty");
-  protected readonly editLabel = t("buttons.edit");
-  protected readonly linkToElementLabel = t("labels.linkToElement");
-  protected readonly removeLabel = t("buttons.remove");
+  protected readonly hintLabel = translated(() => t("labels.link.hint"));
+  protected readonly emptyLabel = translated(() => t("labels.link.empty"));
+  protected readonly editLabel = translated(() => t("buttons.edit"));
+  protected readonly linkToElementLabel = translated(() =>
+    t("labels.linkToElement"),
+  );
+  protected readonly removeLabel = translated(() => t("buttons.remove"));
 
   protected readonly inputValue = signal("");
 

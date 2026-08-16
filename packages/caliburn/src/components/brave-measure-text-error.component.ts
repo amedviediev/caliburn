@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component } from "@angular/core";
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
+import { translated } from "../i18n";
+
 /** the anchors upstream's `<Trans>` fills in for the `<link>` /
  * `<issueLink>` / `<discordLink>` markers */
 const LINKS: Record<string, string> = {
@@ -60,10 +62,10 @@ const parseLine = (raw: string): Run[] => {
   templateUrl: "./brave-measure-text-error.component.html",
 })
 export class CaliburnBraveMeasureTextErrorComponent {
-  protected readonly lines = [
+  protected readonly lines = translated(() => [
     parseLine(t("errors.brave_measure_text_error.line1")),
     parseLine(t("errors.brave_measure_text_error.line2")),
     parseLine(t("errors.brave_measure_text_error.line3")),
     parseLine(t("errors.brave_measure_text_error.line4")),
-  ];
+  ]);
 }

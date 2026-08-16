@@ -25,6 +25,8 @@ import type { PointerType } from "@excalidraw/element/types";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnDropdownMenuContentComponent } from "./dropdown-menu/dropdown-menu-content.component";
 import { CaliburnDropdownMenuItemComponent } from "./dropdown-menu/dropdown-menu-item.component";
 import { CaliburnDropdownMenuTriggerComponent } from "./dropdown-menu/dropdown-menu-trigger.component";
@@ -91,12 +93,12 @@ export class CaliburnToolbarComponent {
   /** id of the section heading rendered inside the island (see LayerUI) */
   readonly headingId = input.required<string>();
 
-  protected readonly labels = {
+  protected readonly labels = translated(() => ({
     shapes: t("headings.shapes"),
     lock: t("toolBar.lock"),
     extraTools: t("toolBar.extraTools"),
     mermaidToExcalidraw: t("toolBar.mermaidToExcalidraw"),
-  };
+  }));
 
   private readonly extraToolsMenuOpen = signal(false);
   protected readonly extraToolsOpen = this.extraToolsMenuOpen.asReadonly();

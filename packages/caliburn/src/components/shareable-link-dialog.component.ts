@@ -9,6 +9,8 @@ import {
 import { copyTextToSystemClipboard } from "@excalidraw/excalidraw/clipboard";
 import { t } from "@excalidraw/excalidraw/i18n";
 
+import { translated } from "../i18n";
+
 import { CaliburnDialogComponent } from "./dialog.component";
 import { CaliburnFilledButtonComponent } from "./filled-button.component";
 import { CaliburnTextFieldComponent } from "./text-field.component";
@@ -39,13 +41,13 @@ export class CaliburnShareableLinkDialogComponent implements OnDestroy {
   readonly errorMessage = output<string>();
 
   protected readonly copyStatus = signal<"success" | null>(null);
-  protected readonly copyLinkLabel = t("buttons.copyLink");
+  protected readonly copyLinkLabel = translated(() => t("buttons.copyLink"));
   // upstream's copy names "Excalidraw server"; this app's own server is the
   // one actually holding the upload, whatever this deployment's backend is
   // configured to be
-  protected readonly uploadedSecurelyLabel = t(
-    "alerts.uploadedSecurly",
-  ).replace(/Excalidraw/g, "Caliburn");
+  protected readonly uploadedSecurelyLabel = translated(() =>
+    t("alerts.uploadedSecurly").replace(/Excalidraw/g, "Caliburn"),
+  );
 
   private copyStatusTimeout = 0;
 

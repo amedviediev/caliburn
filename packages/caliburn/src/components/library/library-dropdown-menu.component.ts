@@ -26,6 +26,8 @@ import { CaliburnDropdownMenuItemComponent } from "../dropdown-menu/dropdown-men
 import { CaliburnDropdownMenuTriggerComponent } from "../dropdown-menu/dropdown-menu-trigger.component";
 import { CaliburnDropdownMenuComponent } from "../dropdown-menu/dropdown-menu.component";
 
+import { translated } from "../../i18n";
+
 import {
   clearLibraryItemSvgCache,
   deleteItemsFromLibraryItemSvgCache,
@@ -71,10 +73,12 @@ export class CaliburnLibraryDropdownMenuComponent {
 
   readonly selectedItems = model.required<LibraryItem["id"][]>();
 
-  protected readonly loadLabel = t("buttons.load");
-  protected readonly exportLabel = t("buttons.export");
-  protected readonly removeLabel = t("buttons.remove");
-  protected readonly resetLibraryLabel = t("buttons.resetLibrary");
+  protected readonly loadLabel = translated(() => t("buttons.load"));
+  protected readonly exportLabel = translated(() => t("buttons.export"));
+  protected readonly removeLabel = translated(() => t("buttons.remove"));
+  protected readonly resetLibraryLabel = translated(() =>
+    t("buttons.resetLibrary"),
+  );
 
   protected readonly isLibraryMenuOpen = signal(false);
   protected readonly showRemoveLibAlert = signal(false);

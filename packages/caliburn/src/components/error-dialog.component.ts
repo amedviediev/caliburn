@@ -11,6 +11,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { translated } from "../i18n";
+
 import { CaliburnDialogComponent } from "./dialog.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
@@ -34,7 +36,7 @@ export class CaliburnErrorDialogComponent {
 
   readonly close = output<void>();
 
-  protected readonly title = t("errorDialog.title");
+  protected readonly title = translated(() => t("errorDialog.title"));
   protected readonly modalIsShown = signal(true);
   protected readonly isMobile =
     this.editor.editorInterface.formFactor === "phone";
