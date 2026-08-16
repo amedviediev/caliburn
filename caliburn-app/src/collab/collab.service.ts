@@ -113,9 +113,9 @@ import type { CaliburnImperativeAPI } from "../../../packages/caliburn/src/index
  * - `componentDidMount` / `componentWillUnmount` are `start()` / `destroy()`,
  *   called by the app shell once the editor API exists (upstream mounts
  *   `<Collab>` at that same moment). Upstream's `excalidrawAPI` prop can only
- *   change by remounting `<Collab>`; the service outlives the editor (the app
- *   rebuilds it on a language change), so the API-attached subscriptions hang
- *   off the `excalidrawAPI` setter and re-bind whenever it's reassigned.
+ *   change by remounting `<Collab>`; the service is a root singleton that
+ *   outlives any one editor, so the API-attached subscriptions hang off the
+ *   `excalidrawAPI` setter and re-bind whenever it's reassigned.
  */
 @Injectable({ providedIn: "root" })
 export class CollabService {
@@ -128,11 +128,11 @@ export class CollabService {
   private unsubApi: (() => void) | null = null;
 
   /**
-   * The editor API the service talks to. The app rebuilds the editor on a
-   * language change and reassigns this — upstream's `<Collab>` remounts with
-   * the new `excalidrawAPI` prop and re-runs `componentDidMount`, so the
-   * setter re-binds the API-attached subscriptions to the new instance
-   * rather than leaving them on the discarded one.
+   * The editor API the service talks to. Reassigning it is this port's stand-in
+   * for upstream's `<Collab>` remounting with a new `excalidrawAPI` prop and
+   * re-running `componentDidMount`, so the setter re-binds the API-attached
+   * subscriptions to the new instance rather than leaving them on the
+   * discarded one.
    */
   get excalidrawAPI(): CaliburnImperativeAPI {
     return this.api;

@@ -130,7 +130,7 @@ type InitializedScene = {
  * Port of upstream `excalidraw-app/App.tsx`'s `initializeScene`. The confirm
  * modal is the editor's own (which takes the editor instead of a module-level
  * atom), so the caller hands in a way to reach it — resolved at the point of
- * use, since the editor may be rebuilt between calls.
+ * use, since the editor only exists once the view has mounted.
  */
 const initializeScene = async (opts: {
   collab: Collab | null;
@@ -325,11 +325,6 @@ export class CaliburnAppComponent implements OnDestroy {
 
   private readonly editorRef = viewChild(CaliburnEditorComponent);
 
-  protected readonly initialData = signal<{
-    elements?: readonly OrderedExcalidrawElement[];
-    appState?: Partial<AppState>;
-  } | null>(null);
-
   protected readonly isCollabDisabled = isRunningInIframe();
   protected readonly isCollabEnabled = !this.isCollabDisabled;
   protected readonly isCollaborating = isCollaborating;
@@ -391,7 +386,6 @@ export class CaliburnAppComponent implements OnDestroy {
   );
 
   private excalidrawAPI: CaliburnImperativeAPI | null = null;
-  private pendingFiles: BinaryFiles | null = null;
   private collabStarted = false;
   private initialized = false;
   private detachHandlers: (() => void) | null = null;
@@ -410,11 +404,6 @@ export class CaliburnAppComponent implements OnDestroy {
 
     if (!api) {
       return;
-    }
-
-    if (this.pendingFiles) {
-      api.addFiles(Object.values(this.pendingFiles));
-      this.pendingFiles = null;
     }
 
     if (!this.isCollabDisabled) {

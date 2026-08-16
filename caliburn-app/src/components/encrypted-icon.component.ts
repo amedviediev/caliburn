@@ -4,9 +4,10 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import { NgIcon } from "@ng-icons/core";
 
-import { CaliburnTooltipComponent } from "../../../packages/caliburn/src/index";
-
-import { translated } from "../../../packages/caliburn/src/index";
+import {
+  CaliburnTooltipComponent,
+  translated,
+} from "../../../packages/caliburn/src/index";
 
 /**
  * Angular port of upstream

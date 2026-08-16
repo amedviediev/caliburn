@@ -28,6 +28,6 @@ export class CaliburnWelcomeScreenMenuHintComponent {
   /** upstream defaults the slot to `t(...)` in its render body, so an unset
    * input follows the language rather than freezing at construction */
   protected readonly labelText = translated(
-    () => this.label() ?? t("welcomeScreen.defaults.menuHint"),
+    () => this.label() || t("welcomeScreen.defaults.menuHint"),
   );
 }

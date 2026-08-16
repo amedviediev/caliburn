@@ -42,7 +42,7 @@ describe("startup language", () => {
         .value,
     ).toBe("fr-FR");
 
-    // the app's own labels (outside the rebuilt editor subtree) too
+    // the app's own labels, rendered into the editor's slots, too
     expect(
       container.querySelector(".welcome-screen-decor-hint--menu")?.textContent,
     ).toContain("Exportation, préférences, langues");

@@ -342,7 +342,7 @@ describe("collab follow mode", () => {
 });
 
 describe("collab API subscriptions", () => {
-  it("re-binds to the editor API the app hands it after a rebuild", () => {
+  it("re-binds its subscriptions when the editor API is reassigned", () => {
     const collab = new CollabService();
     const unsubscribed: string[] = [];
 
@@ -373,7 +373,7 @@ describe("collab API subscriptions", () => {
     expect(first.listeners.scroll).toHaveLength(1);
     expect(first.listeners.follow).toHaveLength(1);
 
-    // the app reassigns the API when a language change rebuilds the editor
+    // a fresh editor hands the service a new API
     collab.excalidrawAPI = second.api;
 
     expect(unsubscribed).toEqual(["first:follow", "first:scroll"]);

@@ -52,6 +52,14 @@ const openLibrary = () => {
   });
 };
 
+/** the library dropdown's last item — upstream gives it no testid */
+const trashItemLabel = () => {
+  const items = container().querySelectorAll(
+    ".library-menu .dropdown-menu-item",
+  );
+  return items[items.length - 1]?.textContent?.trim();
+};
+
 /**
  * `assertSidebarDockButton` from upstream's
  * `Sidebar/siderbar.test.helpers.tsx`.
@@ -399,6 +407,40 @@ describe("LibraryMenu", () => {
     });
     expect(queryByTestId(container(), "lib-dropdown--load")).toBe(null);
     expect(queryByTestId(container(), "lib-dropdown--export")).not.toBe(null);
+    // upstream's `resetLabel`: the trash item reads "Remove" once items are
+    // selected, "Reset library" otherwise (it carries no testid either side)
+    expect(trashItemLabel()).toBe("Remove");
+  });
+
+  it("labels the library dropdown's trash item for the current selection", async () => {
+    await act(() =>
+      h.app.library.updateLibrary({
+        libraryItems: [
+          {
+            id: "item1",
+            status: "unpublished",
+            created: 1,
+            elements: [API.createElement({ id: "elem1", type: "rectangle" })],
+          },
+        ],
+      }),
+    );
+
+    openLibrary();
+    await waitFor(() => {
+      expect(libraryUnits().length).toBe(1);
+    });
+
+    act(() => {
+      fireEvent.click(
+        queryByTestId(
+          container().querySelector(".layer-ui__library")!,
+          "dropdown-menu-button",
+        )!,
+      );
+    });
+
+    expect(trashItemLabel()).toBe("Reset library");
   });
 
   it("reports library updates through the onLibraryChange prop", async () => {

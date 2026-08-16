@@ -95,7 +95,7 @@ export class CaliburnLibraryDropdownMenuComponent {
   });
 
   protected readonly resetLabel = computed(() =>
-    this.itemsSelected() ? this.removeLabel : this.resetLibraryLabel,
+    this.itemsSelected() ? this.removeLabel() : this.resetLibraryLabel(),
   );
 
   protected readonly alertTitle = computed(() =>
