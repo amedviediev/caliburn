@@ -136,6 +136,20 @@ caliburn-text-field {
   height: var(--lg-icon-size);
 }
 
+// `.Dialog__close svg` sizes every dialog's close button; the `<ng-icon>` host
+// wrapping it inherits the button's `0.8333rem` font-size and would clip the
+// cross to that box.
+.excalidraw .Dialog__close ng-icon {
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+
+  svg {
+    width: inherit;
+    height: inherit;
+  }
+}
+
 // `.OverwriteConfirm__Description__icon svg` sizes the modal's warning icon;
 // the `<ng-icon>` host would clip it to `1em`.
 .excalidraw .OverwriteConfirm__Description__icon ng-icon {

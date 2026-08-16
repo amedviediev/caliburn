@@ -90,7 +90,10 @@ mockMermaidToExcalidraw({
 
 const INPUT_SELECTOR = ".ttd-dialog-input";
 
-const dialog = () => document.querySelector(".ttd-dialog");
+// `.ttd-dialog` lands on both the `caliburn-dialog` host and the `.Modal`
+// root it routes the class to; the latter is the one that carries the DOM,
+// now portalled into the body-level `.excalidraw-modal-container`
+const dialog = () => document.querySelector(".Modal.ttd-dialog");
 
 const previewCanvas = () =>
   document.querySelector(".ttd-dialog-output-canvas-content canvas");
@@ -228,7 +231,7 @@ describe("mermaid dialog entry points", () => {
     });
 
     const command = Array.from(
-      renderResult.container.querySelectorAll<HTMLElement>(".command-item"),
+      document.querySelectorAll<HTMLElement>(".command-item"),
     ).find(
       (item) =>
         item.querySelector(".name")?.textContent?.trim() ===

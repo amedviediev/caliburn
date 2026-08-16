@@ -1,7 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
+  inject,
   input,
   output,
 } from "@angular/core";
@@ -10,12 +12,19 @@ import clsx from "clsx";
 
 import { KEYS } from "@excalidraw/common";
 
+import { createPortalContainer } from "./create-portal-container";
+
+import type { OnInit } from "@angular/core";
+
 /**
- * Angular port of upstream `Modal.tsx`. Portal-less: renders in place in the
- * component tree rather than via a `document.body`-appended portal — the
- * rendered DOM (`.Modal` / `.Modal__background` / `.Modal__content`,
- * `role="dialog"`, escape/backdrop close) is otherwise unchanged. Host-bound
- * (no wrapper element) so the rendered DOM root is exactly `.Modal`.
+ * Angular port of upstream `Modal.tsx`. Host-bound (no wrapper element) so
+ * the rendered DOM root is exactly `.Modal`, and relocated into the
+ * `document.body`-level `.excalidraw.excalidraw-modal-container` portal
+ * (`createPortalContainer`) — Angular has no `createPortal`, so the host
+ * element is moved once its own view exists, which lands the same subtree in
+ * the same place as upstream's React portal. Living at body level with the
+ * container's `z-index: var(--zIndex-modal)` is what puts the modal above the
+ * editor's canvases and UI layer, exactly as upstream.
  */
 @Component({
   selector: "caliburn-modal",
@@ -29,7 +38,12 @@ import { KEYS } from "@excalidraw/common";
   },
   templateUrl: "./modal.component.html",
 })
-export class CaliburnModalComponent {
+export class CaliburnModalComponent implements OnInit {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly portalContainer = createPortalContainer(
+    "excalidraw-modal-container",
+  );
+
   readonly maxWidth = input<number>();
   readonly labelledBy = input.required<string>();
   readonly closeOnClickOutside = input(true);
@@ -48,6 +62,12 @@ export class CaliburnModalComponent {
   );
 
   readonly maxWidthStyle = computed(() => `${this.maxWidth()}px`);
+
+  ngOnInit() {
+    // by now the component's own view (and anything projected into it) is
+    // built, so moving the host carries the whole modal across in one piece
+    this.portalContainer.appendChild(this.host.nativeElement);
+  }
 
   onBackgroundClick() {
     if (this.closeOnClickOutside()) {

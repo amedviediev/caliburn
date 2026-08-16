@@ -1,6 +1,7 @@
 <div
   #container
   class="excalidraw excalidraw-container"
+  [class.theme--dark]="isDarkTheme()"
   [class.excalidraw--view-mode]="state.viewModeEnabled"
   [class.excalidraw--non-interactive]="!isInteractionEnabled()"
   [class.excalidraw--navigation]="

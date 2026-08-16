@@ -239,7 +239,7 @@ describe("HelpDialog", () => {
     });
 
     expect(h.state.openDialog).toEqual({ name: "help" });
-    const dialog = container.querySelector(".Modal.HelpDialog")!;
+    const dialog = document.querySelector(".Modal.HelpDialog")!;
     expect(dialog).not.toBeNull();
     expect(dialog.querySelectorAll(".HelpDialog__island").length).toBe(3);
     expect(
@@ -251,7 +251,7 @@ describe("HelpDialog", () => {
     });
 
     expect(h.state.openDialog).toBe(null);
-    expect(container.querySelector(".Modal.HelpDialog")).toBeNull();
+    expect(document.querySelector(".Modal.HelpDialog")).toBeNull();
   });
 
   it("opens via the ? shortcut and toggles back off", () => {
@@ -279,7 +279,7 @@ describe("ClearCanvas confirm dialog", () => {
       fireEvent.click(getByTestId(container, "clear-canvas-button"));
     });
 
-    const dialog = container.querySelector(".confirm-dialog")!;
+    const dialog = document.querySelector(".confirm-dialog")!;
     expect(dialog).not.toBeNull();
     expect(dialog.querySelector(".clear-canvas__content")).not.toBeNull();
 
@@ -293,7 +293,7 @@ describe("ClearCanvas confirm dialog", () => {
     act(() => {
       fireEvent.click(cancel);
     });
-    expect(container.querySelector(".confirm-dialog")).toBeNull();
+    expect(document.querySelector(".confirm-dialog")).toBeNull();
     expect(h.elements.filter((element) => !element.isDeleted).length).toBe(1);
 
     openMainMenu();
@@ -302,26 +302,24 @@ describe("ClearCanvas confirm dialog", () => {
     });
     act(() => {
       fireEvent.click(
-        container.querySelectorAll<HTMLButtonElement>(
+        document.querySelectorAll<HTMLButtonElement>(
           ".confirm-dialog-buttons button",
         )[1],
       );
     });
 
-    expect(container.querySelector(".confirm-dialog")).toBeNull();
+    expect(document.querySelector(".confirm-dialog")).toBeNull();
     expect(h.elements.filter((element) => !element.isDeleted).length).toBe(0);
   });
 });
 
 describe("ErrorDialog", () => {
   it("renders appState.errorMessage and clears it on close", () => {
-    const { container } = renderResult;
-
     act(() => {
       API.setAppState({ errorMessage: "boom" });
     });
 
-    const dialog = container.querySelector(".Modal")!;
+    const dialog = document.querySelector(".Modal")!;
     expect(dialog).not.toBeNull();
     expect(dialog.textContent).toContain("boom");
 
@@ -330,7 +328,7 @@ describe("ErrorDialog", () => {
     });
 
     expect(h.state.errorMessage).toBe(null);
-    expect(container.querySelector(".Modal")).toBeNull();
+    expect(document.querySelector(".Modal")).toBeNull();
   });
 });
 
@@ -344,13 +342,13 @@ describe("JSONExportDialog", () => {
     });
 
     expect(h.state.openDialog).toEqual({ name: "jsonExport" });
-    const dialog = container.querySelector(".ExportDialog--json")!;
+    const dialog = document.querySelector(".ExportDialog--json")!;
     expect(dialog).not.toBeNull();
     expect(dialog.querySelectorAll(".Card").length).toBe(1);
     expect(dialog.querySelector(".Card-button")).not.toBeNull();
 
     act(() => {
-      fireEvent.keyDown(container.querySelector(".Modal")!, {
+      fireEvent.keyDown(document.querySelector(".Modal")!, {
         key: KEYS.ESCAPE,
       });
     });
@@ -368,7 +366,7 @@ describe("ImageExportDialog", () => {
     });
 
     expect(h.state.openDialog).toEqual({ name: "imageExport" });
-    const modal = container.querySelector(".ImageExportModal")!;
+    const modal = document.querySelector(".ImageExportModal")!;
     expect(modal).not.toBeNull();
     expect(
       modal.querySelector(".ImageExportModal__preview__canvas"),
@@ -398,20 +396,20 @@ describe("ImageExportDialog", () => {
 
     expect(h.state.exportBackground).toBe(true);
     act(() => {
-      fireEvent.click(container.querySelector("input#exportBackgroundSwitch")!);
+      fireEvent.click(document.querySelector("input#exportBackgroundSwitch")!);
     });
     expect(h.state.exportBackground).toBe(false);
 
     expect(h.state.exportEmbedScene).toBe(false);
     act(() => {
-      fireEvent.click(container.querySelector("input#exportEmbedSwitch")!);
+      fireEvent.click(document.querySelector("input#exportEmbedSwitch")!);
     });
     expect(h.state.exportEmbedScene).toBe(true);
 
     expect(h.state.exportScale).toBe(1);
     act(() => {
       fireEvent.click(
-        container.querySelectorAll<HTMLInputElement>(
+        document.querySelectorAll<HTMLInputElement>(
           'input[name="exportScale"]',
         )[2],
       );
@@ -440,7 +438,7 @@ describe("save / load / export actions", () => {
     });
     act(() => {
       fireEvent.click(
-        container.querySelector<HTMLButtonElement>(".Card-button")!,
+        document.querySelector<HTMLButtonElement>(".Card-button")!,
       );
     });
 
@@ -533,7 +531,7 @@ describe("save / load / export actions", () => {
 
     // the scene isn't empty, so the overwrite confirmation comes first
     const confirmButton = await waitFor(() => {
-      const button = container.querySelector<HTMLButtonElement>(
+      const button = document.querySelector<HTMLButtonElement>(
         ".OverwriteConfirm__Description .ExcButton",
       );
       expect(button).not.toBeNull();
@@ -566,7 +564,7 @@ describe("save / load / export actions", () => {
     await waitFor(() => {
       expect(h.state.errorMessage).toBeTruthy();
     });
-    expect(container.querySelector(".Modal")).not.toBeNull();
+    expect(document.querySelector(".Modal")).not.toBeNull();
   });
 
   it("exports an svg through onExportImage", async () => {
@@ -589,11 +587,11 @@ describe("save / load / export actions", () => {
     // embed the scene so the returned image handle is adopted, and so the
     // extension switches to `.excalidraw.svg` as upstream does
     act(() => {
-      fireEvent.click(container.querySelector("input#exportEmbedSwitch")!);
+      fireEvent.click(document.querySelector("input#exportEmbedSwitch")!);
     });
     act(() => {
       fireEvent.click(
-        container.querySelectorAll<HTMLButtonElement>(
+        document.querySelectorAll<HTMLButtonElement>(
           ".ImageExportModal__settings__buttons__button",
         )[1],
       );

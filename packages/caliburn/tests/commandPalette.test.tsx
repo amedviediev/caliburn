@@ -17,26 +17,24 @@ const { h } = window;
 
 let renderResult: RenderResult;
 
-const dialog = () =>
-  renderResult.container.querySelector(".Modal.command-palette-dialog");
+// the palette is a `Modal`, so it lives in the body-level
+// `.excalidraw-modal-container` portal rather than inside the editor element
+// (upstream's own tests reach portalled DOM through `document` the same way)
+const dialog = () => document.querySelector(".Modal.command-palette-dialog");
 
 const input = () =>
-  renderResult.container.querySelector<HTMLInputElement>(
-    ".command-palette-dialog input",
-  )!;
+  document.querySelector<HTMLInputElement>(".command-palette-dialog input")!;
 
 const items = () =>
-  Array.from(
-    renderResult.container.querySelectorAll<HTMLElement>(".command-item"),
-  );
+  Array.from(document.querySelectorAll<HTMLElement>(".command-item"));
 
 const labels = () =>
   items().map((item) => item.querySelector(".name")!.textContent!.trim());
 
 const categoryTitles = () =>
-  Array.from(
-    renderResult.container.querySelectorAll(".command-category-title"),
-  ).map((title) => title.textContent!.trim());
+  Array.from(document.querySelectorAll(".command-category-title")).map(
+    (title) => title.textContent!.trim(),
+  );
 
 const openPalette = () => {
   Keyboard.withModifierKeys({ ctrl: true }, () => {
@@ -168,7 +166,7 @@ describe("CommandPalette", () => {
 
     expect(items()).toHaveLength(0);
     expect(
-      renderResult.container.querySelector(".command-palette-dialog .no-match"),
+      document.querySelector(".command-palette-dialog .no-match"),
     ).not.toBeNull();
   });
 
@@ -300,9 +298,7 @@ describe("CommandPalette", () => {
     // the unnamed item never becomes a command
     expect(items()).toHaveLength(1);
     expect(
-      renderResult.container.querySelector(
-        ".command-item-large .library-item-icon",
-      ),
+      document.querySelector(".command-item-large .library-item-icon"),
     ).not.toBeNull();
   });
 
@@ -343,7 +339,7 @@ describe("CommandPalette", () => {
     });
 
     const rows = Array.from(
-      renderResult.container.querySelectorAll(".HelpDialog__shortcut"),
+      document.querySelectorAll(".HelpDialog__shortcut"),
     ).map((row) => row.textContent);
 
     expect(rows.some((row) => row?.includes(t("commandPalette.title")))).toBe(

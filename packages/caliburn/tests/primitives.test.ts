@@ -44,6 +44,14 @@ function createComponent<T>(type: new (...args: any[]) => T) {
   return TestBed.createComponent(type);
 }
 
+/**
+ * `caliburn-modal` relocates itself into the body-level
+ * `.excalidraw-modal-container` portal (`createPortalContainer`), so modal DOM
+ * no longer sits under the fixture's own element.
+ */
+const inPortal = <T extends Element = HTMLElement>(selector: string): T =>
+  document.querySelector<T>(`.excalidraw-modal-container ${selector}`)!;
+
 describe("caliburn-island", () => {
   @Component({
     selector: "island-host",
@@ -541,8 +549,7 @@ describe("caliburn-modal", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const modal: HTMLElement =
-      fixture.nativeElement.querySelector("caliburn-modal");
+    const modal = inPortal("caliburn-modal");
     expect(modal.classList.contains("Modal")).toBe(true);
     expect(modal.classList.contains("Dialog")).toBe(true);
     expect(modal.getAttribute("role")).toBe("dialog");
@@ -559,8 +566,7 @@ describe("caliburn-modal", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const modal: HTMLElement =
-      fixture.nativeElement.querySelector("caliburn-modal");
+    const modal = inPortal("caliburn-modal");
     modal.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
@@ -576,8 +582,7 @@ describe("caliburn-modal", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    let background: HTMLElement =
-      fixture.nativeElement.querySelector(".Modal__background");
+    let background = inPortal(".Modal__background");
     background.click();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -586,7 +591,7 @@ describe("caliburn-modal", () => {
     fixture.componentInstance.closeOnClickOutside.set(true);
     fixture.detectChanges();
     await fixture.whenStable();
-    background = fixture.nativeElement.querySelector(".Modal__background");
+    background = inPortal(".Modal__background");
     background.click();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -617,8 +622,7 @@ describe("caliburn-modal", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const background: HTMLElement =
-      fixture.nativeElement.querySelector(".Modal__background");
+    const background = inPortal(".Modal__background");
     background.click();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -653,17 +657,16 @@ describe("caliburn-dialog", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const modal: HTMLElement =
-      fixture.nativeElement.querySelector("caliburn-modal");
-    const title = fixture.nativeElement.querySelector(".Dialog__title");
+    const modal = inPortal("caliburn-modal");
+    const title = inPortal(".Dialog__title");
     expect(modal.classList.contains("Dialog")).toBe(true);
     expect(title?.querySelector(".Dialog__titleContent")?.textContent).toBe(
       "My Dialog",
     );
-    expect(
-      fixture.nativeElement.querySelector(".Dialog__content"),
-    ).not.toBeNull();
-    expect(fixture.nativeElement.querySelector(".Dialog__close")).toBeNull();
+    expect(inPortal(".Dialog__content")).not.toBeNull();
+    // upstream gates this on the phone form factor, leaving desktop dialogs
+    // with no close affordance; caliburn always renders it
+    expect(inPortal(".Dialog__close")).not.toBeNull();
 
     modal.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
@@ -673,17 +676,15 @@ describe("caliburn-dialog", () => {
     expect(fixture.componentInstance.open()).toBe(false);
   });
 
-  it("renders a Dialog__close button only when fullscreen", async () => {
+  it("closes through the Dialog__close button, fullscreen included", async () => {
     const fixture = createComponent(DialogHost);
     fixture.componentInstance.fullscreen.set(true);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const modal: HTMLElement =
-      fixture.nativeElement.querySelector("caliburn-modal");
+    const modal = inPortal("caliburn-modal");
     expect(modal.classList.contains("Dialog--fullscreen")).toBe(true);
-    const closeButton: HTMLButtonElement =
-      fixture.nativeElement.querySelector(".Dialog__close");
+    const closeButton = inPortal<HTMLButtonElement>(".Dialog__close");
     expect(closeButton).not.toBeNull();
 
     closeButton.click();
@@ -700,8 +701,8 @@ describe("caliburn-dialog", () => {
     vi.runAllTimers();
     vi.useRealTimers();
 
-    const buttons = fixture.nativeElement.querySelectorAll(
-      "caliburn-island button",
+    const buttons = document.querySelectorAll(
+      ".excalidraw-modal-container caliburn-island button",
     );
     expect(document.activeElement).toBe(buttons[1]);
   });
@@ -711,8 +712,7 @@ describe("caliburn-dialog", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const background: HTMLElement =
-      fixture.nativeElement.querySelector(".Modal__background");
+    const background = inPortal(".Modal__background");
     background.click();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -735,8 +735,7 @@ describe("caliburn-dialog", () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const modal: HTMLElement =
-      fixture.nativeElement.querySelector("caliburn-modal");
+    const modal = inPortal("caliburn-modal");
     expect(modal.classList.contains("Modal")).toBe(true);
     expect(modal.classList.contains("Dialog")).toBe(true);
     expect(modal.classList.contains("ConfirmDialog")).toBe(true);

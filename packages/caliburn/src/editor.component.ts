@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -526,6 +527,17 @@ export class CaliburnEditorComponent
    * marked dirty and refresh in the same synchronous change-detection pass.
    */
   readonly changeGeneration = signal(0);
+
+  /**
+   * Upstream's `App.tsx` toggles `theme--dark` on the `.excalidraw` container
+   * from `appState.theme` on every update; caliburn binds this on the same
+   * element, and `createPortalContainer` puts it on the body-level containers
+   * so the CSS-variable scope follows the modals out of the container.
+   */
+  readonly isDarkTheme = computed(() => {
+    this.changeGeneration();
+    return this.state.theme === THEME.DARK;
+  });
 
   get canvas(): HTMLCanvasElement {
     return this.staticCanvasRef()!.nativeElement;

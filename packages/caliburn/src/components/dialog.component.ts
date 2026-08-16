@@ -54,7 +54,11 @@ let nextDialogId = 0;
  * `className` there too (`Dialog.tsx`'s `<Modal className={clsx("Dialog",
  * props.className, ...)}>`), and `ConfirmDialog.tsx`/`HelpDialog.tsx` (Task
  * 19) depend on their own class landing on that element for
- * `ConfirmDialog.scss`/`HelpDialog.scss` to apply.
+ * `ConfirmDialog.scss`/`HelpDialog.scss` to apply. `.Dialog__close` renders
+ * unconditionally: the pin's `Dialog.tsx` only renders it at phone form
+ * factor, which leaves every desktop dialog with no close affordance of its
+ * own — the button is always there here, and `fullscreen` only picks the
+ * `.Dialog--fullscreen` layout.
  */
 @Component({
   selector: "caliburn-dialog",
@@ -71,9 +75,8 @@ export class CaliburnDialogComponent implements AfterViewInit, OnDestroy {
   readonly size = input<DialogSize>();
   readonly autofocus = input(true);
   readonly closeOnClickOutside = input(true);
-  /** whether the host formFactor is mobile — drives `.Dialog--fullscreen`
-   * and the in-dialog close button, mirroring upstream's
-   * `useEditorInterface().formFactor === "phone"`. */
+  /** whether the host formFactor is mobile — drives `.Dialog--fullscreen`,
+   * mirroring upstream's `useEditorInterface().formFactor === "phone"`. */
   readonly fullscreen = input(false);
   readonly extraClass = input<string>("", { alias: "class" });
 

@@ -12,17 +12,15 @@
         <span class="Dialog__titleContent">{{ title() }}</span>
       </h2>
     }
-    @if (fullscreen()) {
-      <button
-        class="Dialog__close"
-        (click)="onClose()"
-        [title]="closeLabel"
-        [attr.aria-label]="closeLabel"
-        type="button"
-      >
-        <ng-icon name="closeIcon" />
-      </button>
-    }
+    <button
+      class="Dialog__close"
+      (click)="onClose()"
+      [title]="closeLabel"
+      [attr.aria-label]="closeLabel"
+      type="button"
+    >
+      <ng-icon name="closeIcon" />
+    </button>
     <div class="Dialog__content"><ng-content /></div>
   </caliburn-island>
 </caliburn-modal>

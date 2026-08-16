@@ -45,8 +45,10 @@ const mockLoadedScene = () =>
       ) as any,
     );
 
+// the confirmation is a `Modal`, so it renders into the body-level
+// `.excalidraw-modal-container` portal rather than inside the editor element
 const queryOverwriteConfirm = () =>
-  renderResult.container.querySelector<HTMLElement>(".OverwriteConfirm");
+  document.querySelector<HTMLElement>(".OverwriteConfirm");
 
 describe("overwrite confirmation", () => {
   beforeEach(async () => {
@@ -107,7 +109,7 @@ describe("overwrite confirmation", () => {
     clickLoad();
 
     const confirmButton = await waitFor(() => {
-      const button = renderResult.container.querySelector<HTMLButtonElement>(
+      const button = document.querySelector<HTMLButtonElement>(
         ".OverwriteConfirm__Description .ExcButton",
       );
       expect(button).not.toBeNull();
@@ -135,7 +137,7 @@ describe("overwrite confirmation", () => {
     clickLoad();
 
     const backdrop = await waitFor(() => {
-      const backdrop = renderResult.container.querySelector<HTMLElement>(
+      const backdrop = document.querySelector<HTMLElement>(
         ".Dialog .Modal__background",
       );
       expect(backdrop).not.toBeNull();
