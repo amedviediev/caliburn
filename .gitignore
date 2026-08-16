@@ -24,6 +24,7 @@ yarn-error.log*
 packages/excalidraw/types
 coverage
 dev-dist
+e2e/artifacts
 html
 meta*.json
 .claude

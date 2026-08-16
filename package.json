@@ -33,6 +33,7 @@
     "lint-staged": "12.3.7",
     "pepjs": "0.5.3",
     "prettier": "2.6.2",
+    "puppeteer-core": "25.7.0",
     "rewire": "6.0.0",
     "rimraf": "^5.0.0",
     "typescript": "6.0.3",
@@ -73,6 +74,7 @@
     "rm:node_modules": "rimraf --glob node_modules packages/*/node_modules",
     "clean-install": "yarn rm:node_modules && yarn install",
     "demo": "vite --config examples/with-vite/vite.config.mts",
+    "e2e": "node e2e/run.mjs",
     "start": "vite --config caliburn-app/vite.config.mts"
   },
   "resolutions": {
