@@ -2720,6 +2720,13 @@ export class CaliburnEditorComponent
     // non-interactive because that implies view mode, whose gates constrain
     // everything except the tool-usage path
 
+    const target = event.target as HTMLElement;
+    // capture subsequent pointer events to the canvas
+    // this makes other elements non-interactive until pointer up
+    if (target.setPointerCapture) {
+      target.setPointerCapture(event.pointerId);
+    }
+
     this.maybeCleanupAfterMissingPointerUp(event);
 
     this.lastPointerDownEvent = event;
@@ -2896,14 +2903,7 @@ export class CaliburnEditorComponent
 
   private onPointerMoveFromPointerDown(event: PointerEvent) {
     const pointerDownState = this.pointerDownState;
-    // upstream tests this as `instanceof HTMLElement`, which it can only
-    // afford because its pointer down captures the pointer onto the canvas
-    // (`setPointerCapture`) and so never sees a foreign target. Caliburn does
-    // not capture, so an off-canvas move reports whatever is under the
-    // pointer — including the `<svg>` inside a toolbar button, which is no
-    // HTMLElement. The guard's job is to drop the target-less synthetic moves
-    // (`document`), and `Element` still does exactly that.
-    if (!pointerDownState || !(event.target instanceof Element)) {
+    if (!pointerDownState || !(event.target instanceof HTMLElement)) {
       return;
     }
     pointerDownState.lastCoords = viewportCoordsToSceneCoords(

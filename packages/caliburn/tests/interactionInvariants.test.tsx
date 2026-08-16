@@ -23,15 +23,6 @@ const armedBucketFill = () =>
 const overlay = () =>
   GlobalTestState.renderResult.getByToolName("selection") as HTMLElement;
 
-/**
- * The icon inside a toolbar button — an `SVGSVGElement`, so a drag passing
- * over one reports a target that is no `HTMLElement`.
- */
-const overlayIcon = () =>
-  GlobalTestState.renderResult.container.querySelector(
-    ".App-toolbar svg",
-  ) as SVGSVGElement;
-
 describe("interaction invariants", () => {
   beforeEach(() => {
     mouse.reset();
@@ -107,15 +98,8 @@ describe("interaction invariants", () => {
       expect.objectContaining({ x: 100, y: 50, isDeleted: false }),
     );
 
-    // ... including across a button's icon, which reports an SVG target
-    expect(overlayIcon()).not.toBeInstanceOf(HTMLElement);
-    fireEvent.pointerMove(overlayIcon(), { clientX: 145, clientY: 95 });
-    expect(h.elements[0]).toEqual(
-      expect.objectContaining({ x: 120, y: 70, isDeleted: false }),
-    );
-
     updates.length = 0;
-    fireEvent.pointerUp(overlay(), { clientX: 145, clientY: 95 });
+    fireEvent.pointerUp(overlay(), { clientX: 125, clientY: 75 });
 
     expect(pointerDownState()).toBe(null);
     expect(h.state.cursorButton).toBe("up");
@@ -124,7 +108,34 @@ describe("interaction invariants", () => {
 
     // the released drag does not resume when the pointer comes back
     mouse.moveTo(200, 200);
-    expect(h.elements[0]).toEqual(expect.objectContaining({ x: 120, y: 70 }));
+    expect(h.elements[0]).toEqual(expect.objectContaining({ x: 100, y: 50 }));
+  });
+
+  it("captures the pointer to the canvas on pointer down", async () => {
+    await render(<Excalidraw />);
+    const setPointerCapture = vi.spyOn(
+      HTMLElement.prototype,
+      "setPointerCapture",
+    );
+
+    const pointerId = 7;
+    fireEvent.pointerDown(GlobalTestState.interactiveCanvas, {
+      clientX: 25,
+      clientY: 25,
+      pointerId,
+    });
+
+    expect(setPointerCapture).toHaveBeenCalledWith(pointerId);
+    expect(setPointerCapture.mock.contexts[0]).toBe(
+      GlobalTestState.interactiveCanvas,
+    );
+
+    fireEvent.pointerUp(GlobalTestState.interactiveCanvas, {
+      clientX: 25,
+      clientY: 25,
+      pointerId,
+    });
+    setPointerCapture.mockRestore();
   });
 
   it("disarms an armed bucket click when disabled", async () => {

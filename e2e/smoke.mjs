@@ -249,6 +249,16 @@ const drawRectangle = async (page, from = [500, 400], to = [700, 550]) => {
   });
 };
 
+/** the scene's first element's box — the geometry `elements()` leaves out */
+const elementBox = (page) =>
+  page.evaluate(() => {
+    const el = (window.h?.elements ?? []).filter((e) => !e.isDeleted)[0];
+    return el ? { x: el.x, y: el.y, width: el.width, height: el.height } : null;
+  });
+
+/** a toolbar button's icon — the `<svg>` a drag crossing the toolbar passes over */
+const TOOLBAR_ICON = '[data-testid="toolbar-ellipse"] svg';
+
 const readLinksIn = (page, containerSelector) =>
   page.evaluate(
     (selector) =>
@@ -331,6 +341,89 @@ export const runSuite = async (browser, url, runner) => {
         expectEqual(els[0].type, "rectangle", "element type");
       },
       { evidence: { page, selectors: ['[data-testid="toolbar-rectangle"]'] } },
+    );
+
+    await runner.check(
+      "baseline.drag-captures-pointer",
+      "a drag crossing the toolbar keeps tracking and never lights it up",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page);
+        // deselect, so the drag below grabs the shape by its stroke rather
+        // than landing on one of the selection's transform handles
+        await page.mouse.click(1150, 780);
+        await waitFor(
+          page,
+          () => Object.keys(window.h.state.selectedElementIds).length === 0,
+          { message: "clicking empty canvas did not deselect" },
+        );
+        const before = await elementBox(page);
+
+        // the icon inside a toolbar button: an `<svg>`, so an uncaptured
+        // drag passing over it reports a target that is no `HTMLElement`
+        const icon = await rectOf(page, TOOLBAR_ICON);
+        expect(icon, `${TOOLBAR_ICON} is not rendered`);
+        await expectOwnsPixels(page, TOOLBAR_ICON, "toolbar icon");
+        const over = [
+          icon.x + Math.round(icon.width / 2),
+          icon.y + Math.round(icon.height / 2),
+        ];
+
+        const from = [550, 400]; // on the rectangle's top edge, off its corners
+        await page.mouse.move(from[0], from[1]);
+        await page.mouse.down();
+        try {
+          await page.mouse.move(over[0], over[1], { steps: 16 });
+          const held = await elementBox(page);
+          expectEqual(
+            `${held.x},${held.y}`,
+            `${before.x + (over[0] - from[0])},${
+              before.y + (over[1] - from[1])
+            }`,
+            "the dragged shape stopped tracking the pointer over the toolbar",
+          );
+          // the captured pointer never reaches the toolbar: nothing under it
+          // takes hover, and the capture target keeps it instead
+          const hover = await page.evaluate(() => ({
+            toolbar: !!document.querySelector(".App-toolbar :hover"),
+            deepest: window.__e2e.describe(
+              [...document.querySelectorAll(":hover")].at(-1),
+            ),
+          }));
+          expect(
+            !hover.toolbar,
+            `the toolbar took hover mid-drag (deepest :hover ${hover.deepest})`,
+          );
+          expectEqual(
+            hover.deepest,
+            "canvas.excalidraw__canvas.interactive",
+            "the deepest hovered node mid-drag",
+          );
+        } finally {
+          await page.mouse.move(900, 700, { steps: 8 });
+          await page.mouse.up();
+        }
+
+        const after = await elementBox(page);
+        expectEqual(
+          `${after.x},${after.y}`,
+          `${before.x + (900 - from[0])},${before.y + (700 - from[1])}`,
+          "the released shape's position",
+        );
+        const els = await elements(page);
+        expectEqual(els.length, 1, "element count after the drag");
+        expectEqual(
+          (await appState(page)).activeTool,
+          "selection",
+          "the tool the drag ended on",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [TOOLBAR_ICON, "canvas.excalidraw__canvas.interactive"],
+        },
+      },
     );
 
     await runner.check(
