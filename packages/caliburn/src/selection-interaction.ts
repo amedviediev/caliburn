@@ -275,7 +275,7 @@ export const getElementAtPosition = (
 /**
  * Returns `null` when the gesture must not start at all — upstream's
  * `handleSelectionOnPointerDown` returning `true` (the pointer hit an
- * element's link icon).
+ * element's link icon, or added a point to the linear element being edited).
  */
 export const handleSelectionPointerDown = (
   editor: CaliburnEditorComponent,
@@ -310,7 +310,7 @@ export const handleSelectionPointerDown = (
       editor.setState({ selectedLinearElement: ret.linearElementEditor });
     }
     if (ret.didAddPoint) {
-      return pointerDownState;
+      return null;
     }
   }
 
