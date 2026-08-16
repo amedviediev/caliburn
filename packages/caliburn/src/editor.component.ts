@@ -3006,7 +3006,7 @@ export class CaliburnEditorComponent
       this,
       scenePointer.x,
       scenePointer.y,
-      { includeLockedElements: true },
+      { preferSelected: true, includeLockedElements: true },
     );
 
     // upstream's `if (!this.handleIframeLikeElementHover(...))` — an
@@ -3031,10 +3031,19 @@ export class CaliburnEditorComponent
       return;
     }
 
+    // upstream's `if (isLaserTool) { return; }` — the laser tool keeps the
+    // cursor it painted, skipping the hyperlink popup and the branches below
+    if (this.state.activeTool.type === "laser") {
+      return;
+    }
+
+    // upstream reads the branches below off the single `preferSelected` hit
+    // test above; caliburn re-queries, so the option has to come along
     const hoveredElement = getElementAtPosition(
       this,
       scenePointer.x,
       scenePointer.y,
+      { preferSelected: true },
     );
     if (
       hoveredElement &&
@@ -3058,6 +3067,7 @@ export class CaliburnEditorComponent
       this,
       scenePointer.x,
       scenePointer.y,
+      { preferSelected: true },
     );
     if (
       // if using cmd/ctrl, we're not dragging

@@ -14,6 +14,7 @@ import {
   dragNewElement,
   editGroupForSelectedElement,
   getCommonBounds,
+  getContainingFrame,
   getElementsInGroup,
   getElementsWithinSelection,
   getSelectedElements,
@@ -22,10 +23,12 @@ import {
   hitElementBoundingBoxOnly,
   hitElementBoundText,
   hitElementItself,
+  isCursorInFrame,
   isElbowArrow,
   isEmbeddableElement,
   isIframeLikeElement,
   isLinearElement,
+  isNonDeletedElement,
   isSelectedViaGroup,
   isSomeElementSelected,
   isTextElement,
@@ -37,6 +40,7 @@ import { pointFrom } from "@excalidraw/math";
 
 import type {
   ExcalidrawElement,
+  ExcalidrawFrameLikeElement,
   ExcalidrawIframeLikeElement,
   NonDeleted,
   Ordered,
@@ -215,6 +219,8 @@ export const getElementsAtPosition = (
 ): NonDeleted<ExcalidrawElement>[] => {
   const iframeLikes: Ordered<NonDeleted<ExcalidrawIframeLikeElement>>[] = [];
 
+  const elementsMap = editor.scene.getNonDeletedElementsMap();
+
   return (
     opts?.includeBoundTextElement && opts?.includeLockedElements
       ? editor.scene.getNonDeletedElements()
@@ -228,6 +234,25 @@ export const getElementsAtPosition = (
           )
   )
     .filter((el) => hitElement(editor, x, y, el))
+    .filter((element) => {
+      // hitting a frame's element from outside the frame is not considered a hit
+      const containingFrame = getContainingFrame(element, elementsMap);
+      if (containingFrame && !isNonDeletedElement(containingFrame)) {
+        console.error("[NONDELETED][INVARIANT] Containing frame is deleted");
+      }
+      return containingFrame &&
+        editor.state.frameRendering.enabled &&
+        editor.state.frameRendering.clip &&
+        // iframe-like elements are rendered as DOM overlays and are not
+        // visually clipped by their containing frames
+        !isIframeLikeElement(element)
+        ? isCursorInFrame(
+            { x, y },
+            containingFrame as NonDeleted<ExcalidrawFrameLikeElement>,
+            elementsMap,
+          )
+        : true;
+    })
     .filter((el) => {
       // The parameter elements comes ordered from lower z-index to higher.
       // We want to preserve that order on the returned array.
