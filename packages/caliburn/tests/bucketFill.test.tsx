@@ -10,15 +10,12 @@ import type { LocalPoint } from "@excalidraw/math";
 
 import type { ExcalidrawLineElement } from "@excalidraw/element/types";
 
-// Import-only port of upstream `tests/bucketFill.test.tsx`, with two
-// disclosed exceptions: the eye-dropper case reads the editor's
+// Import-only port of upstream `tests/bucketFill.test.tsx`, with one
+// disclosed exception: the eye-dropper case reads the editor's
 // `activeEyeDropper` signal where upstream reads
 // `editorJotaiStore.get(activeEyeDropperAtom)` (that atom lives in
 // `components/EyeDropper.tsx`, which imports the React `App` — caliburn
-// keeps the same state in a per-editor signal instead), and upstream's
-// "recovers from a lost pointer-up via the shared cleanup" case is absent
-// (caliburn's pointer lifecycle is canvas-bound, so it has no
-// `maybeCleanupAfterMissingPointerUp` replay to drive).
+// keeps the same state in a per-editor signal instead).
 import { Excalidraw } from "../src/index";
 
 import { API } from "./helpers/api";
@@ -265,6 +262,34 @@ describe("bucket fill tool", () => {
     expect(
       h.elements.filter((el) => el.type === "line" && !el.isDeleted),
     ).toHaveLength(1);
+  });
+
+  it("recovers from a lost pointer-up via the shared cleanup", () => {
+    // regression: the old bespoke once-listener only reset pointer state on
+    // a real pointer-up; the shared missing-pointer-up cleanup now covers
+    // lost ones (e.g. window blurred mid-click)
+    seedRectangle();
+    act(() => {
+      API.setAppState({ currentItemBackgroundColor: "#ffec99" });
+    });
+    selectBucketFill();
+
+    mouse.downAt(80, 70);
+    expect(h.state.cursorButton).toBe("down");
+
+    act(() => {
+      (h.app as any).maybeCleanupAfterMissingPointerUp(null);
+    });
+    expect(h.state.cursorButton).toBe("up");
+    // the click never completed, so the armed fill is discarded — an
+    // interrupted interaction must not leave a permanent edit
+    expect(
+      h.elements.filter((el) => el.type === "line" && !el.isDeleted),
+    ).toHaveLength(0);
+    mouse.upAt(80, 70);
+    expect(
+      h.elements.filter((el) => el.type === "line" && !el.isDeleted),
+    ).toHaveLength(0);
   });
 
   it("dragging with the bucket tool neither selects nor creates extras", () => {
