@@ -713,16 +713,11 @@ const updateBoxSelection = (
   });
 };
 
-/**
- * @returns true when the click deselected — upstream returns from its
- * pointer-up handler there, so the branches that follow are for a click that
- * kept a selection.
- */
 export const handleSelectionPointerUp = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
   event: PointerEvent,
-): boolean => {
+) => {
   const hitElement = pointerDownState.hit.element;
 
   if (
@@ -889,7 +884,21 @@ export const handleSelectionPointerUp = (
   if (editor.state.selectionElement) {
     editor.setState({ selectionElement: null });
   }
+};
 
+/**
+ * Upstream's deselect-on-pointer-up: a click that landed on a bounding box
+ * without landing on anything drops the selection. It runs after the crop
+ * exit, and returns from the pointer-up handler, so the caller must skip the
+ * branches that follow it there.
+ *
+ * @returns true when the click deselected
+ */
+export const maybeDeselectOnPointerUp = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+): boolean => {
+  const hitElement = pointerDownState.hit.element;
   const elementsMap = editor.scene.getNonDeletedElementsMap();
 
   if (

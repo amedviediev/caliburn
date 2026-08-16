@@ -319,6 +319,7 @@ import {
   handleSelectionPointerUp,
   initialPointerDownState,
   isHittingCommonBoundingBoxOfSelectedElements,
+  maybeDeselectOnPointerUp,
   updateActiveLockedIdOnPointerUp,
 } from "./selection-interaction";
 
@@ -1427,6 +1428,22 @@ export class CaliburnEditorComponent
   }
 
   private onKeyDownImpl = (event: KeyboardEvent) => {
+    if (!this.isInteractionEnabled()) {
+      // only the navigation keyboard remains: page-scroll keys and
+      // `navigation`-flagged action shortcuts (canvas zoom & zoom-to-fit —
+      // see `ActionManager.handleKeyDown`'s own gates)
+      if (
+        this.isNavigationEnabled() &&
+        this.maybeHandlePageScrollKeyDown(event)
+      ) {
+        // the editor consumes the input — the page must not scroll along
+        event.preventDefault();
+        return;
+      }
+      this.actionManager.handleKeyDown(event);
+      return;
+    }
+
     // normalize `event.key` when CapsLock is pressed #2372
 
     if (
@@ -1450,22 +1467,6 @@ export class CaliburnEditorComponent
             : value;
         },
       });
-    }
-
-    if (!this.isInteractionEnabled()) {
-      // only the navigation keyboard remains: page-scroll keys and
-      // `navigation`-flagged action shortcuts (canvas zoom & zoom-to-fit —
-      // see `ActionManager.handleKeyDown`'s own gates)
-      if (
-        this.isNavigationEnabled() &&
-        this.maybeHandlePageScrollKeyDown(event)
-      ) {
-        // the editor consumes the input — the page must not scroll along
-        event.preventDefault();
-        return;
-      }
-      this.actionManager.handleKeyDown(event);
-      return;
     }
 
     if (
@@ -2705,13 +2706,15 @@ export class CaliburnEditorComponent
       } else {
         handleLinearEditorPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
+        handleSelectionPointerUp(this, this.pointerDownState, event);
+        updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
+        // upstream's "click outside the cropping region to exit" — ahead of
+        // the deselect below, which returns from upstream's handler, and
+        // must read isCropping before the cleanup at the end resets it
+        maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
         // a click that deselected ends upstream's pointer-up handler right
         // there — only the teardown it had already run stays
-        if (!handleSelectionPointerUp(this, this.pointerDownState, event)) {
-          updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
-          // upstream's "click outside the cropping region to exit" — must
-          // read isCropping before the cleanup below resets it
-          maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
+        if (!maybeDeselectOnPointerUp(this, this.pointerDownState)) {
           if (
             maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
           ) {

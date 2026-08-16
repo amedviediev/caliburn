@@ -2,7 +2,13 @@ import React from "react";
 
 import { IMAGE_MIME_TYPES, KEYS, arrayToMap } from "@excalidraw/common";
 
-import { getTransformHandles } from "@excalidraw/element";
+import {
+  getCommonBounds,
+  getTransformHandles,
+  getTransformHandlesFromCoords,
+} from "@excalidraw/element";
+
+import type { Radians } from "@excalidraw/math";
 
 import type { ExcalidrawImageElement } from "@excalidraw/element/types";
 
@@ -185,6 +191,55 @@ describe("crop editor pointer exit paths", () => {
     mouse.click(500, 500);
 
     expect(h.state.croppingElementId).toBe(null);
+  });
+
+  /**
+   * Pointer-up runs the crop exit ahead of the deselect, which is where
+   * upstream returns from the handler (App.tsx 12051 then 12263) — so a
+   * pointer-up that does both must still exit crop.
+   *
+   * Reaching that seam takes a seeded state: `handleSelectionPointerDown`'s
+   * own crop exit pre-empts every click that would otherwise arrive at
+   * pointer-up with crop still live, and the deselect needs a multi-element
+   * selection (its single-element half cannot fire for an image, whose
+   * bounding box is its shape). A pointer-down on a transform handle is the
+   * one path that returns before that pointer-down crop exit.
+   */
+  it("a pointer-up that deselects still exits crop mode", () => {
+    const image = seedImage();
+    const rect = API.createElement({
+      type: "rectangle",
+      x: 200,
+      y: 20,
+      width: 100,
+      height: 100,
+    });
+    act(() => {
+      API.setElements([image, rect]);
+      h.app.setState({
+        selectedElementIds: { [image.id]: true, [rect.id]: true },
+        croppingElementId: image.id,
+      });
+    });
+
+    const [x1, y1, x2, y2] = getCommonBounds([image, rect]);
+    const handle = getTransformHandlesFromCoords(
+      [x1, y1, x2, y2, (x1 + x2) / 2, (y1 + y2) / 2],
+      0 as Radians,
+      h.state.zoom,
+      "mouse",
+    ).nw!;
+
+    mouse.reset();
+    mouse.downAt(handle[0] + handle[2] / 2, handle[1] + handle[3] / 2);
+    // the armed handle returns before the pointer-down's own crop exit, so
+    // crop is still live when pointer-up runs both branches
+    expect(h.state.croppingElementId).toBe(image.id);
+
+    mouse.upAt();
+
+    expect(h.state.croppingElementId).toBe(null);
+    expect(API.getSelectedElements()).toEqual([]);
   });
 });
 
