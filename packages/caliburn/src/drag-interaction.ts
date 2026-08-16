@@ -304,6 +304,11 @@ export const maybeDragSelectedElements = (
         editor.state,
       );
 
+      // before the selection switch below, whose group resolution reads the
+      // scene: upstream's own updater runs at the end of its `flushSync`,
+      // i.e. once the duplicates are already in the scene
+      editor.scene.replaceAllElements(elementsWithIndices);
+
       // switch selected elements to the duplicated ones
       editor.setState((prevState) => ({
         ...getSelectionStateForElements(
@@ -312,8 +317,6 @@ export const maybeDragSelectedElements = (
           prevState,
         ),
       }));
-
-      editor.scene.replaceAllElements(elementsWithIndices);
       selectedElements.forEach((element) => {
         if (
           isBindableElement(element) &&

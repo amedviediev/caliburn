@@ -1215,7 +1215,10 @@ export const runSuite = async (browser, url, runner) => {
         const before = await appState(page);
         await page.keyboard.down("Space");
         try {
-          await dragCanvas(page, [700, 500], [820, 620]);
+          // below the welcome screen's centre menu: `resetEditor` empties the
+          // scene, which brings the menu back, and its buttons own the pixels
+          // around [700, 500] — a drag starting there never reaches the canvas
+          await dragCanvas(page, [700, 650], [820, 770]);
         } finally {
           await page.keyboard.up("Space");
         }

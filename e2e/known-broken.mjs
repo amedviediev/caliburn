@@ -17,7 +17,4 @@ export const KNOWN_BROKEN = {
     "and Discord all link to excalidraw's own properties " +
     "(menu-socials.component.html), which the app must not ship as its own " +
     "branding (Task 39)",
-  "pan.space-hold-drag":
-    "`isHoldingSpace` is never read anywhere in packages/caliburn — the " +
-    "space-hold pan gesture was not ported",
 };

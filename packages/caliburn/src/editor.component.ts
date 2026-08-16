@@ -75,7 +75,10 @@ import { ARROW_TYPE, CURSOR_TYPE, KEYS, isArrowKey } from "@excalidraw/common";
 
 import { findShapeByKey } from "@excalidraw/excalidraw/components/Tools";
 
-import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
+import {
+  getDefaultAppState,
+  isHandToolActive,
+} from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { LassoTrail } from "@excalidraw/excalidraw/lasso";
 import { AppCursor } from "@excalidraw/excalidraw/components/App.cursor";
@@ -287,8 +290,10 @@ import {
   gesture,
   handleCanvasPanUsingWheelOrSpaceDrag as panCanvasOnWheelOrSpaceDrag,
   isGestureActive,
+  isHoldingSpace,
   removePointer,
   resetGesture,
+  setHoldingSpace,
   updateGestureOnPointerDown,
   updateMultiTouchGesture,
 } from "./pan-gesture";
@@ -1200,6 +1205,7 @@ export class CaliburnEditorComponent
     document.addEventListener("cut", this.onCut);
     window.addEventListener("resize", this.onWindowResize);
     window.addEventListener("focus", this.onWindowFocus);
+    window.addEventListener("blur", this.onWindowBlur);
 
     this.commit();
   }
@@ -1210,6 +1216,14 @@ export class CaliburnEditorComponent
 
   private onWindowFocus = () => {
     this.maybeCleanupAfterMissingPointerUp(null);
+  };
+
+  /**
+   * Upstream's `onBlur`: the space bar's keyup lands wherever the focus went,
+   * so a window that loses focus mid-hold must forget it was held.
+   */
+  private onWindowBlur = () => {
+    setHoldingSpace(false);
   };
 
   ngAfterViewInit() {
@@ -1242,14 +1256,14 @@ export class CaliburnEditorComponent
     document.removeEventListener("cut", this.onCut);
     window.removeEventListener("resize", this.onWindowResize);
     window.removeEventListener("focus", this.onWindowFocus);
+    window.removeEventListener("blur", this.onWindowBlur);
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
     this.library.destroy();
     this.unsubLibraryItems();
     clearLibraryItemSvgCache();
     this.store.onStoreIncrementEmitter.clear();
-    this.history.clear();
-    this.store.clear();
+    this.store.onDurableIncrementEmitter.clear();
     this.scene.destroy();
   }
 
@@ -1368,12 +1382,15 @@ export class CaliburnEditorComponent
 
   /**
    * Upstream's `onKeyUp`, restricted to the branches caliburn has a landing
-   * place for: the rest of it (space-drag release, bind mode) drives
-   * machinery no task has ported.
+   * place for: the rest of it (bind mode) drives machinery no task has
+   * ported.
    */
   private onKeyUp = (event: KeyboardEvent) => {
     if (!this.isInteractionEnabled()) {
       return;
+    }
+    if (event.key === KEYS.SPACE) {
+      this.batchCommits(() => this.onSpaceKeyUp());
     }
     if (event.key === KEYS.ALT) {
       this.batchCommits(() => this.bucketFill.closeTemporaryEyeDropper());
@@ -1389,7 +1406,52 @@ export class CaliburnEditorComponent
     }
   };
 
+  private onSpaceKeyUp() {
+    if (
+      (this.state.viewModeEnabled && this.state.activeTool.type !== "laser") ||
+      this.state.openDialog?.name === "elementLinkSelector"
+    ) {
+      this.cursor.set(CURSOR_TYPE.GRAB);
+    } else if (isSelectionLikeTool(this.state.activeTool.type)) {
+      this.cursor.reset();
+    } else {
+      this.cursor.applyForTool();
+      this.setState({
+        selectedElementIds: makeNextSelectedElementIds({}, this.state),
+        selectedGroupIds: {},
+        editingGroupId: null,
+        activeEmbeddable: null,
+      });
+    }
+    setHoldingSpace(false);
+  }
+
   private onKeyDownImpl = (event: KeyboardEvent) => {
+    // normalize `event.key` when CapsLock is pressed #2372
+
+    if (
+      "Proxy" in window &&
+      ((!event.shiftKey && /^[A-Z]$/.test(event.key)) ||
+        (event.shiftKey && /^[a-z]$/.test(event.key)))
+    ) {
+      event = new Proxy(event, {
+        get(ev: any, prop) {
+          const value = ev[prop];
+          if (typeof value === "function") {
+            // fix for Proxies hijacking `this`
+            return value.bind(ev);
+          }
+          return prop === "key"
+            ? // CapsLock inverts capitalization based on ShiftKey, so invert
+              // it back
+              event.shiftKey
+              ? ev.key.toUpperCase()
+              : ev.key.toLowerCase()
+            : value;
+        },
+      });
+    }
+
     if (!this.isInteractionEnabled()) {
       // only the navigation keyboard remains: page-scroll keys and
       // `navigation`-flagged action shortcuts (canvas zoom & zoom-to-fit —
@@ -1611,6 +1673,12 @@ export class CaliburnEditorComponent
       event.preventDefault();
     } else if (event.key === KEYS.ENTER) {
       handleEnterToEditKeyDown(this, event);
+    }
+
+    if (event.key === KEYS.SPACE && gesture.pointers.size === 0) {
+      setHoldingSpace(true);
+      this.cursor.set(CURSOR_TYPE.GRAB);
+      event.preventDefault();
     }
 
     if (
@@ -2025,7 +2093,7 @@ export class CaliburnEditorComponent
 
     if (nextActiveTool.type === "hand") {
       this.cursor.set(CURSOR_TYPE.GRAB);
-    } else {
+    } else if (!isHoldingSpace()) {
       this.cursor.applyForTool(nextActiveTool);
     }
 
@@ -2459,6 +2527,12 @@ export class CaliburnEditorComponent
       return;
     }
 
+    // a viewport gesture owns the pointer: no hover affordance may run,
+    // least of all one that would take the pan cursor back
+    if (isHoldingSpace() || isGestureActive() || isHandToolActive(this.state)) {
+      return;
+    }
+
     if (this.pointerDownState) {
       this.onPointerMoveFromPointerDown(event);
       return;
@@ -2566,12 +2640,19 @@ export class CaliburnEditorComponent
     removePointer(this, event);
 
     // upstream resets `cursorButton` and broadcasts the released pointer
-    // from its single pointer-up handler; caliburn's per-interaction
-    // teardowns only cover some of the branches below, so both live here
-    if (this.state.cursorButton !== "up") {
-      this.setState({ cursorButton: "up" });
+    // from the gesture's own pointer-up handler; caliburn's per-interaction
+    // teardowns only cover some of the branches below, so both live here —
+    // still gated on a gesture being in flight, so that a release which
+    // never opened one (a second finger's, a non-primary button's) leaves
+    // the state alone, as upstream does. A pointer-capturing tool (the
+    // laser) strokes without a `pointerDownState` of its own, so it needs
+    // naming here.
+    if (this.pointerDownState || this.isActiveToolPointerCapturing()) {
+      if (this.state.cursorButton !== "up") {
+        this.setState({ cursorButton: "up" });
+      }
+      this.savePointer(event.clientX, event.clientY, "up");
     }
-    this.savePointer(event.clientX, event.clientY, "up");
 
     // an armed bucket fill commits only on a GENUINE pointer up: a tool
     // switch mid-press orphans the click, which must discard the fill
@@ -2624,17 +2705,20 @@ export class CaliburnEditorComponent
       } else {
         handleLinearEditorPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
-        handleSelectionPointerUp(this, this.pointerDownState, event);
-        updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
-        // upstream's "click outside the cropping region to exit" — must
-        // read isCropping before the cleanup below resets it
-        maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
-        if (
-          maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
-        ) {
-          this.clearHighlightsOnPointerUp();
-          this.pointerDownState = null;
-          return;
+        // a click that deselected ends upstream's pointer-up handler right
+        // there — only the teardown it had already run stays
+        if (!handleSelectionPointerUp(this, this.pointerDownState, event)) {
+          updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
+          // upstream's "click outside the cropping region to exit" — must
+          // read isCropping before the cleanup below resets it
+          maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
+          if (
+            maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
+          ) {
+            this.clearHighlightsOnPointerUp();
+            this.pointerDownState = null;
+            return;
+          }
         }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
       }

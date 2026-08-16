@@ -1,4 +1,9 @@
-import { EVENT, POINTER_BUTTON, throttleRAF } from "@excalidraw/common";
+import {
+  CURSOR_TYPE,
+  EVENT,
+  POINTER_BUTTON,
+  throttleRAF,
+} from "@excalidraw/common";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import { getCenter, getDistance } from "@excalidraw/excalidraw/gesture";
 import { getViewportForZoomWithScrollConstraints } from "@excalidraw/excalidraw/viewport";
@@ -17,7 +22,20 @@ export const gesture: Gesture = {
 
 let isPanning = false;
 
+let holdingSpace = false;
+
 export const isGestureActive = () => gesture.pointers.size >= 2 || isPanning;
+
+/**
+ * Whether the space bar is held down — the modifier that turns a primary
+ * drag into a pan, whatever the active tool. Module-level like `isPanning`,
+ * as upstream's `App.tsx` keeps it.
+ */
+export const isHoldingSpace = () => holdingSpace;
+
+export const setHoldingSpace = (holding: boolean) => {
+  holdingSpace = holding;
+};
 
 let lastPointerUp: (() => void) | null = null;
 
@@ -31,7 +49,7 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
       gesture.pointers.size <= 1 &&
       (((event.button === POINTER_BUTTON.WHEEL ||
         (event.button === POINTER_BUTTON.MAIN &&
-          isHandToolActive(editor.state))) &&
+          (holdingSpace || isHandToolActive(editor.state)))) &&
         // reachable while non-interactive when the active tool is allowed
         // via `interaction.enabled.tools` — panning must stay gated on
         // `navigation` then
@@ -46,6 +64,7 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
 
   event.preventDefault();
 
+  editor.cursor.set(CURSOR_TYPE.GRABBING);
   let { clientX: lastX, clientY: lastY } = event;
   const onPointerMove = throttleRAF((event: PointerEvent) => {
     const deltaX = lastX - event.clientX;
@@ -61,6 +80,9 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
   const teardown = (lastPointerUp = () => {
     lastPointerUp = null;
     isPanning = false;
+    if (!holdingSpace) {
+      editor.cursor.reset();
+    }
     editor.setState(
       {
         cursorButton: "up",
@@ -208,6 +230,9 @@ export const endPanSession = () => {
 export const resetGesture = () => {
   isPanning = false;
   endPanSession();
+  // after the teardown, which reads it: upstream likewise clears the flag
+  // only once the hanging pan has run its own (space-aware) cleanup
+  holdingSpace = false;
   gesture.pointers.clear();
   gesture.lastCenter = null;
   gesture.initialDistance = null;

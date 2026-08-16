@@ -1,4 +1,5 @@
 import {
+  CURSOR_TYPE,
   DEFAULT_COLLISION_THRESHOLD,
   DEFAULT_TRANSFORM_HANDLE_SPACING,
   KEYS,
@@ -18,8 +19,10 @@ import {
   getSelectedElements,
   hasBoundingBox,
   hitElementBoundingBox,
+  hitElementBoundingBoxOnly,
   hitElementBoundText,
   hitElementItself,
+  isElbowArrow,
   isEmbeddableElement,
   isLinearElement,
   isSelectedViaGroup,
@@ -33,6 +36,7 @@ import { pointFrom } from "@excalidraw/math";
 
 import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
+import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
 import { originInGridFromEvent } from "./create-interaction";
 import { finishImageCropping, maybeHandleCrop } from "./crop-interaction";
 import { maybeDragSelectedElements } from "./drag-interaction";
@@ -709,11 +713,16 @@ const updateBoxSelection = (
   });
 };
 
+/**
+ * @returns true when the click deselected — upstream returns from its
+ * pointer-up handler there, so the branches that follow are for a click that
+ * kept a selection.
+ */
 export const handleSelectionPointerUp = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
   event: PointerEvent,
-) => {
+): boolean => {
   const hitElement = pointerDownState.hit.element;
 
   if (
@@ -880,6 +889,53 @@ export const handleSelectionPointerUp = (
   if (editor.state.selectionElement) {
     editor.setState({ selectionElement: null });
   }
+
+  const elementsMap = editor.scene.getNonDeletedElementsMap();
+
+  if (
+    // do not clear selection if lasso is active
+    editor.state.activeTool.type !== "lasso" &&
+    // not elbow midpoint dragged
+    !(hitElement && isElbowArrow(hitElement)) &&
+    // not dragged
+    !pointerDownState.drag.hasOccurred &&
+    // not resized
+    !editor.state.isResizing &&
+    // only hitting the bounding box of the previous hit element
+    ((hitElement &&
+      hitElementBoundingBoxOnly(
+        {
+          point: pointFrom(
+            pointerDownState.origin.x,
+            pointerDownState.origin.y,
+          ),
+          element: hitElement,
+          elementsMap,
+          threshold: getElementHitThreshold(editor, hitElement),
+        },
+        elementsMap,
+      )) ||
+      (!hitElement &&
+        pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements))
+  ) {
+    if (editor.state.selectedLinearElement?.isEditing) {
+      // Exit editing mode but keep the element selected
+      editor.actionManager.executeAction(actionToggleLinearEditor);
+    } else {
+      // Deselect selected elements
+      editor.setState({
+        selectedElementIds: makeNextSelectedElementIds({}, editor.state),
+        selectedGroupIds: {},
+        editingGroupId: null,
+        activeEmbeddable: null,
+      });
+    }
+    // reset cursor
+    editor.cursor.set(CURSOR_TYPE.AUTO);
+    return true;
+  }
+
+  return false;
 };
 
 export const updateActiveLockedIdOnPointerUp = (
