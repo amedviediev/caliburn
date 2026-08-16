@@ -111,21 +111,59 @@ import type { CaliburnImperativeAPI } from "../../../packages/caliburn/src/index
  *   `errorMessage` signal the app renders its error dialog from;
  * - `componentDidMount` / `componentWillUnmount` are `start()` / `destroy()`,
  *   called by the app shell once the editor API exists (upstream mounts
- *   `<Collab>` at that same moment).
- *
- * Two upstream surfaces have no caliburn editor to hang off and are left out,
- * rather than stubbed: `excalidrawAPI.onUserFollow` (the editor has no
- * collaborator list to start following from — the follow *protocol* below is
- * ported, so a remote peer following us still works), and the `_reconcile`
- * path's remote-pointer rendering, which the editor's canvas doesn't draw.
+ *   `<Collab>` at that same moment). Upstream's `excalidrawAPI` prop can only
+ *   change by remounting `<Collab>`; the service outlives the editor (the app
+ *   rebuilds it on a language change), so the API-attached subscriptions hang
+ *   off the `excalidrawAPI` setter and re-bind whenever it's reassigned.
  */
 @Injectable({ providedIn: "root" })
 export class CollabService {
   portal: Portal;
   fileManager: FileManager;
-  excalidrawAPI!: CaliburnImperativeAPI;
   activeIntervalId: number | null = null;
   idleTimeoutId: number | null = null;
+
+  private api!: CaliburnImperativeAPI;
+  private unsubApi: (() => void) | null = null;
+
+  /**
+   * The editor API the service talks to. The app rebuilds the editor on a
+   * language change and reassigns this — upstream's `<Collab>` remounts with
+   * the new `excalidrawAPI` prop and re-runs `componentDidMount`, so the
+   * setter re-binds the API-attached subscriptions to the new instance
+   * rather than leaving them on the discarded one.
+   */
+  get excalidrawAPI(): CaliburnImperativeAPI {
+    return this.api;
+  }
+
+  set excalidrawAPI(excalidrawAPI: CaliburnImperativeAPI) {
+    if (this.api === excalidrawAPI) {
+      return;
+    }
+    this.api = excalidrawAPI;
+    this.unsubApi?.();
+    this.unsubApi = this.subscribeToAPI(excalidrawAPI);
+  }
+
+  private subscribeToAPI(excalidrawAPI: CaliburnImperativeAPI) {
+    const unsubOnUserFollow = excalidrawAPI.onUserFollow((payload) => {
+      this.setUserToFollow(
+        payload.action === "FOLLOW" ? payload.userToFollow : null,
+      );
+    });
+    const throttledRelayUserViewportBounds = throttleRAF(
+      this.relayVisibleSceneBounds,
+    );
+    const unsubOnScrollChange = excalidrawAPI.onScrollChange(() =>
+      throttledRelayUserViewportBounds(),
+    );
+
+    return () => {
+      unsubOnUserFollow();
+      unsubOnScrollChange();
+    };
+  }
 
   /** upstream's React state, minus the parts that became signals */
   state: { username: string; activeRoomLink: string | null } = {
@@ -141,8 +179,6 @@ export class CollabService {
   private collaborators = new Map<SocketId, Collaborator>();
   /** the socket ids of the users following the current user */
   private followedBy = new Set<SocketId>();
-
-  private onUnmount: (() => void) | null = null;
 
   constructor() {
     this.portal = new Portal(this);
@@ -206,16 +242,6 @@ export class CollabService {
     window.addEventListener("offline", this.onOfflineStatusToggle);
     window.addEventListener(EVENT.UNLOAD, this.onUnload);
 
-    const throttledRelayUserViewportBounds = throttleRAF(
-      this.relayVisibleSceneBounds,
-    );
-    const unsubOnScrollChange = this.excalidrawAPI.onScrollChange(() =>
-      throttledRelayUserViewportBounds(),
-    );
-    this.onUnmount = () => {
-      unsubOnScrollChange();
-    };
-
     this.onOfflineStatusToggle();
 
     if (isTestEnv() || isDevEnv()) {
@@ -251,7 +277,8 @@ export class CollabService {
       window.clearTimeout(this.idleTimeoutId);
       this.idleTimeoutId = null;
     }
-    this.onUnmount?.();
+    this.unsubApi?.();
+    this.unsubApi = null;
   }
 
   isCollaborating = () => isCollaborating();
