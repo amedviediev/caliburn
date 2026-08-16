@@ -16,6 +16,23 @@
   }
 </div>
 
+<!-- the follow-mode badge's label; a template rather than a string because
+     upstream renders the followed user's name in its own ellipsizing span -->
+<ng-template #followingLabel>
+  Following
+  <span
+    style="
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100px;
+    "
+    [attr.title]="userToFollow()?.username"
+    >{{ userToFollow()?.username }}</span
+  >
+</ng-template>
+
 <ng-template #editor>
   <caliburn-editor
     [initialData]="initialData()"
@@ -26,6 +43,9 @@
     [customCommandPaletteItems]="commandPaletteItems()"
     [handleKeyboardGlobally]="true"
     [autoFocus]="true"
+    [onPointerUpdate]="onPointerUpdate"
+    [userToFollow]="userToFollow()"
+    [viewportStatusFrame]="viewportStatusFrame()"
     [mainMenu]="mainMenuSlot"
     [welcomeScreenCenter]="welcomeScreenCenterSlot"
     [welcomeScreenMenuHint]="welcomeScreenMenuHintSlot"

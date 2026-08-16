@@ -26,11 +26,7 @@ export const isOffline = signal(false);
 /** upstream `collab/Collab.tsx`'s `activeRoomLinkAtom` */
 export const activeRoomLink = signal<string | null>(null);
 
-/**
- * upstream `collab/Collab.tsx`'s `userToFollowAtom`. Nothing sets it in
- * caliburn — the editor renders no collaborator list to start following from
- * — but the follow protocol reads it, so peers following *us* still work.
- */
+/** upstream `collab/Collab.tsx`'s `userToFollowAtom` */
 export const userToFollow = signal<UserToFollow | null>(null);
 
 /** upstream `data/LocalData.ts`'s `localStorageQuotaExceededAtom` */

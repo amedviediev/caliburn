@@ -71,6 +71,7 @@ import {
   isOffline,
   localStorageQuotaExceeded,
   shareDialogState,
+  userToFollow,
 } from "./app-state";
 import { AppThemeService } from "./app-theme.service";
 import {
@@ -105,7 +106,7 @@ import { handleLibrary, persistLibraryItems } from "./library";
 import type { CollabService as Collab } from "./collab/collab.service";
 
 import type { CaliburnImperativeAPI } from "../../packages/caliburn/src/index";
-import type { OnDestroy } from "@angular/core";
+import type { OnDestroy, TemplateRef } from "@angular/core";
 
 /** upstream keeps this as a module constant; here it is resolved per call,
  * since the locale is loaded after this module is imported */
@@ -340,6 +341,29 @@ export class CaliburnAppComponent implements OnDestroy {
   protected readonly isCollabEnabled = !this.isCollabDisabled;
   protected readonly isCollaborating = isCollaborating;
   protected readonly isOffline = isOffline;
+  protected readonly userToFollow = userToFollow;
+  /** relays the local cursor to the room (no-op when collab is disabled) */
+  protected readonly onPointerUpdate = this.isCollabDisabled
+    ? null
+    : this.collab.onPointerUpdate;
+
+  private readonly followingLabel =
+    viewChild<TemplateRef<unknown>>("followingLabel");
+
+  /** upstream's `viewportStatusFrame` memo: the follow-mode frame + badge */
+  protected readonly viewportStatusFrame = computed(() => {
+    const followedUser = userToFollow();
+    const label = this.followingLabel();
+    return followedUser && label
+      ? {
+          border: "var(--color-primary-hover)",
+          label: {
+            label,
+            onClose: () => this.collab.setUserToFollow(null),
+          },
+        }
+      : null;
+  });
   protected readonly localStorageQuotaExceeded = localStorageQuotaExceeded;
   protected readonly appTheme = this.appThemeService.appTheme;
   protected readonly editorTheme = this.appThemeService.editorTheme;
