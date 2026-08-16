@@ -82,7 +82,7 @@ export class CaliburnHelpDialogComponent {
 
   protected readonly links = [
     {
-      href: "https://github.com/amedviediev/caliburn",
+      href: "https://github.com/amedviediev/caliburn/issues",
       rel: "noopener noreferrer",
       icon: "githubIcon",
       label: t("helpDialog.github"),

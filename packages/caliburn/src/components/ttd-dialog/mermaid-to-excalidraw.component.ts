@@ -143,8 +143,11 @@ export class CaliburnMermaidToExcalidrawComponent implements OnDestroy {
     modifier: getShortcutKey("CtrlOrCmd"),
     enter: getShortcutKey("Enter"),
   };
+  // upstream's copy says "rendered as image in Excalidraw"; the target is
+  // this app's own scene, not upstream's — safe ahead of parseDescription
+  // since it only scans for `<tag>…</tag>` markers, none of which match
   protected readonly descriptionRuns = parseDescription(
-    t("mermaid.description"),
+    t("mermaid.description").replace(/Excalidraw/g, "Caliburn"),
   );
 
   protected readonly text = signal(

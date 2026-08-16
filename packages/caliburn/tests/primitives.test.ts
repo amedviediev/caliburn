@@ -1156,7 +1156,7 @@ describe("caliburn-welcome-screen unwired primitives", () => {
       <a
         caliburn-welcome-screen-menu-item-link
         icon="githubIcon"
-        href="https://github.com/excalidraw/excalidraw"
+        href="https://github.com/amedviediev/caliburn"
         ariaLabel="GitHub"
       >
         GitHub
@@ -1189,7 +1189,7 @@ describe("caliburn-welcome-screen unwired primitives", () => {
     );
     expect(link.classList.contains("welcome-screen-menu-item")).toBe(true);
     expect(link.getAttribute("href")).toBe(
-      "https://github.com/excalidraw/excalidraw",
+      "https://github.com/amedviediev/caliburn",
     );
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noopener");

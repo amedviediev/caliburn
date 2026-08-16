@@ -93,6 +93,7 @@ const UPSTREAM_LINK_MARKERS = [
   "x.com/excalidraw",
   "twitter.com/excalidraw",
   "discord.gg/UexuTaE",
+  "youtube.com/@excalidraw",
 ];
 
 const occlusionDetail = async (page, selector) => {
