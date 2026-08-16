@@ -26,6 +26,9 @@ let holdingSpace = false;
 
 export const isGestureActive = () => gesture.pointers.size >= 2 || isPanning;
 
+/** whether a pan session is in flight (upstream's module-level `isPanning`) */
+export const isPanSessionActive = () => isPanning;
+
 /**
  * Whether the space bar is held down — the modifier that turns a primary
  * drag into a pan, whatever the active tool. Module-level like `isPanning`,

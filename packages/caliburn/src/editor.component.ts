@@ -12,6 +12,7 @@ import {
 } from "@angular/core";
 
 import {
+  AppEventBus,
   DEFAULT_IMAGE_OPTIONS,
   DEFAULT_UI_OPTIONS,
   THEME,
@@ -29,6 +30,7 @@ import {
   ZOOM_STEP,
   debounce,
   getStrokeWidthByKey,
+  isBrave,
   isInputLike,
   isSelectionLikeTool,
   isWritableElement,
@@ -53,6 +55,7 @@ import {
   isFrameLikeElement,
   isImageElement,
   isLinearElement,
+  isMeasureTextSupported,
   isTextElement,
   makeNextSelectedElementIds,
   newElementWith,
@@ -74,7 +77,13 @@ import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shor
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 
-import { ARROW_TYPE, CURSOR_TYPE, KEYS, isArrowKey } from "@excalidraw/common";
+import {
+  ARROW_TYPE,
+  CODES,
+  CURSOR_TYPE,
+  KEYS,
+  isArrowKey,
+} from "@excalidraw/common";
 
 import { findShapeByKey } from "@excalidraw/excalidraw/components/Tools";
 
@@ -84,6 +93,7 @@ import {
 } from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { LassoTrail } from "@excalidraw/excalidraw/lasso";
+import { LaserTrails } from "@excalidraw/excalidraw/laserTrails";
 import { AppCursor } from "@excalidraw/excalidraw/components/App.cursor";
 import {
   AppViewport,
@@ -128,6 +138,8 @@ import type {
   LibraryItemsSource,
   OnUserFollowedPayload,
   SceneData,
+  UIConfig,
+  UIOptions,
   SidebarName,
   SidebarTabName,
   ToolType,
@@ -208,6 +220,10 @@ import {
   createScheduleImageRefresh,
   onImageToolbarButtonClick,
 } from "./image-interaction";
+import {
+  handleIframeLikeCenterClick,
+  handleIframeLikeElementHover,
+} from "./embed-interaction";
 import {
   applyElementLinkHoverAffordance,
   getElementLinkAtPosition,
@@ -296,6 +312,7 @@ import {
   handleCanvasPanUsingWheelOrSpaceDrag as panCanvasOnWheelOrSpaceDrag,
   isGestureActive,
   isHoldingSpace,
+  isPanSessionActive,
   removePointer,
   resetGesture,
   setHoldingSpace,
@@ -341,7 +358,34 @@ import type { PointerDownState } from "./selection-interaction";
 
 import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
 
+/**
+ * `AppEventBus` behavior for the editor lifecycle events, verbatim from
+ * upstream's `editorLifecycleEventBehavior` (`App.tsx`).
+ */
+const editorLifecycleEventBehavior = {
+  "editor:mount": { cardinality: "once", replay: "last" },
+  "editor:initialize": { cardinality: "once", replay: "last" },
+  "editor:unmount": { cardinality: "once", replay: "last" },
+} as const;
+
+export type CaliburnMountPayload = {
+  excalidrawAPI: CaliburnImperativeAPI;
+  /*
+   *Excalidraw container.
+   * should never be null, but just to be safe
+   */
+  container: HTMLDivElement | null;
+};
+
+export type CaliburnImperativeAPIEventMap = {
+  "editor:mount": [payload: CaliburnMountPayload];
+  "editor:initialize": [api: CaliburnImperativeAPI];
+  "editor:unmount": [];
+};
+
 export interface CaliburnImperativeAPI {
+  /** Whether the editor has been unmounted and the API is no longer usable. */
+  isDestroyed: boolean;
   /** upstream `App.id` — the token a library install is attributed to */
   id: string;
   updateScene: CaliburnEditorComponent["updateScene"];
@@ -377,11 +421,31 @@ export interface CaliburnImperativeAPI {
     cb: (scrollX: number, scrollY: number, zoom: AppState["zoom"]) => void,
   ) => () => void;
   onUserFollow: (cb: (payload: OnUserFollowedPayload) => void) => () => void;
+  onPointerDown: (
+    cb: (
+      activeTool: AppState["activeTool"],
+      pointerDownState: PointerDownState,
+      event: PointerEvent,
+    ) => void,
+  ) => () => void;
+  onPointerUp: (
+    cb: (
+      activeTool: AppState["activeTool"],
+      pointerDownState: PointerDownState,
+      event: PointerEvent,
+    ) => void,
+  ) => () => void;
+  onEvent: CaliburnEditorComponent["onEvent"];
 }
 
 /** a props snapshot the `interaction` predicates can be evaluated against */
 type InteractionProps = {
   interaction?: boolean | InteractionConfig | null;
+};
+
+/** a props snapshot the `ui` predicates can be evaluated against */
+type UIProps = {
+  ui?: boolean | UIConfig | null;
 };
 
 let nextEditorId = 0;
@@ -422,10 +486,38 @@ export class CaliburnEditorComponent
   readonly interaction = input<boolean | InteractionConfig | null | undefined>(
     undefined,
   );
+  /**
+   * Whether Excalidraw's default UI is rendered. `false` hides all of it;
+   * an object hides all of it but opts individual controls back in
+   * (`UIConfig["enabled"]`). Host-supplied UI (the composition slots and
+   * projected children) keeps rendering either way.
+   *
+   * @default true
+   */
+  readonly ui = input<boolean | UIConfig | null | undefined>(undefined);
   readonly theme = input<Theme | undefined>(undefined);
+  readonly zenModeEnabled = input<boolean | undefined>(undefined);
+  readonly gridModeEnabled = input<boolean | undefined>(undefined);
+  /** the scene name, seeded into `appState.name` (host-controlled) */
+  readonly name = input<string | undefined>(undefined);
+  /** extra class names for the editor's root `.excalidraw` element */
+  readonly className = input<string | undefined>(undefined);
+  /** host overrides for the default UI's actions & tools (merged over
+   * `DEFAULT_UI_OPTIONS`, as upstream's `index.tsx` does) */
+  readonly UIOptions = input<Partial<UIOptions> | undefined>(undefined);
   readonly onExcalidrawAPI = input<
-    ((api: CaliburnImperativeAPI) => void) | null
+    ((api: CaliburnImperativeAPI | null) => void) | null
   >(null);
+  /** Invoked once the editor root is mounted. */
+  readonly onMount = input<((payload: CaliburnMountPayload) => void) | null>(
+    null,
+  );
+  /** Invoked when the editor root is unmounted. */
+  readonly onUnmount = input<(() => void) | null>(null);
+  /** Invoked once the initial scene is loaded. */
+  readonly onInitialize = input<((api: CaliburnImperativeAPI) => void) | null>(
+    null,
+  );
   readonly onPointerDown = input<
     | ((
         activeTool: AppState["activeTool"],
@@ -486,6 +578,27 @@ export class CaliburnEditorComponent
   readonly onThemeChange = input<
     ((theme: AppState["theme"] | "system") => void) | null
   >(null);
+  /**
+   * Host hook for element-link clicks. Called before the editor opens the
+   * URL; `event.preventDefault()` suppresses the `window.open`.
+   */
+  readonly onLinkOpen = input<
+    | ((
+        element: NonDeletedExcalidrawElement,
+        event: CustomEvent<{ nativeEvent: MouseEvent }>,
+      ) => void)
+    | null
+  >(null);
+  /** upstream's `validateEmbeddable` — widens (or narrows) the set of URLs
+   * an embeddable element accepts (`embeddableURLValidator`) */
+  readonly validateEmbeddable = input<
+    | boolean
+    | string[]
+    | RegExp
+    | RegExp[]
+    | ((link: string) => boolean | undefined)
+    | undefined
+  >(undefined);
   /** upstream's `<CommandPalette customCommandPaletteItems>` (the palette is
    * a host-rendered child upstream; caliburn's LayerUI renders it) */
   readonly customCommandPaletteItems = input<CommandPaletteItem[]>([]);
@@ -501,8 +614,9 @@ export class CaliburnEditorComponent
    * input instead — which also makes "did the host supply one?" a plain
    * read rather than a mount-counting heuristic.
    *
-   * `topRightUI` is upstream's `renderTopRightUI` render prop (its one
-   * non-tunnel outlet), spelled the same way for consistency.
+   * `topLeftUI` / `topRightUI` are upstream's `renderTopLeftUI` /
+   * `renderTopRightUI` render props (its two non-tunnel outlets), spelled
+   * the same way for consistency.
    */
   readonly mainMenu = input<TemplateRef<unknown> | null>(null);
   readonly welcomeScreenCenter = input<TemplateRef<unknown> | null>(null);
@@ -510,6 +624,7 @@ export class CaliburnEditorComponent
   readonly welcomeScreenToolbarHint = input<TemplateRef<unknown> | null>(null);
   readonly welcomeScreenHelpHint = input<TemplateRef<unknown> | null>(null);
   readonly footerCenter = input<TemplateRef<unknown> | null>(null);
+  readonly topLeftUI = input<TemplateRef<unknown> | null>(null);
   readonly topRightUI = input<TemplateRef<unknown> | null>(null);
   readonly sidebar = input<TemplateRef<unknown> | null>(null);
   /**
@@ -589,6 +704,7 @@ export class CaliburnEditorComponent
   readonly undoAction = createUndoAction(this.history);
   readonly redoAction = createRedoAction(this.history);
   readonly lassoTrail = new LassoTrail(this as any);
+  readonly laserTrails = new LaserTrails(this as any);
   readonly cursorHints = new CursorHints(this);
 
   /** the mounted `<caliburn-cursor-hint>`, if any (see `CursorHints`) */
@@ -648,6 +764,9 @@ export class CaliburnEditorComponent
     },
     onDuplicate: undefined as unknown,
     theme: undefined as Theme | undefined,
+    zenModeEnabled: undefined as boolean | undefined,
+    gridModeEnabled: undefined as boolean | undefined,
+    name: undefined as string | undefined,
     onThemeChange: undefined as
       | ((theme: AppState["theme"] | "system") => void)
       | undefined,
@@ -697,6 +816,14 @@ export class CaliburnEditorComponent
    * mirrored here as a per-instance signal.
    */
   readonly activeConfirmDialog = signal<"clearCanvas" | null>(null);
+
+  /**
+   * Upstream puts `<BraveMeasureTextError />` straight into
+   * `appState.errorMessage`, which is a `ReactNode`; caliburn's error dialog
+   * projects a string, so the one renderable error message it can raise is a
+   * flag of its own instead.
+   */
+  readonly braveMeasureTextError = signal(false);
 
   /**
    * Upstream keeps the overwrite-confirmation modal in a module-level jotai
@@ -783,6 +910,34 @@ export class CaliburnEditorComponent
   readonly onUserFollowEmitter = new Emitter<
     [payload: OnUserFollowedPayload]
   >();
+
+  readonly onPointerDownEmitter = new Emitter<
+    [
+      activeTool: AppState["activeTool"],
+      pointerDownState: PointerDownState,
+      event: PointerEvent,
+    ]
+  >();
+
+  readonly onPointerUpEmitter = new Emitter<
+    [
+      activeTool: AppState["activeTool"],
+      pointerDownState: PointerDownState,
+      event: PointerEvent,
+    ]
+  >();
+
+  private readonly editorLifecycleEvents = new AppEventBus<
+    CaliburnImperativeAPIEventMap,
+    typeof editorLifecycleEventBehavior
+  >(editorLifecycleEventBehavior);
+
+  readonly onEvent = this.editorLifecycleEvents.on.bind(
+    this.editorLifecycleEvents,
+  ) as AppEventBus<
+    CaliburnImperativeAPIEventMap,
+    typeof editorLifecycleEventBehavior
+  >["on"];
 
   /** emits a follow/unfollow intent to the host (which owns the
    *  `userToFollow` state) via both the `onUserFollow` prop and the
@@ -927,6 +1082,24 @@ export class CaliburnEditorComponent
       return interaction.enabled?.browserZoom === true;
     }
     return false;
+  }
+
+  /** Whether Excalidraw's full default UI is rendered. */
+  isDefaultUIEnabled(props: UIProps = { ui: this.ui() }): boolean {
+    return (
+      props.ui !== false && (typeof props.ui !== "object" || props.ui === null)
+    );
+  }
+
+  /** Whether an individual default UI control is rendered. */
+  isUIControlEnabled(
+    control: keyof UIConfig["enabled"],
+    props: UIProps = { ui: this.ui() },
+  ): boolean {
+    if (typeof props.ui === "object" && props.ui !== null) {
+      return props.ui.enabled?.[control] === true;
+    }
+    return props.ui !== false;
   }
 
   /**
@@ -1164,6 +1337,25 @@ export class CaliburnEditorComponent
     this.props.libraryReturnUrl = this.libraryReturnUrl();
     this.props.onLibraryChange = this.onLibraryChange() ?? undefined;
 
+    // upstream's `index.tsx` normalization, mutating `props.UIOptions` in
+    // place so the object LayerUI reads stays the one it captured
+    const uiOptions = this.UIOptions();
+    const canvasActions = uiOptions?.canvasActions;
+    Object.assign(this.props.UIOptions, uiOptions, {
+      canvasActions: {
+        ...DEFAULT_UI_OPTIONS.canvasActions,
+        ...canvasActions,
+      },
+      tools: {
+        image: uiOptions?.tools?.image ?? true,
+      },
+    });
+    if (canvasActions?.export) {
+      this.props.UIOptions.canvasActions.export.saveFileToDisk =
+        canvasActions.export?.saveFileToDisk ??
+        DEFAULT_UI_OPTIONS.canvasActions.export.saveFileToDisk;
+    }
+
     const theme = this.theme();
     this.props.theme = theme;
     this.props.onThemeChange = this.onThemeChange() ?? undefined;
@@ -1179,6 +1371,19 @@ export class CaliburnEditorComponent
     ) {
       this.props.UIOptions.canvasActions.toggleTheme = true;
     }
+
+    const zenModeEnabled = this.zenModeEnabled();
+    const gridModeEnabled = this.gridModeEnabled();
+    const name = this.name();
+    this.props.zenModeEnabled = zenModeEnabled;
+    this.props.gridModeEnabled = gridModeEnabled;
+    this.props.name = name;
+    this.state = {
+      ...this.state,
+      zenModeEnabled: zenModeEnabled ?? false,
+      gridModeEnabled: gridModeEnabled ?? this.state.gridModeEnabled,
+      name: name ?? this.state.name,
+    };
 
     const viewModeEnabled = this.viewModeEnabled();
     if (!this.isInteractionEnabled()) {
@@ -1257,6 +1462,7 @@ export class CaliburnEditorComponent
     const svgLayer = this.svgLayerRef()?.nativeElement;
     if (svgLayer) {
       this.lassoTrail.start(svgLayer);
+      this.laserTrails.start(svgLayer);
       this.drawShape.trail.start(svgLayer);
     }
     this.cursor.reset();
@@ -1264,10 +1470,23 @@ export class CaliburnEditorComponent
     this.updateDOMRect();
     this.observeContainerResize();
     this.initializeScene();
+    // note that this check seems to always pass in localhost
+    if (isBrave() && !isMeasureTextSupported()) {
+      this.braveMeasureTextError.set(true);
+    }
     if (this.autoFocus()) {
       this.focusContainer();
     }
     renderEditor(this);
+
+    const mountPayload = {
+      excalidrawAPI: this.getApi(),
+      container: this.containerRef()?.nativeElement ?? null,
+    };
+    this._mounted = true;
+    this.editorLifecycleEvents.emit("editor:mount", mountPayload);
+    this.onMount()?.(mountPayload);
+    this.maybeEmitInitialize();
   }
 
   /** upstream's `componentDidMount` observer, same `supportsResizeObserver`
@@ -1286,8 +1505,30 @@ export class CaliburnEditorComponent
   }
 
   ngOnDestroy() {
+    // the API object is recreated so a host holding the old reference can
+    // still tell it apart from a live one
+    const api = this.getApi();
+    this.api = { ...api, isDestroyed: true };
+    for (const key of Object.keys(this.api) as (keyof typeof api)[]) {
+      if (
+        (key.startsWith("get") || key === "onEvent") &&
+        typeof this.api[key] === "function"
+      ) {
+        (this.api as any)[key] = () => {
+          throw new Error(
+            "ExcalidrawAPI is no longer usable after the editor has been unmounted and will return invalid/empty data. You should check for `ExcalidrawAPI.isDestroyed` before calling get* methods on subscribing to state/event changes.",
+          );
+        };
+      }
+    }
+
+    this.editorLifecycleEvents.emit("editor:unmount");
+    this.onUnmount()?.();
+    this.onExcalidrawAPI()?.(null);
+
     this.unmounted = true;
     this.lassoTrail.stop();
+    this.laserTrails.stop();
     this.drawShape.stop();
     resetGesture();
     endPointerSession();
@@ -1306,8 +1547,10 @@ export class CaliburnEditorComponent
     this.library.destroy();
     this.unsubLibraryItems();
     clearLibraryItemSvgCache();
+    this.onChangeEmitter.clear();
     this.store.onStoreIncrementEmitter.clear();
     this.store.onDurableIncrementEmitter.clear();
+    this.editorLifecycleEvents.clear();
     this.scene.destroy();
   }
 
@@ -1472,8 +1715,32 @@ export class CaliburnEditorComponent
     setHoldingSpace(false);
   }
 
+  /**
+   * The browser's own keyboard zoom is prevented over the non-interactive
+   * editor by default (opt out via
+   * `interaction: { enabled: { browserZoom: true } }`), mirroring the
+   * interactive editor. Upstream attaches this as its own keydown listener
+   * beside the navigation one, so both run on the same event.
+   */
+  private preventBrowserZoomKeyDown = (event: KeyboardEvent) => {
+    if (
+      event[KEYS.CTRL_OR_CMD] &&
+      (event.code === CODES.EQUAL ||
+        event.code === CODES.MINUS ||
+        event.code === CODES.ZERO ||
+        event.code === CODES.NUM_ADD ||
+        event.code === CODES.NUM_SUBTRACT ||
+        event.code === CODES.NUM_ZERO)
+    ) {
+      event.preventDefault();
+    }
+  };
+
   private onKeyDownImpl = (event: KeyboardEvent) => {
     if (!this.isInteractionEnabled()) {
+      if (!this.isBrowserZoomEnabled()) {
+        this.preventBrowserZoomKeyDown(event);
+      }
       // only the navigation keyboard remains: page-scroll keys and
       // `navigation`-flagged action shortcuts (canvas zoom & zoom-to-fit —
       // see `ActionManager.handleKeyDown`'s own gates)
@@ -2370,6 +2637,11 @@ export class CaliburnEditorComponent
       !this.isInteractionEnabled() &&
       !this.isToolSupported(this.state.activeTool.type)
     ) {
+      if (this.isLinksEnabled() || this.isEmbedsEnabled()) {
+        // needed by handleElementLinkClick & handleIframeLikeCenterClick
+        // (drag-distance & hit checks)
+        this.lastPointerDownEvent = event;
+      }
       if (this.isNavigationEnabled()) {
         updateGestureOnPointerDown(this, event);
         // pans on drag same as view mode (the pan session manages its own
@@ -2491,6 +2763,12 @@ export class CaliburnEditorComponent
     } else if (activeToolType === "text") {
       this.pointerDownState = initialPointerDownState(this, event);
       handleTextOnPointerDown(this, event, this.pointerDownState);
+    } else if (activeToolType === "laser") {
+      this.pointerDownState = initialPointerDownState(this, event);
+      this.laserTrails.startPath(
+        this.pointerDownState.lastCoords.x,
+        this.pointerDownState.lastCoords.y,
+      );
     } else if (activeToolType === "autoshape") {
       this.pointerDownState = initialPointerDownState(this, event);
       this.drawShape.handlePointerDown(this.pointerDownState);
@@ -2513,6 +2791,11 @@ export class CaliburnEditorComponent
 
     if (this.pointerDownState) {
       this.onPointerDown()?.(
+        this.state.activeTool,
+        this.pointerDownState,
+        event,
+      );
+      this.onPointerDownEmitter.trigger(
         this.state.activeTool,
         this.pointerDownState,
         event,
@@ -2558,6 +2841,12 @@ export class CaliburnEditorComponent
       event,
       this.state,
     );
+    if (this.state.activeTool.type === "laser") {
+      this.laserTrails.addPointToPath(
+        pointerDownState.lastCoords.x,
+        pointerDownState.lastCoords.y,
+      );
+    }
     if (this.drawShape.handlePointerMove(pointerDownState.lastCoords)) {
       return;
     }
@@ -2590,6 +2879,12 @@ export class CaliburnEditorComponent
         // two-finger pinch zoom/pan (single-pointer panning is handled by
         // the pan session set up on pointerdown)
         updateMultiTouchGesture(this, event);
+      }
+      if (
+        (this.isLinksEnabled() || this.isEmbedsEnabled()) &&
+        !isPanSessionActive()
+      ) {
+        this.handleInteractiveContentPointerMove(event);
       }
       return;
     }
@@ -2627,6 +2922,67 @@ export class CaliburnEditorComponent
     maybeUpdateFrameToHighlightOnPointerMove(this, scenePointer);
     this.arrowText.updateHoveredAnchor(scenePointer);
     this.maybeUpdateHoverCursor(scenePointer, event);
+  }
+
+  /**
+   * Restricted pointer handling for the non-interactive editor with links
+   * and/or embeds allowed (`interaction.enabled.links` / `.embeds` /
+   * `.interactiveContent`) — runs only the element-link & embed concerns
+   * (shared with the full pointer handlers above) so they behave like in
+   * view mode without the rest of the canvas pointer machinery.
+   */
+  private handleInteractiveContentPointerMove(event: PointerEvent) {
+    const scenePointer = viewportCoordsToSceneCoords(event, this.state);
+    const hitElementMightBeLocked = getElementAtPosition(
+      this,
+      scenePointer.x,
+      scenePointer.y,
+      { includeLockedElements: true },
+    );
+
+    if (this.isEmbedsEnabled()) {
+      const hitElement = hitElementMightBeLocked?.locked
+        ? null
+        : hitElementMightBeLocked;
+      if (
+        handleIframeLikeElementHover(this, {
+          hitElement,
+          scenePointer,
+          moveEvent: event,
+        })
+      ) {
+        return;
+      }
+    }
+
+    this.hitLinkElement = this.isLinksEnabled()
+      ? getElementLinkAtPosition(this, scenePointer, hitElementMightBeLocked)
+      : undefined;
+    if (!applyElementLinkHoverAffordance(this)) {
+      this.cursor.reset();
+    }
+  }
+
+  private handleInteractiveContentPointerUp(event: PointerEvent) {
+    this.lastPointerUpEvent = event;
+
+    if (this.isEmbedsEnabled() && handleIframeLikeCenterClick(this)) {
+      return;
+    }
+
+    const scenePointer = viewportCoordsToSceneCoords(event, this.state);
+    if (
+      this.isLinksEnabled() &&
+      maybeHandleElementLinkClick(this, event, scenePointer)
+    ) {
+      return;
+    }
+
+    // clicking outside an active embed deactivates it (view-mode style;
+    // clicks inside it are consumed by the embed itself)
+    if (this.state.activeEmbeddable?.state === "active") {
+      this.setState({ activeEmbeddable: null });
+    }
   }
 
   private maybeUpdateHoverCursor(
@@ -2706,6 +3062,9 @@ export class CaliburnEditorComponent
       !this.isInteractionEnabled() &&
       !this.isToolSupported(this.state.activeTool.type)
     ) {
+      if (this.isLinksEnabled() || this.isEmbedsEnabled()) {
+        this.batchCommits(() => this.handleInteractiveContentPointerUp(event));
+      }
       return;
     }
     this.batchCommits(() => {
@@ -2761,6 +3120,7 @@ export class CaliburnEditorComponent
       this.isLinksEnabled() &&
       maybeHandleElementLinkClick(
         this,
+        event,
         viewportCoordsToSceneCoords(event, this.state),
       )
     ) {
@@ -2770,7 +3130,18 @@ export class CaliburnEditorComponent
 
     if (this.pointerDownState) {
       this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
+      this.onPointerUpEmitter.trigger(
+        this.state.activeTool,
+        this.pointerDownState,
+        event,
+      );
       if (this.state.activeTool.type === "custom") {
+        this.clearHighlightsOnPointerUp();
+        this.pointerDownState = null;
+        return;
+      }
+      if (this.state.activeTool.type === "laser") {
+        this.laserTrails.endPath();
         this.clearHighlightsOnPointerUp();
         this.pointerDownState = null;
         return;
@@ -2880,8 +3251,33 @@ export class CaliburnEditorComponent
     this.history.clear();
   };
 
+  private api: CaliburnImperativeAPI | null = null;
+
+  private _initialized = false;
+  private _mounted = false;
+
+  /**
+   * Upstream emits `editor:mount` from `componentDidMount` and
+   * `editor:initialize` from `componentDidUpdate`, so mount always comes
+   * first. Caliburn's `commit()` stands in for both, and the scene is
+   * initialized before the view-init hook returns — hence the explicit
+   * ordering gate.
+   */
+  private maybeEmitInitialize() {
+    if (this._mounted && !this._initialized && !this.state.isLoading) {
+      this._initialized = true;
+      this.editorLifecycleEvents.emit("editor:initialize", this.getApi());
+      this.onInitialize()?.(this.getApi());
+    }
+  }
+
   getApi(): CaliburnImperativeAPI {
+    return (this.api ??= this.createApi());
+  }
+
+  private createApi(): CaliburnImperativeAPI {
     return {
+      isDestroyed: false,
       id: this.id,
       updateScene: this.updateScene,
       resetScene: this.resetScene,
@@ -2916,6 +3312,9 @@ export class CaliburnEditorComponent
       onIncrement: (cb) => this.store.onStoreIncrementEmitter.on(cb),
       onScrollChange: (cb) => this.onScrollChangeEmitter.on(cb),
       onUserFollow: (cb) => this.onUserFollowEmitter.on(cb),
+      onPointerDown: (cb) => this.onPointerDownEmitter.on(cb),
+      onPointerUp: (cb) => this.onPointerUpEmitter.on(cb),
+      onEvent: this.onEvent,
     };
   }
 
@@ -2970,7 +3369,11 @@ export class CaliburnEditorComponent
   }
 
   getName = () => {
-    return this.state.name || `${t("labels.untitled")}-${getDateTime()}`;
+    return (
+      this.state.name ||
+      this.props.name ||
+      `${t("labels.untitled")}-${getDateTime()}`
+    );
   };
 
   onExportImage = async (
@@ -3124,6 +3527,16 @@ export class CaliburnEditorComponent
       this.state = { ...this.state, viewModeEnabled: true };
     }
 
+    // a host-controlled zen mode overrides action results (upstream forces
+    // it in `syncActionResult` and re-syncs it in `componentDidUpdate`)
+    const zenModeEnabled = this.zenModeEnabled();
+    if (
+      zenModeEnabled !== undefined &&
+      this.state.zenModeEnabled !== zenModeEnabled
+    ) {
+      this.state = { ...this.state, zenModeEnabled };
+    }
+
     const forcedTool = this.activeTool?.();
     if (
       forcedTool &&
@@ -3228,6 +3641,17 @@ export class CaliburnEditorComponent
     if (this.isEmbedsEnabled(prevProps) !== this.isEmbedsEnabled()) {
       if (!this.isEmbedsEnabled()) {
         this.setState({ activeEmbeddable: null });
+      }
+    }
+
+    if (
+      this.isToolSupported(this.state.activeTool.type, prevProps) !==
+      this.isToolSupported(this.state.activeTool.type)
+    ) {
+      if (!this.isToolSupported(this.state.activeTool.type)) {
+        // end a possibly mid-stroke laser trail (the stroke's own window
+        // listeners tear down on the next pointerup)
+        this.laserTrails.endPath();
       }
     }
   }
@@ -3454,7 +3878,7 @@ export class CaliburnEditorComponent
       ) {
         this.embedsValidationStatus.set(
           element.id,
-          embeddableURLValidator(element.link, undefined),
+          embeddableURLValidator(element.link, this.validateEmbeddable()),
         );
         ShapeCache.delete(element);
       }
@@ -3466,6 +3890,8 @@ export class CaliburnEditorComponent
       this.commitPending = true;
       return;
     }
+    // must be updated *before* the change listeners are triggered below
+    this.maybeEmitInitialize();
     this.changeGeneration.update((generation) => generation + 1);
     this.updateEmbeddables();
     // assigned rather than `setState`d, which would re-enter this commit; the

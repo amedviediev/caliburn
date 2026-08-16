@@ -1,6 +1,7 @@
 <div
   #container
   class="excalidraw excalidraw-container"
+  [class]="className()"
   [class.theme--dark]="isDarkTheme()"
   [class.excalidraw--view-mode]="state.viewModeEnabled"
   [class.excalidraw--non-interactive]="!isInteractionEnabled()"
@@ -16,6 +17,7 @@
   "
   [class.excalidraw--viewport-status-border]="!!viewportStatusFrame()?.border"
   [class.excalidraw--viewport-status-label]="!!viewportStatusFrame()?.label"
+  [class.excalidraw--ui-hidden]="!isDefaultUIEnabled()"
   [class.excalidraw--zen-mode]="state.zenModeEnabled"
   [style.--ui-pointerEvents]="uiPointerEvents"
   [style.--right-sidebar-width]="rightSidebarWidth"
@@ -47,13 +49,19 @@
   </div>
   <div class="excalidraw-textEditorContainer"></div>
   <div class="excalidraw-eye-dropper-container">
-    @if (activeEyeDropper() && editorInterface.formFactor !== "phone") {
+    @if (
+      isDefaultUIEnabled() &&
+      activeEyeDropper() &&
+      editorInterface.formFactor !== "phone"
+    ) {
       <caliburn-eye-dropper />
     }
   </div>
-  <caliburn-context-menu />
-  <caliburn-cursor-hint />
-  @for (element of hyperlinkElements(); track element.id) {
-    <caliburn-hyperlink [element]="element" />
+  @if (isDefaultUIEnabled()) {
+    <caliburn-context-menu />
+    <caliburn-cursor-hint />
+    @for (element of hyperlinkElements(); track element.id) {
+      <caliburn-hyperlink [element]="element" />
+    }
   }
 </div>

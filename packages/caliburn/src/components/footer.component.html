@@ -2,10 +2,11 @@
   role="contentinfo"
   class="layer-ui__wrapper__footer App-menu App-menu_bottom"
 >
+  @if (defaultUIEnabled() || (zoomUIEnabled() && isNavigationEnabled())) {
   <div class="layer-ui__wrapper__footer-left zen-mode-transition">
     <caliburn-stack-col [gap]="2">
       <section caliburn-section heading="canvasActions">
-        @if (isNavigationEnabled()) {
+        @if (zoomUIEnabled() && isNavigationEnabled()) {
         <caliburn-stack-col [gap]="1" class="zoom-actions">
           <caliburn-stack-row align="center">
             <button
@@ -42,7 +43,7 @@
             ></button>
           </caliburn-stack-row>
         </caliburn-stack-col>
-        } @if (!state().viewModeEnabled) {
+        } @if (defaultUIEnabled() && !state().viewModeEnabled) {
         <div class="undo-redo-buttons zen-mode-transition">
           <div class="undo-button-container">
             <caliburn-tooltip [label]="labels.undo">
@@ -75,9 +76,11 @@
       </section>
     </caliburn-stack-col>
   </div>
+  }
   @if (footerCenter(); as center) {
     <ng-container *ngTemplateOutlet="center" />
   }
+  @if (defaultUIEnabled() || renderWelcomeScreen()) {
   <div class="layer-ui__wrapper__footer-right zen-mode-transition">
     <div style="position: relative">
       @if (renderWelcomeScreen()) {
@@ -87,7 +90,20 @@
           <caliburn-welcome-screen-help-hint />
         }
       }
-      <caliburn-help-button [onClick]="showHelp" />
+      @if (defaultUIEnabled()) {
+        <caliburn-help-button [onClick]="showHelp" />
+      }
     </div>
   </div>
+  }
+  @if (defaultUIEnabled()) {
+    <button
+      type="button"
+      class="disable-zen-mode"
+      [class.disable-zen-mode--visible]="showExitZenModeBtn()"
+      (click)="exitZenMode()"
+    >
+      {{ labels.exitZenMode }}
+    </button>
+  }
 </footer>

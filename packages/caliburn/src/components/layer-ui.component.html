@@ -1,5 +1,10 @@
 <ng-content />
-@if (state().errorMessage) {
+@if (defaultUIEnabled() && braveMeasureTextError()) {
+  <caliburn-error-dialog (close)="clearBraveMeasureTextError()">
+    <caliburn-brave-measure-text-error />
+  </caliburn-error-dialog>
+}
+@if (defaultUIEnabled() && state().errorMessage) {
   <caliburn-error-dialog (close)="clearErrorMessage()">{{
     state().errorMessage
   }}</caliburn-error-dialog>
@@ -19,8 +24,10 @@
   <caliburn-image-export-dialog />
 }
 <caliburn-json-export-dialog />
-@if (elementLinkSourceId(); as sourceElementId) {
-  <caliburn-element-link-dialog [sourceElementId]="sourceElementId" />
+@if (defaultUIEnabled()) {
+  @if (elementLinkSourceId(); as sourceElementId) {
+    <caliburn-element-link-dialog [sourceElementId]="sourceElementId" />
+  }
 }
 <caliburn-command-palette />
 @if (viewportStatusFrame()?.border; as border) {
@@ -61,9 +68,12 @@
       <caliburn-stack-col [gap]="6" class="App-menu_top__left">
         <div style="position: relative">
           <div class="excalidraw-ui-top-left">
+            @if (topLeftUI(); as topLeft) {
+              <ng-container *ngTemplateOutlet="topLeft" />
+            }
             @if (mainMenu(); as menu) {
               <ng-container *ngTemplateOutlet="menu" />
-            } @else {
+            } @else if (defaultUIEnabled()) {
               <caliburn-default-main-menu />
             }
           </div>
@@ -75,11 +85,13 @@
             }
           }
         </div>
-        <div class="selected-shape-actions-container">
-          <caliburn-shape-actions />
-        </div>
+        @if (defaultUIEnabled()) {
+          <div class="selected-shape-actions-container">
+            <caliburn-shape-actions />
+          </div>
+        }
       </caliburn-stack-col>
-      @if (!state().viewModeEnabled) {
+      @if (defaultUIEnabled() && !state().viewModeEnabled) {
         <section class="shapes-section" [attr.aria-labelledby]="headingId">
           <div style="position: relative">
             @if (renderWelcomeScreen()) {
@@ -105,7 +117,7 @@
         class="layer-ui__wrapper__top-right zen-mode-transition"
         [class.transition-right]="state().zenModeEnabled"
       >
-        @if (state().collaborators.size) {
+        @if (defaultUIEnabled() && state().collaborators.size) {
           <caliburn-user-list
             [collaborators]="state().collaborators"
             [userToFollow]="userToFollow()?.socketId ?? null"
@@ -115,7 +127,7 @@
         @if (topRightUI(); as topRight) {
           <ng-container *ngTemplateOutlet="topRight" />
         }
-        @if (showSidebarTrigger()) {
+        @if (defaultUIEnabled() && showSidebarTrigger()) {
           <button
             caliburn-sidebar-trigger
             triggerClass="default-sidebar-trigger"
@@ -134,7 +146,9 @@
   </caliburn-fixed-side-container>
   <caliburn-footer />
   @if (
-    state().toast || state().scrolledOutside || viewportStatusFrame()?.label
+    state().toast ||
+    (scrollBackToContentUIEnabled() && state().scrolledOutside) ||
+    viewportStatusFrame()?.label
   ) {
     <div class="floating-status-stack">
       @if (state().toast; as toast) {
@@ -145,7 +159,11 @@
           (close)="clearToast()"
         />
       }
-      @if (!state().toast && state().scrolledOutside) {
+      @if (
+        !state().toast &&
+        scrollBackToContentUIEnabled() &&
+        state().scrolledOutside
+      ) {
         <button
           type="button"
           class="scroll-back-to-content"
@@ -167,6 +185,6 @@
 @if (sidebar(); as hostSidebar) {
   <ng-container *ngTemplateOutlet="hostSidebar" />
 }
-@if (!hostDefaultSidebars()) {
+@if (defaultUIEnabled() && !hostDefaultSidebars()) {
   <caliburn-default-sidebar [fallback]="true" />
 }

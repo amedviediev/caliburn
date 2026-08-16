@@ -17,6 +17,7 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../edit
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
 
 import { CaliburnActiveConfirmDialogComponent } from "./active-confirm-dialog.component";
+import { CaliburnBraveMeasureTextErrorComponent } from "./brave-measure-text-error.component";
 import { CaliburnCommandPaletteComponent } from "./command-palette/command-palette.component";
 import { CaliburnElementLinkDialogComponent } from "./element-link-dialog.component";
 import { CaliburnErrorDialogComponent } from "./error-dialog.component";
@@ -85,6 +86,7 @@ let nextLayerUIId = 0;
   imports: [
     NgTemplateOutlet,
     CaliburnActiveConfirmDialogComponent,
+    CaliburnBraveMeasureTextErrorComponent,
     CaliburnCommandPaletteComponent,
     CaliburnDefaultMainMenuComponent,
     CaliburnDefaultSidebarComponent,
@@ -136,6 +138,7 @@ export class CaliburnLayerUIComponent {
   );
 
   protected readonly mainMenu = this.editor.mainMenu;
+  protected readonly topLeftUI = this.editor.topLeftUI;
   protected readonly welcomeScreenCenter = this.editor.welcomeScreenCenter;
   protected readonly welcomeScreenMenuHint = this.editor.welcomeScreenMenuHint;
   protected readonly welcomeScreenToolbarHint =
@@ -146,6 +149,7 @@ export class CaliburnLayerUIComponent {
   protected readonly userToFollow = this.editor.userToFollow;
   protected readonly viewportStatusFrame = this.editor.viewportStatusFrame;
   protected readonly hostDefaultSidebars = this.editor.hostDefaultSidebars;
+  protected readonly braveMeasureTextError = this.editor.braveMeasureTextError;
 
   protected state() {
     this.editor.changeGeneration();
@@ -171,9 +175,18 @@ export class CaliburnLayerUIComponent {
       : null;
   });
 
+  protected defaultUIEnabled() {
+    return this.editor.isDefaultUIEnabled();
+  }
+
+  protected scrollBackToContentUIEnabled() {
+    return this.editor.isUIControlEnabled("scrollBackToContent");
+  }
+
   protected readonly shouldShowStats = computed(() => {
     const state = this.state();
     return (
+      this.editor.isDefaultUIEnabled() &&
       state.stats.open &&
       !state.zenModeEnabled &&
       !state.viewModeEnabled &&
@@ -203,6 +216,10 @@ export class CaliburnLayerUIComponent {
         })`,
       );
     }
+  }
+
+  protected clearBraveMeasureTextError() {
+    this.editor.braveMeasureTextError.set(false);
   }
 
   protected clearErrorMessage() {

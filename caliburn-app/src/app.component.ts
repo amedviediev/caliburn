@@ -415,9 +415,15 @@ export class CaliburnAppComponent implements OnDestroy {
     });
   }
 
-  /** upstream's `onExcalidrawAPI` callback, re-run on every editor remount */
-  protected readonly onExcalidrawAPI = (api: CaliburnImperativeAPI) => {
+  /** upstream's `onExcalidrawAPI` callback, re-run on every editor remount.
+   * The editor hands `null` back when it unmounts (upstream's
+   * `componentWillUnmount`), which only means "forget the API". */
+  protected readonly onExcalidrawAPI = (api: CaliburnImperativeAPI | null) => {
     this.excalidrawAPI = api;
+
+    if (!api) {
+      return;
+    }
 
     if (this.pendingFiles) {
       api.addFiles(Object.values(this.pendingFiles));

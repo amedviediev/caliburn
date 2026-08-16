@@ -19,6 +19,7 @@ import {
   normalizeLink,
   sceneCoordsToViewportCoords,
   viewportCoordsToSceneCoords,
+  wrapEvent,
 } from "@excalidraw/common";
 import {
   ShapeCache,
@@ -121,9 +122,6 @@ const shouldHideLinkPopup = (
  * Angular port of upstream `components/hyperlink/Hyperlink.tsx` — the link
  * popup shown above a selected element: the link itself (or the editor
  * input), and the edit / link-to-element / remove buttons.
- *
- * Upstream's `onLinkOpen` prop has no caliburn equivalent, so the anchor
- * opens the link through the browser alone.
  */
 @Component({
   selector: "caliburn-hyperlink",
@@ -204,6 +202,24 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
 
   protected linkTarget() {
     return isLocalLink(this.element().link) ? "_self" : "_blank";
+  }
+
+  protected onLinkClick(event: MouseEvent) {
+    const element = this.element();
+    const onLinkOpen = this.editor.onLinkOpen();
+    if (element.link && onLinkOpen) {
+      const customEvent = wrapEvent(EVENT.EXCALIDRAW_LINK, event);
+      onLinkOpen(
+        {
+          ...element,
+          link: normalizeLink(element.link),
+        },
+        customEvent,
+      );
+      if (customEvent.defaultPrevented) {
+        event.preventDefault();
+      }
+    }
   }
 
   protected showRemove() {

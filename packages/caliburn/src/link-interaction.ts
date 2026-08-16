@@ -3,9 +3,11 @@ import { pointDistance, pointFrom } from "@excalidraw/math";
 import {
   CURSOR_TYPE,
   DRAGGING_THRESHOLD,
+  EVENT,
   isLocalLink,
   normalizeLink,
   viewportCoordsToSceneCoords,
+  wrapEvent,
 } from "@excalidraw/common";
 
 import { isPointHittingLink } from "@excalidraw/excalidraw/components/hyperlink/helpers";
@@ -56,11 +58,10 @@ export const getElementLinkAtPosition = (
   return undefined;
 };
 
-/**
- * Upstream also routes the click through `props.onLinkOpen` before opening
- * the URL; caliburn has no such prop, so the link always opens directly.
- */
-const handleElementLinkClick = (editor: CaliburnEditorComponent) => {
+const handleElementLinkClick = (
+  editor: CaliburnEditorComponent,
+  event: PointerEvent,
+) => {
   const draggedDistance = pointDistance(
     pointFrom(
       editor.lastPointerDownEvent!.clientX,
@@ -102,12 +103,26 @@ const handleElementLinkClick = (editor: CaliburnEditorComponent) => {
     let url = editor.hitLinkElement.link;
     if (url) {
       url = normalizeLink(url);
-      const target = isLocalLink(url) ? "_self" : "_blank";
-      const newWindow = window.open(undefined, target);
-      // https://mathiasbynens.github.io/rel-noopener/
-      if (newWindow) {
-        newWindow.opener = null;
-        newWindow.location = url;
+      let customEvent;
+      const onLinkOpen = editor.onLinkOpen();
+      if (onLinkOpen) {
+        customEvent = wrapEvent(EVENT.EXCALIDRAW_LINK, event);
+        onLinkOpen(
+          {
+            ...editor.hitLinkElement,
+            link: url,
+          },
+          customEvent,
+        );
+      }
+      if (!customEvent?.defaultPrevented) {
+        const target = isLocalLink(url) ? "_self" : "_blank";
+        const newWindow = window.open(undefined, target);
+        // https://mathiasbynens.github.io/rel-noopener/
+        if (newWindow) {
+          newWindow.opener = null;
+          newWindow.location = url;
+        }
       }
     }
   }
@@ -145,6 +160,7 @@ export const applyElementLinkHoverAffordance = (
  */
 export const maybeHandleElementLinkClick = (
   editor: CaliburnEditorComponent,
+  event: PointerEvent,
   scenePointer: { x: number; y: number },
 ): boolean => {
   if (editor.editorInterface.isTouchScreen) {
@@ -168,7 +184,7 @@ export const maybeHandleElementLinkClick = (
     editor.lastPointerDownEvent &&
     !editor.state.selectedElementIds[editor.hitLinkElement.id]
   ) {
-    handleElementLinkClick(editor);
+    handleElementLinkClick(editor, event);
     return true;
   }
   return false;

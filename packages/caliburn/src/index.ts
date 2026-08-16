@@ -1,3 +1,5 @@
+import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+
 export { CaliburnEditorComponent } from "./editor.component";
 export type { CaliburnImperativeAPI } from "./editor.component";
 export { createTestHook, h } from "./test-hook";
@@ -67,6 +69,15 @@ export type { CommandPaletteItem } from "./components/command-palette/types";
 export interface ExcalidrawCompatProps {
   handleKeyboardGlobally?: boolean;
   onExcalidrawAPI?: (api: any) => void;
+  /** declared so ported test bodies get contextual parameter types for the
+   * callbacks they pass inline (the index signature below gives none); the
+   * payloads stay `any` so upstream's own prop types remain assignable */
+  onMount?: (payload: {
+    excalidrawAPI: any;
+    container: HTMLDivElement | null;
+  }) => void;
+  onInitialize?: (api: any) => void;
+  onLinkOpen?: (element: NonDeletedExcalidrawElement, event: any) => void;
   [key: string]: unknown;
 }
 

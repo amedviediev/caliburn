@@ -21,6 +21,7 @@
     class="excalidraw-hyperlinkContainer-link"
     [attr.target]="linkTarget()"
     rel="noopener noreferrer"
+    (click)="onLinkClick($event)"
     >{{ element().link }}</a
   >
   } @else {

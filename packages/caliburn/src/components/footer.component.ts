@@ -18,6 +18,7 @@ import {
   actionZoomOut,
 } from "../actions/actionCanvas";
 import { actionShortcuts } from "../actions/actionMenu";
+import { actionToggleZenMode } from "../actions/actionToggleZenMode";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
 import { CaliburnHelpButtonComponent } from "./help-button.component";
@@ -38,8 +39,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
  * Upstream renders those two through `actionManager.renderAction`, which
  * mounts each action's React `PanelComponent`; caliburn's actions carry no
  * component, so the buttons are declared here and dispatch through
- * `actionManager.executeAction`. The exit-zen-mode button
- * is omitted — it needs a surface that has no caliburn equivalent yet. The
+ * `actionManager.executeAction` — the exit-zen-mode button included. The
  * welcome screen's `HelpHint` is mounted at its upstream tunnel spot
  * (`layer-ui__wrapper__footer-right`'s `position: relative` box, sibling to
  * the `HelpButton`), and the footer-center outlet renders the host's
@@ -79,6 +79,7 @@ export class CaliburnFooterComponent {
     resetZoom: t("buttons.resetZoom"),
     undo: t("buttons.undo"),
     redo: t("buttons.redo"),
+    exitZenMode: t("buttons.exitZenMode"),
   };
 
   protected state() {
@@ -93,6 +94,21 @@ export class CaliburnFooterComponent {
 
   protected isNavigationEnabled() {
     return this.editor.isNavigationEnabled();
+  }
+
+  protected defaultUIEnabled() {
+    return this.editor.isDefaultUIEnabled();
+  }
+
+  protected zoomUIEnabled() {
+    return this.editor.isUIControlEnabled("zoom");
+  }
+
+  protected showExitZenModeBtn() {
+    return (
+      typeof this.editor.zenModeEnabled() === "undefined" &&
+      this.state().zenModeEnabled
+    );
   }
 
   protected zoomPercentage() {
@@ -132,4 +148,8 @@ export class CaliburnFooterComponent {
   protected readonly showHelp = () => {
     this.editor.actionManager.executeAction(actionShortcuts, "ui");
   };
+
+  protected exitZenMode() {
+    this.editor.actionManager.executeAction(actionToggleZenMode, "ui");
+  }
 }
