@@ -48,6 +48,7 @@ import {
 import { pointDistance, pointFrom } from "@excalidraw/math";
 
 import type { Radians } from "@excalidraw/math";
+import type { ArrowEndpoint } from "@excalidraw/element";
 import type {
   ExcalidrawElement,
   ExcalidrawImageElement,
@@ -464,6 +465,7 @@ export const startTextEditing = (
     container,
     autoEdit = true,
     initialCaretSceneCoords,
+    arrowEndpoint,
   }: {
     /** X position to insert text at */
     sceneX: number;
@@ -474,9 +476,35 @@ export const startTextEditing = (
     container?: ExcalidrawTextContainer | null;
     autoEdit?: boolean;
     initialCaretSceneCoords?: { x: number; y: number };
+    /**
+     * creates the text as a label for this arrow endpoint: the binding then
+     * dictates the text's position and alignment, overriding (sceneX, sceneY)
+     */
+    arrowEndpoint?: ArrowEndpoint | null;
   },
 ) => {
   let shouldBindToContainer = false;
+
+  // Resolved here rather than by the caller so that the stroke width the
+  // binding gap derives from (see `getBindingGap`) is, by construction, the
+  // one the text is created with below.
+  const arrowEndpointBinding =
+    arrowEndpoint &&
+    editor.arrowText.getTextBinding(
+      arrowEndpoint,
+      editor.getCurrentItemStrokeWidth("text"),
+    );
+
+  if (arrowEndpointBinding) {
+    // an arrow endpoint is not a text container — the text is a sibling the
+    // arrow binds to, not a label inside it
+    container = null;
+    insertAtParentCenter = false;
+    // the scene position of the text's bound side midpoint, not a caret
+    // position
+    sceneX = arrowEndpointBinding.anchor[0];
+    sceneY = arrowEndpointBinding.anchor[1];
+  }
 
   let parentCenterPosition =
     insertAtParentCenter &&
@@ -496,9 +524,14 @@ export const startTextEditing = (
       shouldBindToContainer = true;
     }
   }
-  const existingTextElement =
-    getSelectedTextElement(editor, container) ||
-    getTextElementAtPosition(editor, sceneX, sceneY);
+  // The endpoint flow always creates a fresh text: the lookups below would
+  // otherwise adopt a currently selected text (wherever it sits on canvas)
+  // or one that happens to lie around the anchor — even a container-bound
+  // one — and bind the arrow to that instead.
+  const existingTextElement = arrowEndpointBinding
+    ? null
+    : getSelectedTextElement(editor, container) ||
+      getTextElementAtPosition(editor, sceneX, sceneY);
 
   const fontFamily =
     existingTextElement?.fontFamily || editor.state.currentItemFontFamily;
@@ -547,7 +580,11 @@ export const startTextEditing = (
     sceneY,
   );
 
-  const newTextElementPosition = parentCenterPosition
+  const newTextElementPosition = arrowEndpointBinding
+    ? // the anchor is dictated by the arrow, so neither the grid nor the
+      // caret-centering fudge may nudge it
+      { x: sceneX, y: sceneY }
+    : parentCenterPosition
     ? {
         x: parentCenterPosition.elementCenterX,
         y: parentCenterPosition.elementCenterY,
@@ -595,12 +632,12 @@ export const startTextEditing = (
       text: "",
       fontSize,
       fontFamily,
-      textAlign: parentCenterPosition
-        ? "center"
-        : editor.state.currentItemTextAlign,
-      verticalAlign: parentCenterPosition
-        ? VERTICAL_ALIGN.MIDDLE
-        : DEFAULT_VERTICAL_ALIGN,
+      textAlign:
+        arrowEndpointBinding?.textAlign ??
+        (parentCenterPosition ? "center" : editor.state.currentItemTextAlign),
+      verticalAlign:
+        arrowEndpointBinding?.verticalAlign ??
+        (parentCenterPosition ? VERTICAL_ALIGN.MIDDLE : DEFAULT_VERTICAL_ALIGN),
       containerId: shouldBindToContainer ? container?.id : undefined,
       groupIds: container?.groupIds ?? [],
       lineHeight,
@@ -632,6 +669,14 @@ export const startTextEditing = (
     } else {
       editor.insertNewElement(element);
     }
+  }
+
+  if (arrowEndpoint && arrowEndpointBinding) {
+    editor.arrowText.bindText(
+      arrowEndpoint,
+      element,
+      arrowEndpointBinding.fixedPoint,
+    );
   }
 
   if (autoEdit || existingTextElement || container) {
@@ -668,26 +713,44 @@ export const handleTextOnPointerDown = (
   // under the editor, which outlives the hover when the tool is locked
   editor.setState({ hoveredArrowTextAnchor: null });
 
-  const element = getElementAtPosition(editor, sceneX, sceneY, {
-    includeBoundTextElement: true,
-  });
-
-  // FIXME
-  let container = getTextBindableContainerAtPosition(editor, sceneX, sceneY);
-
-  if (hasBoundTextElement(element)) {
-    container = element as NonDeleted<ExcalidrawTextContainer>;
-    sceneX = element.x + element.width / 2;
-    sceneY = element.y + element.height / 2;
-  }
-  startTextEditing(editor, {
+  // a free arrow endpoint takes precedence over adding a label *to* the
+  // arrow — it's the smaller, more deliberate target
+  const arrowEndpoint = editor.arrowText.getBindableEndpointAtPosition(
     sceneX,
     sceneY,
-    insertAtParentCenter: !event.altKey,
-    container,
-    autoEdit: false,
-    initialCaretSceneCoords: { x: sceneX, y: sceneY },
-  });
+  );
+
+  if (arrowEndpoint) {
+    startTextEditing(editor, {
+      sceneX,
+      sceneY,
+      // the binding fixes the position, but the width is still the user's
+      // to drag out (see `getEndpointBoundTextDragAnchor`)
+      autoEdit: false,
+      arrowEndpoint,
+    });
+  } else {
+    const element = getElementAtPosition(editor, sceneX, sceneY, {
+      includeBoundTextElement: true,
+    });
+
+    // FIXME
+    let container = getTextBindableContainerAtPosition(editor, sceneX, sceneY);
+
+    if (hasBoundTextElement(element)) {
+      container = element as NonDeleted<ExcalidrawTextContainer>;
+      sceneX = element.x + element.width / 2;
+      sceneY = element.y + element.height / 2;
+    }
+    startTextEditing(editor, {
+      sceneX,
+      sceneY,
+      insertAtParentCenter: !event.altKey,
+      container,
+      autoEdit: false,
+      initialCaretSceneCoords: { x: sceneX, y: sceneY },
+    });
+  }
 
   if (!editor.isToolLocked()) {
     editor.setState(

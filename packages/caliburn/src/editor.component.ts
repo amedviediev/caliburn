@@ -139,6 +139,7 @@ import type {
   ActionResult,
 } from "@excalidraw/excalidraw/actions/types";
 
+import { CaliburnArrowText } from "./arrow-text";
 import { CaliburnBucketFill } from "./bucket-fill";
 import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
@@ -721,6 +722,8 @@ export class CaliburnEditorComponent
 
   lastPointerDownEvent: PointerEvent | null = null;
 
+  lastPointerMoveCoords: { x: number; y: number } | null = null;
+
   /** the element whose link icon the pointer is currently over, if any */
   hitLinkElement: NonDeletedExcalidrawElement | undefined;
 
@@ -755,6 +758,8 @@ export class CaliburnEditorComponent
   }
 
   readonly bucketFill = new CaliburnBucketFill(this);
+
+  readonly arrowText = new CaliburnArrowText(this);
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
 
@@ -1438,9 +1443,11 @@ export class CaliburnEditorComponent
     if (!event[KEYS.CTRL_OR_CMD]) {
       const preferenceEnabled = this.state.bindingPreference === "enabled";
       if (this.state.isBindingEnabled !== preferenceEnabled) {
-        this.batchCommits(() =>
-          this.setState({ isBindingEnabled: preferenceEnabled }),
-        );
+        this.batchCommits(() => {
+          this.setState({ isBindingEnabled: preferenceEnabled });
+
+          this.arrowText.refresh();
+        });
       }
     }
   };
@@ -1636,6 +1643,16 @@ export class CaliburnEditorComponent
 
     if (this.state.viewModeEnabled) {
       return;
+    }
+
+    if (event[KEYS.CTRL_OR_CMD] && !event.repeat) {
+      this.setState({
+        isBindingEnabled: this.state.bindingPreference !== "enabled",
+      });
+
+      // the toggle changes what a text-tool click at the current position
+      // would do, with no pointermove to refresh the affordance
+      this.arrowText.refresh();
     }
 
     if (isArrowKey(event.key)) {
@@ -2323,7 +2340,29 @@ export class CaliburnEditorComponent
   };
 
   handleCanvasPointerDown(event: PointerEvent) {
-    this.batchCommits(() => this.handleCanvasPointerDownImpl(event));
+    this.batchCommits(() => {
+      this.handleCanvasPointerDownImpl(event);
+      this.restoreIsBindingEnabledToPreference(event);
+    });
+  }
+
+  /**
+   * Upstream's "if Ctrl is not held, ensure `isBindingEnabled` reflects the
+   * user preference" reset, run on pointer down and pointer up. Upstream
+   * writes it as a plain `setState` — unlike the ctrl toggle itself, which it
+   * wraps in `flushSync` — so the restored value only lands once the handler
+   * has returned, and the in-flight event still sees the binding state the
+   * pointer went down with. Caliburn's `setState` is synchronous, so the
+   * reset runs after the handler body rather than where upstream writes it.
+   */
+  private restoreIsBindingEnabledToPreference(event: PointerEvent) {
+    if (event.ctrlKey) {
+      return;
+    }
+    const preferenceEnabled = this.state.bindingPreference === "enabled";
+    if (this.state.isBindingEnabled !== preferenceEnabled) {
+      this.setState({ isBindingEnabled: preferenceEnabled });
+    }
   }
 
   private handleCanvasPointerDownImpl(event: PointerEvent) {
@@ -2354,13 +2393,7 @@ export class CaliburnEditorComponent
       this.requestUnfollow();
     }
 
-    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
-    if (!event.ctrlKey) {
-      const preferenceEnabled = this.state.bindingPreference === "enabled";
-      if (this.state.isBindingEnabled !== preferenceEnabled) {
-        this.setState({ isBindingEnabled: preferenceEnabled });
-      }
-    }
+    this.lastPointerMoveCoords = viewportCoordsToSceneCoords(event, this.state);
 
     if (this.state.searchMatches) {
       this.setState((state) => {
@@ -2560,6 +2593,12 @@ export class CaliburnEditorComponent
     this.viewport.lastPosition.x = event.clientX;
     this.viewport.lastPosition.y = event.clientY;
 
+    const scenePointer = viewportCoordsToSceneCoords(event, this.state);
+    this.lastPointerMoveCoords = {
+      x: scenePointer.x,
+      y: scenePointer.y,
+    };
+
     updateMultiTouchGesture(this, event);
 
     if (gesture.pointers.size >= 2) {
@@ -2579,8 +2618,8 @@ export class CaliburnEditorComponent
 
     handleMultiElementPointerMove(this, event);
     maybeSuggestBindingOnHover(this, event);
-    const scenePointer = viewportCoordsToSceneCoords(event, this.state);
     maybeUpdateFrameToHighlightOnPointerMove(this, scenePointer);
+    this.arrowText.updateHoveredAnchor(scenePointer);
     this.maybeUpdateHoverCursor(scenePointer, event);
   }
 
@@ -2663,7 +2702,10 @@ export class CaliburnEditorComponent
     ) {
       return;
     }
-    this.batchCommits(() => this.handleCanvasPointerUpImpl(event));
+    this.batchCommits(() => {
+      this.handleCanvasPointerUpImpl(event);
+      this.restoreIsBindingEnabledToPreference(event);
+    });
   }
 
   /** upstream binds `removePointer` on the interactive canvas's pointercancel */
@@ -2706,13 +2748,7 @@ export class CaliburnEditorComponent
       this.lastPointerUpEvent = event;
     }
 
-    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
-    if (!event.ctrlKey) {
-      const preferenceEnabled = this.state.bindingPreference === "enabled";
-      if (this.state.isBindingEnabled !== preferenceEnabled) {
-        this.setState({ isBindingEnabled: preferenceEnabled });
-      }
-    }
+    this.lastPointerMoveCoords = viewportCoordsToSceneCoords(event, this.state);
 
     if (
       isGenuinePointerUp &&
@@ -2775,7 +2811,10 @@ export class CaliburnEditorComponent
    * runs unconditionally once installed.
    */
   handlePointerUpFromPointerDown(event: PointerEvent) {
-    this.batchCommits(() => this.handleCanvasPointerUpImpl(event));
+    this.batchCommits(() => {
+      this.handleCanvasPointerUpImpl(event);
+      this.restoreIsBindingEnabledToPreference(event);
+    });
   }
 
   /**

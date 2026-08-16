@@ -175,6 +175,10 @@ export const maybeDragNewElement = (
     return;
   }
 
+  if (editor.arrowText.maybeDragNewText(newElement, pointerCoords)) {
+    return;
+  }
+
   let [gridX, gridY] = getGridPoint(
     pointerCoords.x,
     pointerCoords.y,
