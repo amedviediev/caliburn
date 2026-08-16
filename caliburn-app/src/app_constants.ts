@@ -4,6 +4,10 @@
 // The storage keys keep their upstream names so an existing local scene keeps
 // loading.
 
+// overrides `@excalidraw/common`'s `APP_NAME` ("Excalidraw"), which the app
+// passes as the browser history entry title
+export const APP_NAME = "Caliburn";
+
 // time constants (ms)
 export const SAVE_TO_LOCAL_STORAGE_TIMEOUT = 300;
 export const INITIAL_SCENE_UPDATE_TIMEOUT = 5000;

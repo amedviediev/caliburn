@@ -60,7 +60,7 @@ const MAIN_MENU_REGIONS = [
   {
     name: "socials links",
     selector: ".dropdown-menu-container caliburn-menu-socials a",
-    count: 3,
+    count: 1,
   },
   {
     name: "theme choices",
@@ -199,20 +199,30 @@ const drawRectangle = async (page, from = [500, 400], to = [700, 550]) => {
   });
 };
 
-const readMenuLinks = (page) =>
-  page.evaluate(() =>
-    [
-      ...document.querySelectorAll(
-        ".dropdown-menu-container caliburn-menu-socials a",
-      ),
-    ].map((a) => ({
-      href: a.getAttribute("href"),
-      target: a.getAttribute("target"),
-      rel: a.getAttribute("rel"),
-      ariaLabel: a.getAttribute("aria-label"),
-      label: a.textContent.trim(),
-    })),
+const readLinksIn = (page, containerSelector) =>
+  page.evaluate(
+    (selector) =>
+      [...document.querySelectorAll(`${selector} a[href]`)].map((a) => ({
+        href: a.getAttribute("href"),
+        target: a.getAttribute("target"),
+        rel: a.getAttribute("rel"),
+        ariaLabel: a.getAttribute("aria-label"),
+        label: a.textContent.trim(),
+      })),
+    containerSelector,
   );
+
+const readMenuLinks = (page) =>
+  readLinksIn(page, ".dropdown-menu-container caliburn-menu-socials");
+
+const upstreamLinks = (links) =>
+  links
+    .filter((link) =>
+      UPSTREAM_LINK_MARKERS.some((marker) =>
+        (link.href ?? "").includes(marker),
+      ),
+    )
+    .map((link) => `${link.label} -> ${link.href}`);
 
 export const runSuite = async (browser, url, runner) => {
   const withPage = async (name, body) => {
@@ -919,7 +929,7 @@ export const runSuite = async (browser, url, runner) => {
         await resetEditor(page);
         await openMainMenu(page);
         const links = await readMenuLinks(page);
-        expectEqual(links.length, 3, "socials link count");
+        expectEqual(links.length, 1, "socials link count");
         for (const link of links) {
           expect(
             link.label.length > 0,
@@ -969,13 +979,7 @@ export const runSuite = async (browser, url, runner) => {
         await openMainMenu(page);
         const links = await readMenuLinks(page);
         expect(links.length > 0, "no socials links to inspect");
-        const upstream = links
-          .filter((link) =>
-            UPSTREAM_LINK_MARKERS.some((marker) =>
-              (link.href ?? "").includes(marker),
-            ),
-          )
-          .map((link) => `${link.label} -> ${link.href}`);
+        const upstream = upstreamLinks(links);
         expect(
           upstream.length === 0,
           `links still pointing at upstream Excalidraw: ${upstream.join("; ")}`,
@@ -1049,6 +1053,44 @@ export const runSuite = async (browser, url, runner) => {
           ],
         },
       },
+    );
+
+    await runner.check(
+      "links.help-dialog-no-upstream-links",
+      "help dialog links point at this app's properties, not upstream Excalidraw's",
+      async () => {
+        await resetEditor(page);
+        await openHelpDialog(page);
+        const links = await readLinksIn(page, ".HelpDialog__header");
+        expect(links.length > 0, "help dialog rendered no header links");
+        const upstream = upstreamLinks(links);
+        expect(
+          upstream.length === 0,
+          `help dialog links still pointing at upstream Excalidraw: ${upstream.join(
+            "; ",
+          )}`,
+        );
+      },
+      { evidence: { page, selectors: [".HelpDialog__header"] } },
+    );
+
+    await runner.check(
+      "links.welcome-screen-no-upstream-links",
+      "the welcome screen renders with no links pointing at upstream Excalidraw",
+      async () => {
+        await resetEditor(page);
+        const mounted = await rectOf(page, ".welcome-screen-center");
+        expect(mounted, ".welcome-screen-center did not mount");
+        const links = await readLinksIn(page, ".welcome-screen-center");
+        const upstream = upstreamLinks(links);
+        expect(
+          upstream.length === 0,
+          `welcome screen links still pointing at upstream Excalidraw: ${upstream.join(
+            "; ",
+          )}`,
+        );
+      },
+      { evidence: { page, selectors: [".welcome-screen-center"] } },
     );
   });
 

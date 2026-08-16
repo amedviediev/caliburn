@@ -1,6 +1,6 @@
 import { Injectable, signal } from "@angular/core";
 
-import { APP_NAME, cloneJSON, EVENT, toBrandedType } from "@excalidraw/common";
+import { cloneJSON, EVENT, toBrandedType } from "@excalidraw/common";
 import {
   IDLE_THRESHOLD,
   ACTIVE_THRESHOLD,
@@ -60,6 +60,7 @@ import {
   userToFollow,
 } from "../app-state";
 import {
+  APP_NAME,
   CURSOR_SYNC_TIMEOUT,
   FILE_UPLOAD_MAX_BYTES,
   FIREBASE_STORAGE_PREFIXES,

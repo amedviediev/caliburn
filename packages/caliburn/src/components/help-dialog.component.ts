@@ -82,28 +82,10 @@ export class CaliburnHelpDialogComponent {
 
   protected readonly links = [
     {
-      href: "https://docs.excalidraw.com",
-      rel: "noopener",
-      icon: "externalLinkIcon",
-      label: t("helpDialog.documentation"),
-    },
-    {
-      href: "https://plus.excalidraw.com/blog",
-      rel: "noopener",
-      icon: "externalLinkIcon",
-      label: t("helpDialog.blog"),
-    },
-    {
-      href: "https://github.com/excalidraw/excalidraw/issues",
+      href: "https://github.com/amedviediev/caliburn",
       rel: "noopener noreferrer",
       icon: "githubIcon",
       label: t("helpDialog.github"),
-    },
-    {
-      href: "https://youtube.com/@excalidraw",
-      rel: "noopener noreferrer",
-      icon: "youtubeIcon",
-      label: "YouTube",
     },
   ];
 

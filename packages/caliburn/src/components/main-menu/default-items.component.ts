@@ -370,13 +370,12 @@ export class CaliburnMenuLiveCollaborationTriggerComponent {
 }
 
 /**
- * Angular port of upstream `main-menu/DefaultItems.tsx`'s `Socials` — three
- * links to the upstream Excalidraw project (GitHub, X, Discord). These
- * reference the upstream project genuinely (attribution, not branding), so
- * upstream's own links/icons are kept as-is. Host-bound with `display:
- * contents` (see `styles.scss`) — upstream renders this as a fragment of
- * three sibling `DropdownMenuItemLink`s, direct children of
- * `.dropdown-menu-group`.
+ * Angular port of upstream `main-menu/DefaultItems.tsx`'s `Socials`. Upstream
+ * renders three links to its own project (GitHub, X, Discord); caliburn has
+ * no X or Discord presence, so those are dropped and the GitHub link points
+ * at this app's own repository instead. Host-bound with `display: contents`
+ * (see `styles.scss`) — upstream renders this as a fragment of sibling
+ * `DropdownMenuItemLink`s, direct children of `.dropdown-menu-group`.
  */
 @Component({
   selector: "caliburn-menu-socials",
@@ -384,7 +383,4 @@ export class CaliburnMenuLiveCollaborationTriggerComponent {
   imports: [CaliburnDropdownMenuItemLinkComponent],
   templateUrl: "./menu-socials.component.html",
 })
-export class CaliburnMenuSocialsComponent {
-  protected readonly followUsLabel = t("labels.followUs");
-  protected readonly discordChatLabel = t("labels.discordChat");
-}
+export class CaliburnMenuSocialsComponent {}

@@ -11,10 +11,4 @@
  *   E2E_STRICT=palette.solid-background yarn e2e
  *   E2E_STRICT=all yarn e2e
  */
-export const KNOWN_BROKEN = {
-  "links.socials-point-at-this-app":
-    "the main menu's socials region is still upstream's verbatim — GitHub, X " +
-    "and Discord all link to excalidraw's own properties " +
-    "(menu-socials.component.html), which the app must not ship as its own " +
-    "branding (Task 39)",
-};
+export const KNOWN_BROKEN = {};

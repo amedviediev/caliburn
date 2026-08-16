@@ -23,5 +23,11 @@ import { CaliburnTooltipComponent } from "../../../packages/caliburn/src/index";
 })
 export class CaliburnAppEncryptedIconComponent {
   protected readonly linkLabel = t("encrypted.link");
-  protected readonly tooltipLabel = t("encrypted.tooltip");
+  // upstream's copy names "Excalidraw's servers"; this app's own servers are
+  // the ones actually holding the encrypted data, whatever this deployment's
+  // backend is configured to be
+  protected readonly tooltipLabel = t("encrypted.tooltip").replace(
+    /Excalidraw/g,
+    "Caliburn",
+  );
 }

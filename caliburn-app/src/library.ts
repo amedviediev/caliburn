@@ -1,9 +1,4 @@
-import {
-  APP_NAME,
-  EVENT,
-  URL_HASH_KEYS,
-  URL_QUERY_KEYS,
-} from "@excalidraw/common";
+import { EVENT, URL_HASH_KEYS, URL_QUERY_KEYS } from "@excalidraw/common";
 import { toValidURL } from "@excalidraw/common";
 import {
   parseLibraryTokensFromUrl,
@@ -13,6 +8,7 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { LibraryItems } from "@excalidraw/excalidraw/types";
 
+import { APP_NAME } from "./app_constants";
 import {
   LibraryIndexedDBAdapter,
   LibraryLocalStorageMigrationAdapter,

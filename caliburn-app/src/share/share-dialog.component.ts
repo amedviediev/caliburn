@@ -151,9 +151,14 @@ export class CaliburnAppShareDialogComponent implements OnDestroy {
       return;
     }
     try {
+      // upstream's copy names "Excalidraw" as the session's host
+      const shareTitle = t("roomDialog.shareTitle").replace(
+        /Excalidraw/g,
+        "Caliburn",
+      );
       await navigator.share({
-        title: t("roomDialog.shareTitle"),
-        text: t("roomDialog.shareTitle"),
+        title: shareTitle,
+        text: shareTitle,
         url: roomLink,
       });
     } catch (error: any) {

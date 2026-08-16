@@ -10,7 +10,6 @@ import {
 } from "@angular/core";
 
 import {
-  APP_NAME,
   EVENT,
   debounce,
   isRunningInIframe,
@@ -75,6 +74,7 @@ import {
 } from "./app-state";
 import { AppThemeService } from "./app-theme.service";
 import {
+  APP_NAME,
   FIREBASE_STORAGE_PREFIXES,
   STORAGE_KEYS,
   SYNC_BROWSER_TABS_TIMEOUT,

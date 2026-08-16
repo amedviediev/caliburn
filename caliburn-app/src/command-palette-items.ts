@@ -10,8 +10,9 @@ import type { CommandPaletteItem } from "../../packages/caliburn/src/index";
 
 /**
  * Port of upstream `excalidraw-app/App.tsx`'s `customCommandPaletteItems`.
- * The Excalidraw+ commands (and the Plus export) are dropped; the social
- * links keep upstream's URLs, which genuinely point at the upstream project.
+ * The Excalidraw+ commands (and the Plus export) are dropped. Caliburn has no
+ * X, Discord or YouTube presence, so those social commands are dropped too;
+ * GitHub points at this app's own repository instead of upstream's.
  */
 export const buildCommandPaletteItems = (opts: {
   collab: CollabService | null;
@@ -87,60 +88,7 @@ export const buildCommandPaletteItems = (opts: {
       ],
       perform: () => {
         window.open(
-          "https://github.com/excalidraw/excalidraw",
-          "_blank",
-          "noopener noreferrer",
-        );
-      },
-    },
-    {
-      label: t("labels.followUs"),
-      icon: "xBrandIcon",
-      category: DEFAULT_CATEGORIES.links,
-      predicate: true,
-      keywords: ["twitter", "contact", "social", "community"],
-      perform: () => {
-        window.open(
-          "https://x.com/excalidraw",
-          "_blank",
-          "noopener noreferrer",
-        );
-      },
-    },
-    {
-      label: t("labels.discordChat"),
-      category: DEFAULT_CATEGORIES.links,
-      predicate: true,
-      icon: "discordIcon",
-      keywords: [
-        "chat",
-        "talk",
-        "contact",
-        "bugs",
-        "requests",
-        "report",
-        "feedback",
-        "suggestions",
-        "social",
-        "community",
-      ],
-      perform: () => {
-        window.open(
-          "https://discord.gg/UexuTaE",
-          "_blank",
-          "noopener noreferrer",
-        );
-      },
-    },
-    {
-      label: "YouTube",
-      icon: "youtubeIcon",
-      category: DEFAULT_CATEGORIES.links,
-      predicate: true,
-      keywords: ["features", "tutorials", "howto", "help", "community"],
-      perform: () => {
-        window.open(
-          "https://youtube.com/@excalidraw",
+          "https://github.com/amedviediev/caliburn",
           "_blank",
           "noopener noreferrer",
         );

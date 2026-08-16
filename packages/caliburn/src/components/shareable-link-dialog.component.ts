@@ -40,7 +40,12 @@ export class CaliburnShareableLinkDialogComponent implements OnDestroy {
 
   protected readonly copyStatus = signal<"success" | null>(null);
   protected readonly copyLinkLabel = t("buttons.copyLink");
-  protected readonly uploadedSecurelyLabel = t("alerts.uploadedSecurly");
+  // upstream's copy names "Excalidraw server"; this app's own server is the
+  // one actually holding the upload, whatever this deployment's backend is
+  // configured to be
+  protected readonly uploadedSecurelyLabel = t(
+    "alerts.uploadedSecurly",
+  ).replace(/Excalidraw/g, "Caliburn");
 
   private copyStatusTimeout = 0;
 
