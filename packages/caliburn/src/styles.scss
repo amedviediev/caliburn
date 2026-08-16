@@ -5,7 +5,7 @@
 // app.scss` / `styles.scss` alone — pull them in here instead. Caliburn-side
 // only; nothing under `packages/excalidraw` is edited. Consumers import this
 // file once, after the upstream `app.scss/styles.scss` pair (see
-// `apps/demo/main.ts`).
+// `examples/with-vite/main.ts`).
 @use "../../excalidraw/components/Island.scss";
 @use "../../excalidraw/components/Stack.scss";
 @use "../../excalidraw/components/FixedSideContainer.scss";

@@ -13,7 +13,7 @@ The editor's interaction core is ported and green against the upstream test suit
 - [x] Port the test harness so the upstream test suite drives the port — `render()` mounts the Angular editor (Angular 22, zoneless, AOT under vitest) and `window.h` exposes its state through the real element engine
 - [x] Port the editor in slices: selection and viewport; rectangle, ellipse, diamond; arrows and binding; text and the wysiwyg editor; freehand; images, frames and groups; clipboard paste and drag-and-drop; element locking; undo/redo and the core actions — 319 ported upstream tests pass against the Angular editor, and the creation-flow snapshots are byte-identical to upstream's
 - [x] Canvas rendering — the vendored static/new-element/interactive renderers drive three stacked canvases from the editor's commit path, with the rough hand-drawn pass and Excalifont text
-- [x] Runnable demo app — `yarn demo` starts a vite dev server with the editor full-screen (`apps/demo`)
+- [x] Runnable demo app — `yarn demo` starts a vite dev server with the editor full-screen (`examples/with-vite`)
 - [x] The full app — `yarn start` serves `caliburn-app`, the Angular port of excalidraw.com's free app: local persistence, shareable links, live collaboration, the library, the language selector and the light/dark/system theme. Excalidraw+ surfaces and the analytics scripts are not part of the port
 - [x] Properties panel, context menu, lasso selection — Angular ports of the upstream React surfaces, driven unchanged by the upstream tests that gate them
 - [x] Imperative API (`onExcalidrawAPI`), host-forced tool, view mode, and per-event commit batching mirroring React's update coalescing — `tool.test` and `viewMode.test` gates green

@@ -35,5 +35,5 @@
     }
   },
   "include": ["packages", "caliburn-app"],
-  "exclude": ["examples", "dist", "types", "tests"]
+  "exclude": ["examples/with-nextjs", "examples/with-script-in-browser", "dist", "types", "tests"]
 }

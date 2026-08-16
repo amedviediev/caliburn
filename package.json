@@ -72,7 +72,7 @@
     "rm:build": "rimraf --glob packages/*/dist packages/*/build",
     "rm:node_modules": "rimraf --glob node_modules packages/*/node_modules",
     "clean-install": "yarn rm:node_modules && yarn install",
-    "demo": "vite --config apps/demo/vite.config.mts",
+    "demo": "vite --config examples/with-vite/vite.config.mts",
     "start": "vite --config caliburn-app/vite.config.mts"
   },
   "resolutions": {
