@@ -54,16 +54,21 @@ const MAIN_MENU_ITEMS = [
  */
 const SAVE_TO_ACTIVE_FILE_ITEM = "save-button";
 
-/** the Preferences submenu's rows, in upstream's order (`DefaultItems.tsx`) */
+/**
+ * The Preferences submenu's rows, in upstream's order (`DefaultItems.tsx`).
+ * `shortcut: null` means "upstream wires one, assert it rendered" — the text
+ * itself is platform-dependent (`getShortcutKey` prints Alt as Option and
+ * CtrlOrCmd as Cmd on darwin); `""` means upstream wires none.
+ */
 const PREFERENCES_ITEMS = [
-  "preferences-tool-lock",
-  "preferences-objects-snap-mode",
-  "preferences-grid-mode",
-  "preferences-zen-mode",
-  "preferences-view-mode",
-  "preferences-element-properties",
-  "preferences-arrow-binding",
-  "preferences-midpoint-snapping",
+  { testid: "preferences-tool-lock", shortcut: "Q" },
+  { testid: "preferences-objects-snap-mode", shortcut: null },
+  { testid: "preferences-grid-mode", shortcut: null },
+  { testid: "preferences-zen-mode", shortcut: null },
+  { testid: "preferences-view-mode", shortcut: null },
+  { testid: "preferences-element-properties", shortcut: null },
+  { testid: "preferences-arrow-binding", shortcut: "" },
+  { testid: "preferences-midpoint-snapping", shortcut: "" },
 ];
 
 /**
@@ -103,8 +108,12 @@ const MAIN_MENU_REGIONS = [
     count: 1,
   },
   {
+    // scoped to the theme item's own host: the Preferences submenu renders a
+    // second RadioGroup inside its own `.dropdown-menu-container`, so an
+    // unscoped count is ambiguous whenever that submenu happens to be open
     name: "theme choices",
-    selector: ".dropdown-menu-container .RadioGroup__choice",
+    selector:
+      ".dropdown-menu-container caliburn-menu-toggle-theme .RadioGroup__choice",
     count: 3,
   },
   {
@@ -464,23 +473,27 @@ export const runSuite = async (browser, url, runner) => {
           "preferences submenu",
         );
         const found = await page.evaluate(
-          (ids) =>
-            ids.map((id) => {
+          (rows) =>
+            rows.map(({ testid }) => {
               const el = document.querySelector(
-                `[data-testid="dropdown-submenu"] [data-testid="${id}"]`,
+                `[data-testid="dropdown-submenu"] [data-testid="${testid}"]`,
               );
               return {
-                id,
+                testid,
                 present: !!el,
                 label:
                   el
                     ?.querySelector(".dropdown-menu-item__text")
                     ?.textContent.trim() ?? "",
+                shortcut:
+                  el
+                    ?.querySelector(".dropdown-menu-item__shortcut")
+                    ?.textContent.trim() ?? "",
               };
             }),
           PREFERENCES_ITEMS,
         );
-        const missing = found.filter((f) => !f.present).map((f) => f.id);
+        const missing = found.filter((f) => !f.present).map((f) => f.testid);
         expect(
           missing.length === 0,
           `preferences rows missing: ${missing.join(", ")}`,
@@ -489,6 +502,21 @@ export const runSuite = async (browser, url, runner) => {
           found.every((f) => f.label.length > 0),
           "a preferences row rendered without a label",
         );
+        PREFERENCES_ITEMS.forEach((expected, index) => {
+          const actual = found[index];
+          if (expected.shortcut === null) {
+            expect(
+              actual.shortcut.length > 0,
+              `${expected.testid} rendered no shortcut`,
+            );
+            return;
+          }
+          expectEqual(
+            actual.shortcut,
+            expected.shortcut,
+            `${expected.testid} shortcut`,
+          );
+        });
         // the box-selection radio upstream renders above the toggles
         const radios = await page.evaluate(
           () =>
@@ -497,10 +525,10 @@ export const runSuite = async (browser, url, runner) => {
             ).length,
         );
         expectEqual(radios, 2, "box-selection radio choices");
-        for (const id of PREFERENCES_ITEMS) {
+        for (const { testid } of PREFERENCES_ITEMS) {
           await expectOwnsPixels(
             page,
-            `[data-testid="dropdown-submenu"] [data-testid="${id}"]`,
+            `[data-testid="dropdown-submenu"] [data-testid="${testid}"]`,
             "preferences row",
           );
         }
@@ -1410,10 +1438,10 @@ export const runSuite = async (browser, url, runner) => {
         await openMainMenu(page);
         const tail = await page.evaluate(() => ({
           themeChoices: document.querySelectorAll(
-            ".dropdown-menu-container .RadioGroup__choice",
+            ".dropdown-menu-container caliburn-menu-toggle-theme .RadioGroup__choice",
           ).length,
           themeActive: document.querySelectorAll(
-            ".dropdown-menu-container .RadioGroup__choice.active",
+            ".dropdown-menu-container caliburn-menu-toggle-theme .RadioGroup__choice.active",
           ).length,
           languageOptions:
             document.querySelector(
@@ -1439,7 +1467,7 @@ export const runSuite = async (browser, url, runner) => {
         expectEqual(tail.topPicks, 5, "canvas background top picks");
         await expectOwnsPixels(
           page,
-          ".dropdown-menu-container .RadioGroup__choice",
+          ".dropdown-menu-container caliburn-menu-toggle-theme .RadioGroup__choice",
           "theme choice",
         );
         await expectOwnsPixels(
@@ -1457,7 +1485,7 @@ export const runSuite = async (browser, url, runner) => {
         evidence: {
           page,
           selectors: [
-            ".dropdown-menu-container .RadioGroup__choice",
+            ".dropdown-menu-container caliburn-menu-toggle-theme .RadioGroup__choice",
             ".dropdown-menu-container select.dropdown-select__language",
           ],
         },

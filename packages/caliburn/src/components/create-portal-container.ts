@@ -35,9 +35,9 @@ export const createPortalContainer = (className: string): HTMLDivElement => {
   const applyClasses = () => {
     div.className = "";
     div.classList.add("excalidraw", ...className.split(/\s+/).filter(Boolean));
-    // `editorInterface` is a plain object on the editor rather than a signal,
-    // so this reads whatever it holds when the effect re-runs; the theme is
-    // the reactive half and the only one that changes at runtime today
+    // both reads are signal-backed (`editorInterface` since it started being
+    // derived from the editor's measured width), so the effect re-runs on a
+    // form-factor change as well as on a theme one
     div.classList.toggle(
       "excalidraw--mobile",
       editor?.editorInterface.formFactor === "phone",

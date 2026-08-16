@@ -224,7 +224,9 @@ describe("DefaultSidebar", () => {
     });
   });
 
-  it("force-docks the search tab and hides its dock button", () => {
+  // sized first, so the missing dock button proves the force-dock rather than
+  // an editor too narrow to fit a sidebar at all
+  it("force-docks the search tab and hides its dock button", async () => {
     act(() => {
       h.app.toggleSidebar({
         name: DEFAULT_SIDEBAR.name,
@@ -232,8 +234,10 @@ describe("DefaultSidebar", () => {
       });
     });
 
-    const { sidebar: sidebarEl } = assertSidebarDockButton(false);
-    expect(sidebarEl).toHaveClass("sidebar--docked");
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, () => {
+      const { sidebar: sidebarEl } = assertSidebarDockButton(false);
+      expect(sidebarEl).toHaveClass("sidebar--docked");
+    });
   });
 
   // the dock button only renders while the editor is wide enough for a
