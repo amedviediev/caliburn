@@ -144,6 +144,24 @@ describe("canvas toggles", () => {
     expect(h.state.isMidpointSnappingEnabled).toBe(false);
   });
 
+  it("ctrl-drag disables binding until Ctrl is released, even mid-drag", () => {
+    UI.clickTool("arrow");
+
+    mouse.reset();
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.downAt(0, 0);
+    });
+    expect(h.state.isBindingEnabled).toBe(false);
+
+    mouse.moveTo(50, 50);
+    expect(h.state.isBindingEnabled).toBe(false);
+
+    Keyboard.keyUp("Control");
+    expect(h.state.isBindingEnabled).toBe(true);
+
+    mouse.up();
+  });
+
   it("marks checked toggles in the context menu", () => {
     clickContextMenuItem("gridMode");
 

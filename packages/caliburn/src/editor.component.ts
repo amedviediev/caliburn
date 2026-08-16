@@ -1345,9 +1345,9 @@ export class CaliburnEditorComponent
   };
 
   /**
-   * Upstream's `onKeyUp`, restricted to the one branch caliburn has a
-   * landing place for: the rest of it (space-drag release, bind mode, the
-   * `isBindingEnabled` reset) drives machinery no task has ported.
+   * Upstream's `onKeyUp`, restricted to the branches caliburn has a landing
+   * place for: the rest of it (space-drag release, bind mode) drives
+   * machinery no task has ported.
    */
   private onKeyUp = (event: KeyboardEvent) => {
     if (!this.isInteractionEnabled()) {
@@ -1355,6 +1355,15 @@ export class CaliburnEditorComponent
     }
     if (event.key === KEYS.ALT) {
       this.batchCommits(() => this.bucketFill.closeTemporaryEyeDropper());
+    }
+    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
+    if (!event[KEYS.CTRL_OR_CMD]) {
+      const preferenceEnabled = this.state.bindingPreference === "enabled";
+      if (this.state.isBindingEnabled !== preferenceEnabled) {
+        this.batchCommits(() =>
+          this.setState({ isBindingEnabled: preferenceEnabled }),
+        );
+      }
     }
   };
 
