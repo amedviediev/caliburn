@@ -10,7 +10,7 @@ The editor's full chrome is ported: toolbar, properties panel, context menu, mai
 
 `caliburn-app` (`yarn start`) is the Angular port of excalidraw.com's free app: local persistence, the language selector (i18n), live collaboration, shareable links, the library, the command palette, search, and the Mermaid-to-Excalidraw dialog. Excalidraw+ (Pro) surfaces and the analytics scripts are not part of the port. A framework-agnostic demo lives at `examples/with-vite` (`yarn demo`), embedding the editor full-screen with no app chrome around it.
 
-The full workspace suite passes: 2,967 tests passed, 95 skipped (90 are upstream's own skips; 5 are gated on the unported mobile chrome and React-only hook internals, itemized under Known gaps), 1 todo, 0 failed, across 199 test files (`yarn vitest run`). A real-browser interaction harness (`yarn e2e`) drives the app in Chrome with 49 strict checks.
+The full workspace suite passes: 2,970 tests passed, 95 skipped (90 are upstream's own skips; 5 are gated on the unported mobile chrome and React-only hook internals, itemized under Known gaps), 1 todo, 0 failed, across 200 test files (`yarn vitest run`). A real-browser interaction harness (`yarn e2e`) drives the app in Chrome with 49 strict checks.
 
 Known gaps:
 

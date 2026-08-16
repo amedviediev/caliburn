@@ -110,9 +110,9 @@ const LINEAR_ELEMENT_CONVERSION_CACHE = new Map<
  * it can do because component and conversion live in one module. Here the
  * popup is an Angular component that must import the editor, and the editor
  * imports the popup back for its template — a value cycle that breaks
- * whichever module loads first. The conversion half therefore lives in this
- * module, which reaches the editor by type only, and the popup drives the
- * caches through the three functions below.
+ * whichever module loads first unless forwardRef'd. The conversion half
+ * lives in this module instead, reaching the editor by type only, and the
+ * popup drives the caches through the three functions below.
  */
 export const cacheLinearElementsForConversion = (
   linearElements: readonly ExcalidrawLinearElement[],
