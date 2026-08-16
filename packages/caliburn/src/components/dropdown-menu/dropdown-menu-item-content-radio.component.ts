@@ -5,6 +5,8 @@ import {
   output,
 } from "@angular/core";
 
+import { NgIcon } from "@ng-icons/core";
+
 import { CaliburnRadioGroupComponent } from "../radio-group.component";
 
 import type { RadioGroupChoice } from "../radio-group.component";
@@ -23,13 +25,14 @@ import type { RadioGroupChoice } from "../radio-group.component";
 @Component({
   selector: "caliburn-dropdown-menu-item-content-radio",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnRadioGroupComponent],
+  imports: [CaliburnRadioGroupComponent, NgIcon],
   host: {
     style: "display: contents;",
   },
   templateUrl: "./dropdown-menu-item-content-radio.component.html",
 })
 export class CaliburnDropdownMenuItemContentRadioComponent<T> {
+  readonly icon = input<string>();
   readonly name = input.required<string>();
   readonly value = input.required<T>();
   readonly choices = input.required<RadioGroupChoice<T>[]>();

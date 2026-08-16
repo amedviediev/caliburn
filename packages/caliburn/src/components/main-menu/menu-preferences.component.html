@@ -1,0 +1,39 @@
+<caliburn-dropdown-menu-sub>
+  <button
+    caliburn-dropdown-menu-sub-trigger
+    icon="settingsIcon"
+    testId="preferences-menu-item"
+    [ariaLabel]="label"
+    [mobile]="isMobile"
+  >
+    {{ label }}
+  </button>
+  <caliburn-dropdown-menu-sub-content
+    class="excalidraw-main-menu-preferences-submenu"
+    [mobile]="isMobile"
+  >
+    <caliburn-dropdown-menu-item-content-radio
+      icon="emptyIcon"
+      name="boxSelectionMode"
+      [value]="boxSelectionMode()"
+      [choices]="boxSelectionChoices"
+      [mobile]="isMobile"
+      (valueChange)="setBoxSelectionMode($event)"
+    >
+      {{ boxSelectionLabel }}
+    </caliburn-dropdown-menu-item-content-radio>
+    @for (row of toggles(); track row.id) {
+      <button
+        caliburn-dropdown-menu-item
+        [icon]="row.checked ? 'checkIcon' : 'emptyIcon'"
+        [shortcut]="row.shortcut"
+        [ariaLabel]="row.label"
+        [testId]="'preferences-' + row.id"
+        (select)="onToggle(row, $event)"
+      >
+        {{ row.label }}
+      </button>
+    }
+    <ng-content />
+  </caliburn-dropdown-menu-sub-content>
+</caliburn-dropdown-menu-sub>

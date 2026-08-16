@@ -60,6 +60,12 @@ type ToolButtonView = {
  * upstream gates on `app.props.aiEnabled` — the `TTDDialogTriggerTunnel.Out`
  * slot a Plus host fills, and `magicframe`, which additionally needs
  * `app.plugins.diagramToCode`. Neither has a caliburn equivalent.
+ *
+ * Upstream drops the laser tool out of the trigger's selected state and icon
+ * while `app.props.isCollaborating` — it is already highlighting the collab
+ * laser button outside the toolbar and does not want both lit at once. That
+ * button is not ported and the editor takes no `isCollaborating` prop, so
+ * there is nothing to double-highlight and the guard is dropped with it.
  */
 @Component({
   selector: "caliburn-toolbar",

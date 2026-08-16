@@ -18,6 +18,7 @@ import {
   CaliburnMenuHelpComponent,
   CaliburnMenuLiveCollaborationTriggerComponent,
   CaliburnMenuLoadSceneComponent,
+  CaliburnMenuPreferencesComponent,
   CaliburnMenuSaveAsImageComponent,
   CaliburnMenuSaveToActiveFileComponent,
   CaliburnMenuSearchComponent,
@@ -30,10 +31,9 @@ import { CaliburnAppLanguageListComponent } from "../app-language/language-list.
  * Angular port of upstream `excalidraw-app/components/AppMainMenu.tsx`.
  *
  * The Excalidraw+ item, the sign-in/sign-up item and the dev-only visual
- * debugger item are dropped (no Plus surfaces, no debug canvas); the
- * `Preferences` item has no caliburn equivalent yet. Everything else is
- * upstream's order, including the app-level `ToggleTheme allowSystemTheme`
- * and the language select.
+ * debugger item are dropped (no Plus surfaces, no debug canvas). Everything
+ * else is upstream's order, including the app-level `ToggleTheme
+ * allowSystemTheme` and the language select.
  */
 @Component({
   selector: "caliburn-app-main-menu",
@@ -50,6 +50,7 @@ import { CaliburnAppLanguageListComponent } from "../app-language/language-list.
     CaliburnMenuHelpComponent,
     CaliburnMenuLiveCollaborationTriggerComponent,
     CaliburnMenuLoadSceneComponent,
+    CaliburnMenuPreferencesComponent,
     CaliburnMenuSaveAsImageComponent,
     CaliburnMenuSaveToActiveFileComponent,
     CaliburnMenuSearchComponent,

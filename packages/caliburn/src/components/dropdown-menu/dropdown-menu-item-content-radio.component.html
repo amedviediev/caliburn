@@ -1,4 +1,9 @@
 <div class="dropdown-menu-item-base dropdown-menu-item-bare">
+  @if (icon()) {
+    <div class="dropdown-menu-item__icon">
+      <ng-icon [name]="icon()!" />
+    </div>
+  }
   <label
     class="dropdown-menu-item__text"
     style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap"

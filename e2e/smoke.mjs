@@ -44,6 +44,46 @@ const MAIN_MENU_ITEMS = [
   "search-menu-button",
   "help-menu-item",
   "clear-canvas-button",
+  "preferences-menu-item",
+];
+
+/**
+ * `SaveToActiveFile` is deliberately not in the list above: upstream renders
+ * it only while `appState.fileHandle` is set (`actionSaveToActiveFile`'s
+ * predicate), so its own check drives that condition instead.
+ */
+const SAVE_TO_ACTIVE_FILE_ITEM = "save-button";
+
+/** the Preferences submenu's rows, in upstream's order (`DefaultItems.tsx`) */
+const PREFERENCES_ITEMS = [
+  "preferences-tool-lock",
+  "preferences-objects-snap-mode",
+  "preferences-grid-mode",
+  "preferences-zen-mode",
+  "preferences-view-mode",
+  "preferences-element-properties",
+  "preferences-arrow-binding",
+  "preferences-midpoint-snapping",
+];
+
+/**
+ * The extra-tools dropdown, in upstream `Toolbar.tsx`'s order. The mermaid
+ * entry carries `toolbar-embeddable` because upstream's own copy/paste does;
+ * matching on the label keeps the two apart.
+ */
+const EXTRA_TOOLS_ITEMS = [
+  { testid: "toolbar-frame", label: "Frame tool", shortcut: "F" },
+  { testid: "toolbar-embeddable", label: "Web Embed", shortcut: "" },
+  // Shift+X, whose rendering is platform-dependent — asserted as non-empty
+  { testid: "toolbar-autoshape", label: "Draw to shape", shortcut: null },
+  { testid: "toolbar-laser", label: "Laser pointer", shortcut: "K" },
+  { testid: "toolbar-bucketfill", label: "Bucket fill", shortcut: "B" },
+  { testid: "toolbar-lasso", label: "Lasso selection", shortcut: "" },
+  {
+    testid: "toolbar-embeddable",
+    label: "Mermaid to Excalidraw",
+    shortcut: "",
+  },
 ];
 
 /**
@@ -387,6 +427,244 @@ export const runSuite = async (browser, url, runner) => {
             '[data-testid="dropdown-menu"]',
             ".dropdown-menu-container",
           ],
+        },
+      },
+    );
+  });
+
+  // ------------------------------------------------------- menu preferences
+  await withPage("preferences", async (page) => {
+    runner.group("main menu preferences submenu");
+
+    const openPreferences = async () => {
+      await openMainMenu(page);
+      await clickCenter(page, '[data-testid="preferences-menu-item"]');
+      await waitFor(
+        page,
+        () => !!document.querySelector('[data-testid="dropdown-submenu"]'),
+        { message: "the Preferences submenu did not open" },
+      );
+    };
+
+    await runner.check(
+      "preferences.submenu-opens",
+      "the Preferences submenu opens, is solid and lists upstream's full row set",
+      async () => {
+        await resetEditor(page);
+        await openPreferences();
+        await screenshot(page, "preferences-open");
+        await expectOpaque(
+          page,
+          '[data-testid="dropdown-submenu"] .dropdown-menu-container',
+          "preferences submenu",
+        );
+        await expectOwnsPixels(
+          page,
+          '[data-testid="dropdown-submenu"] .dropdown-menu-container',
+          "preferences submenu",
+        );
+        const found = await page.evaluate(
+          (ids) =>
+            ids.map((id) => {
+              const el = document.querySelector(
+                `[data-testid="dropdown-submenu"] [data-testid="${id}"]`,
+              );
+              return {
+                id,
+                present: !!el,
+                label:
+                  el
+                    ?.querySelector(".dropdown-menu-item__text")
+                    ?.textContent.trim() ?? "",
+              };
+            }),
+          PREFERENCES_ITEMS,
+        );
+        const missing = found.filter((f) => !f.present).map((f) => f.id);
+        expect(
+          missing.length === 0,
+          `preferences rows missing: ${missing.join(", ")}`,
+        );
+        expect(
+          found.every((f) => f.label.length > 0),
+          "a preferences row rendered without a label",
+        );
+        // the box-selection radio upstream renders above the toggles
+        const radios = await page.evaluate(
+          () =>
+            document.querySelectorAll(
+              '[data-testid="dropdown-submenu"] .RadioGroup__choice',
+            ).length,
+        );
+        expectEqual(radios, 2, "box-selection radio choices");
+        for (const id of PREFERENCES_ITEMS) {
+          await expectOwnsPixels(
+            page,
+            `[data-testid="dropdown-submenu"] [data-testid="${id}"]`,
+            "preferences row",
+          );
+        }
+      },
+      {
+        evidence: {
+          page,
+          selectors: [
+            '[data-testid="dropdown-submenu"]',
+            '[data-testid="preferences-menu-item"]',
+          ],
+        },
+      },
+    );
+
+    await runner.check(
+      "preferences.box-selection-radio",
+      "the box-selection radio writes appState and keeps the submenu open",
+      async () => {
+        await resetEditor(page);
+        await openPreferences();
+        await clickAndExpect(
+          page,
+          '[data-testid="dropdown-submenu"] .RadioGroup__choice:last-child',
+          () => window.h.state.boxSelectionMode === "overlap",
+          {
+            message: "picking `Overlap` did not set appState.boxSelectionMode",
+          },
+        );
+        expect(
+          await page.evaluate(
+            () => !!document.querySelector('[data-testid="dropdown-submenu"]'),
+          ),
+          "changing the box-selection mode closed the submenu",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: ['[data-testid="dropdown-submenu"] .RadioGroup__choice'],
+        },
+      },
+    );
+
+    await runner.check(
+      "preferences.toggle-persists-across-reload",
+      "toggling grid mode keeps the menu open, checks the row and survives a reload",
+      async () => {
+        await resetEditor(page);
+        await openPreferences();
+        await clickAndExpect(
+          page,
+          '[data-testid="dropdown-submenu"] [data-testid="preferences-grid-mode"]',
+          () => window.h.state.gridModeEnabled === true,
+          {
+            message:
+              "the grid-mode row did not toggle appState.gridModeEnabled",
+          },
+        );
+        expect(
+          await page.evaluate(
+            () => !!document.querySelector('[data-testid="dropdown-submenu"]'),
+          ),
+          "toggling a preference closed the submenu (upstream preventDefaults it)",
+        );
+        await waitFor(
+          page,
+          () =>
+            document
+              .querySelector(
+                '[data-testid="dropdown-submenu"] [data-testid="preferences-grid-mode"] .dropdown-menu-item__icon svg',
+              )
+              ?.querySelector("polyline") != null,
+          { message: "the toggled row did not switch to the check icon" },
+        );
+        await waitFor(
+          page,
+          () =>
+            JSON.parse(localStorage.getItem("excalidraw-state") ?? "{}")
+              .gridModeEnabled === true,
+          { message: "the toggled preference never reached localStorage" },
+        );
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await waitFor(page, () => window.h?.state?.gridModeEnabled === true, {
+          message: "the toggled preference did not survive a reload",
+          timeout: 20000,
+        });
+      },
+      {
+        evidence: {
+          page,
+          selectors: [
+            '[data-testid="dropdown-submenu"] [data-testid="preferences-grid-mode"]',
+          ],
+        },
+      },
+    );
+
+    await runner.check(
+      "preferences.escape-closes-submenu-only",
+      "Escape closes the submenu and leaves the menu around it open",
+      async () => {
+        await resetEditor(page);
+        await openPreferences();
+        await page.keyboard.press("Escape");
+        await waitFor(
+          page,
+          () => !document.querySelector('[data-testid="dropdown-submenu"]'),
+          { message: "Escape did not close the Preferences submenu" },
+        );
+        expect(
+          await page.evaluate(
+            () => !!document.querySelector('[data-testid="dropdown-menu"]'),
+          ),
+          "Escape closed the whole main menu, not just the submenu",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: ['[data-testid="dropdown-submenu"]'],
+        },
+      },
+    );
+
+    await runner.check(
+      "preferences.save-to-active-file-is-conditional",
+      "`Save to current file` renders only once the scene has a file handle",
+      async () => {
+        await resetEditor(page);
+        await openMainMenu(page);
+        expect(
+          await page.evaluate(
+            (id) => !document.querySelector(`[data-testid="${id}"]`),
+            SAVE_TO_ACTIVE_FILE_ITEM,
+          ),
+          "`Save to current file` renders with no active file handle; upstream gates it on `appState.fileHandle`",
+        );
+        await page.evaluate(() =>
+          window.h.setState({ fileHandle: { name: "scene.excalidraw" } }),
+        );
+        await waitFor(
+          page,
+          (id) => {
+            const el = document.querySelector(`[data-testid="${id}"]`);
+            return !!el && !el.disabled;
+          },
+          {
+            message:
+              "`Save to current file` did not appear once a file handle was set",
+            args: [SAVE_TO_ACTIVE_FILE_ITEM],
+          },
+        );
+        await expectOwnsPixels(
+          page,
+          `[data-testid="${SAVE_TO_ACTIVE_FILE_ITEM}"]`,
+          "save to current file",
+        );
+        await page.evaluate(() => window.h.setState({ fileHandle: null }));
+      },
+      {
+        evidence: {
+          page,
+          selectors: [`[data-testid="${SAVE_TO_ACTIVE_FILE_ITEM}"]`],
         },
       },
     );
@@ -869,6 +1147,128 @@ export const runSuite = async (browser, url, runner) => {
           selectors: [
             ".App-toolbar__extra-tools-dropdown .dropdown-menu-container",
           ],
+        },
+      },
+    );
+
+    await runner.check(
+      "extraTools.full-inventory",
+      "the extra-tools dropdown lists upstream's full item set, in order, with its shortcuts",
+      async () => {
+        await resetEditor(page);
+        await openExtraTools();
+        const items = await page.evaluate(() =>
+          [
+            ...document.querySelectorAll(
+              ".App-toolbar__extra-tools-dropdown .dropdown-menu-item",
+            ),
+          ].map((b) => ({
+            testid: b.dataset.testid,
+            label:
+              b
+                .querySelector(".dropdown-menu-item__text")
+                ?.textContent.trim() ?? "",
+            shortcut:
+              b
+                .querySelector(".dropdown-menu-item__shortcut")
+                ?.textContent.trim() ?? "",
+            disabled: !!b.disabled,
+          })),
+        );
+        expectEqual(
+          items.map((i) => i.label).join(" | "),
+          EXTRA_TOOLS_ITEMS.map((i) => i.label).join(" | "),
+          "extra-tools items (labels, in order)",
+        );
+        expectEqual(
+          items.map((i) => i.testid).join(" | "),
+          EXTRA_TOOLS_ITEMS.map((i) => i.testid).join(" | "),
+          "extra-tools items (testids, in order)",
+        );
+        EXTRA_TOOLS_ITEMS.forEach((expected, index) => {
+          const actual = items[index];
+          if (expected.shortcut === null) {
+            expect(
+              actual.shortcut.length > 0,
+              `${expected.label} rendered no shortcut`,
+            );
+            return;
+          }
+          expectEqual(
+            actual.shortcut,
+            expected.shortcut,
+            `${expected.label} shortcut`,
+          );
+        });
+        expect(
+          items.every((i) => !i.disabled),
+          `extra-tools items disabled: ${items
+            .filter((i) => i.disabled)
+            .map((i) => i.label)
+            .join(", ")}`,
+        );
+        // the "Generate" heading upstream renders above the mermaid entry
+        expect(
+          await page.evaluate(() =>
+            [
+              ...document.querySelectorAll(
+                ".App-toolbar__extra-tools-dropdown .dropdown-menu-container > div",
+              ),
+            ].some((d) => d.textContent.trim() === "Generate"),
+          ),
+          "the extra-tools dropdown has no `Generate` section heading",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [
+            ".App-toolbar__extra-tools-dropdown .dropdown-menu-container",
+          ],
+        },
+      },
+    );
+
+    await runner.check(
+      "extraTools.trigger-reflects-selection",
+      "choosing an extra tool marks the trigger and the item as selected",
+      async () => {
+        await resetEditor(page);
+        await openExtraTools();
+        await clickAndExpect(
+          page,
+          '.App-toolbar__extra-tools-dropdown [data-testid="toolbar-laser"]',
+          () => window.h.state.activeTool.type === "laser",
+          {
+            message:
+              "choosing the laser tool from the dropdown did not activate it",
+          },
+        );
+        await waitFor(
+          page,
+          () =>
+            !!document.querySelector(
+              ".App-toolbar__extra-tools-trigger--selected",
+            ),
+          {
+            message:
+              "the extra-tools trigger is not marked selected while an extra tool is active",
+          },
+        );
+        await openExtraTools();
+        await waitFor(
+          page,
+          () =>
+            !!document.querySelector(
+              '.App-toolbar__extra-tools-dropdown [data-testid="toolbar-laser"].dropdown-menu-item--selected',
+            ),
+          { message: "the active extra-tools item is not marked selected" },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".App-toolbar__extra-tools-trigger"],
         },
       },
     );

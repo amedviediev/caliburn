@@ -14,6 +14,8 @@ import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shor
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 
+import type { Action } from "@excalidraw/excalidraw/actions/types";
+
 import type { Theme } from "@excalidraw/element/types";
 
 import {
@@ -26,12 +28,24 @@ import {
   actionSaveToActiveFile,
 } from "../../actions/actionExport";
 import { actionShortcuts } from "../../actions/actionMenu";
+import { actionToggleArrowBinding } from "../../actions/actionToggleArrowBinding";
+import { actionToggleGridMode } from "../../actions/actionToggleGridMode";
+import { actionToggleMidpointSnapping } from "../../actions/actionToggleMidpointSnapping";
+import { actionToggleObjectsSnapMode } from "../../actions/actionToggleObjectsSnapMode";
 import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
+import { actionToggleStats } from "../../actions/actionToggleStats";
+import { actionToggleViewMode } from "../../actions/actionToggleViewMode";
+import { actionToggleZenMode } from "../../actions/actionToggleZenMode";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { CaliburnColorPickerComponent } from "../color-picker/color-picker.component";
 import { CaliburnDropdownMenuItemContentRadioComponent } from "../dropdown-menu/dropdown-menu-item-content-radio.component";
 import { CaliburnDropdownMenuItemLinkComponent } from "../dropdown-menu/dropdown-menu-item-link.component";
 import { CaliburnDropdownMenuItemComponent } from "../dropdown-menu/dropdown-menu-item.component";
+import {
+  CaliburnDropdownMenuSubComponent,
+  CaliburnDropdownMenuSubContentComponent,
+  CaliburnDropdownMenuSubTriggerComponent,
+} from "../dropdown-menu/dropdown-menu-sub.component";
 import { openConfirmModal } from "../overwrite-confirm/overwrite-confirm-state";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
@@ -384,3 +398,154 @@ export class CaliburnMenuLiveCollaborationTriggerComponent {
   templateUrl: "./menu-socials.component.html",
 })
 export class CaliburnMenuSocialsComponent {}
+
+type PreferencesToggle = {
+  id: string;
+  label: string;
+  shortcut?: string;
+  checked: boolean;
+  toggle: () => void;
+};
+
+/**
+ * Angular port of upstream `main-menu/DefaultItems.tsx`'s `Preferences` and
+ * the nine `Preferences*Item`s it renders. Upstream also exports each row on
+ * its own (`Preferences.ToggleGridMode`, …) so a host can pass its own
+ * `children` in place of the default set; caliburn renders the default set
+ * from one template and keeps only the `additionalItems` half of that API —
+ * anything projected into this component is appended below the nine rows.
+ *
+ * `DropdownMenuItemCheckbox` is not a separate component here either: upstream's
+ * is a one-line wrapper that hands `DropdownMenuItem` a `checkIcon`/`emptyIcon`
+ * depending on `checked`, which is exactly what the template does inline.
+ *
+ * Persistence is upstream's: every field these rows write lives in `appState`,
+ * and the host app persists it through `clearAppStateForLocalStorage`
+ * (`appState.ts`'s `APP_STATE_STORAGE_CONF`, `browser: true`). `viewModeEnabled`
+ * is `browser: false` there, so — as upstream — it is the one row that does not
+ * survive a reload.
+ */
+@Component({
+  selector: "caliburn-menu-preferences",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CaliburnDropdownMenuItemComponent,
+    CaliburnDropdownMenuItemContentRadioComponent,
+    CaliburnDropdownMenuSubComponent,
+    CaliburnDropdownMenuSubContentComponent,
+    CaliburnDropdownMenuSubTriggerComponent,
+  ],
+  templateUrl: "./menu-preferences.component.html",
+})
+export class CaliburnMenuPreferencesComponent {
+  private readonly editor = injectEditor();
+
+  protected readonly label = t("labels.preferences");
+  protected readonly boxSelectionLabel = t("labels.boxSelectionMode");
+  protected readonly isMobile =
+    this.editor.editorInterface.formFactor === "phone";
+
+  protected readonly boxSelectionChoices: RadioGroupChoice<
+    "contain" | "overlap"
+  >[] = [
+    {
+      value: "contain",
+      label: t("labels.boxSelectionContain"),
+      ariaLabel: t("labels.boxSelectionContain"),
+    },
+    {
+      value: "overlap",
+      label: t("labels.boxSelectionOverlap"),
+      ariaLabel: t("labels.boxSelectionOverlap"),
+    },
+  ];
+
+  protected boxSelectionMode() {
+    this.editor.changeGeneration();
+    return this.editor.state.boxSelectionMode;
+  }
+
+  protected setBoxSelectionMode(boxSelectionMode: "contain" | "overlap") {
+    this.editor.batchCommits(() => this.editor.setState({ boxSelectionMode }));
+  }
+
+  protected toggles(): PreferencesToggle[] {
+    this.editor.changeGeneration();
+    const state = this.editor.state;
+    const rows: PreferencesToggle[] = [
+      {
+        id: "tool-lock",
+        label: t("labels.preferences_toolLock"),
+        shortcut: getShortcutFromShortcutName("toolLock"),
+        checked: state.activeTool.locked,
+        toggle: () => this.editor.toggleToolLock(),
+      },
+      {
+        id: "objects-snap-mode",
+        label: t("buttons.objectsSnapMode"),
+        shortcut: getShortcutFromShortcutName("objectsSnapMode"),
+        checked: state.objectsSnapModeEnabled,
+        toggle: () => this.execute(actionToggleObjectsSnapMode),
+      },
+      {
+        id: "grid-mode",
+        label: t("labels.toggleGrid"),
+        shortcut: getShortcutFromShortcutName("gridMode"),
+        checked: state.gridModeEnabled,
+        toggle: () => this.execute(actionToggleGridMode),
+      },
+      {
+        id: "zen-mode",
+        label: t("buttons.zenMode"),
+        shortcut: getShortcutFromShortcutName("zenMode"),
+        checked: state.zenModeEnabled,
+        toggle: () => this.execute(actionToggleZenMode),
+      },
+    ];
+
+    if (this.editor.actionManager.isActionEnabled(actionToggleViewMode)) {
+      rows.push({
+        id: "view-mode",
+        label: t("labels.viewMode"),
+        shortcut: getShortcutFromShortcutName("viewMode"),
+        checked: state.viewModeEnabled,
+        toggle: () => this.execute(actionToggleViewMode),
+      });
+    }
+
+    rows.push(
+      {
+        id: "element-properties",
+        label: t("stats.fullTitle"),
+        shortcut: getShortcutFromShortcutName("stats"),
+        checked: state.stats.open,
+        toggle: () => this.execute(actionToggleStats),
+      },
+      {
+        id: "arrow-binding",
+        label: t("labels.arrowBinding"),
+        checked: state.bindingPreference === "enabled",
+        toggle: () => this.execute(actionToggleArrowBinding),
+      },
+      {
+        id: "midpoint-snapping",
+        label: t("labels.midpointSnapping"),
+        checked: state.isMidpointSnappingEnabled,
+        toggle: () => this.execute(actionToggleMidpointSnapping),
+      },
+    );
+
+    return rows;
+  }
+
+  /** upstream's rows all `preventDefault()` so the menu stays open while a
+   * preference is being flipped (see `dropdown-menu-item.component.ts`) */
+  protected onToggle(row: PreferencesToggle, event: Event) {
+    event.preventDefault();
+    row.toggle();
+  }
+
+  private execute(action: Action) {
+    this.editor.actionManager.executeAction(action, "ui");
+  }
+}

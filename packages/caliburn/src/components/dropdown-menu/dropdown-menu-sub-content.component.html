@@ -1,0 +1,26 @@
+@if (sub.open()) {
+  <div
+    class="{{ hostClass() }}"
+    data-testid="dropdown-submenu"
+    [style.position]="'fixed'"
+    [style.top.px]="positionTop()"
+    [style.left.px]="positionLeft()"
+    (pointerenter)="sub.cancelClose()"
+    (pointerleave)="sub.scheduleClose()"
+    #panel
+  >
+    @if (mobile()) {
+      <caliburn-stack-col class="dropdown-menu-container">
+        <ng-content />
+      </caliburn-stack-col>
+    } @else {
+      <caliburn-island
+        class="dropdown-menu-container"
+        style="z-index: 1"
+        [padding]="2"
+      >
+        <ng-content />
+      </caliburn-island>
+    }
+  </div>
+}

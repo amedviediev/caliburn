@@ -19,6 +19,11 @@ export { CaliburnDropdownMenuItemLinkComponent } from "./components/dropdown-men
 export { CaliburnDropdownMenuItemComponent } from "./components/dropdown-menu/dropdown-menu-item.component";
 export { CaliburnDropdownMenuGroupComponent } from "./components/dropdown-menu/dropdown-menu-group.component";
 export { CaliburnDropdownMenuSeparatorComponent } from "./components/dropdown-menu/dropdown-menu-separator.component";
+export {
+  CaliburnDropdownMenuSubComponent,
+  CaliburnDropdownMenuSubContentComponent,
+  CaliburnDropdownMenuSubTriggerComponent,
+} from "./components/dropdown-menu/dropdown-menu-sub.component";
 export { CaliburnMainMenuComponent } from "./components/main-menu/main-menu.component";
 export {
   CaliburnMenuChangeCanvasBackgroundComponent,
@@ -28,6 +33,7 @@ export {
   CaliburnMenuHelpComponent,
   CaliburnMenuLiveCollaborationTriggerComponent,
   CaliburnMenuLoadSceneComponent,
+  CaliburnMenuPreferencesComponent,
   CaliburnMenuSaveAsImageComponent,
   CaliburnMenuSaveToActiveFileComponent,
   CaliburnMenuSearchComponent,
