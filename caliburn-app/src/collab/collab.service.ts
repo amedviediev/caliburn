@@ -138,9 +138,6 @@ export class CollabService {
   }
 
   set excalidrawAPI(excalidrawAPI: CaliburnImperativeAPI) {
-    if (this.api === excalidrawAPI) {
-      return;
-    }
     this.api = excalidrawAPI;
     this.unsubApi?.();
     this.unsubApi = this.subscribeToAPI(excalidrawAPI);

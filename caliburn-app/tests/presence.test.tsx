@@ -387,5 +387,11 @@ describe("collab API subscriptions", () => {
       "second:follow",
       "second:scroll",
     ]);
+
+    // a restart with the same API instance must still re-subscribe — an
+    // identity guard on the setter would silently strand this
+    collab.start(second.api);
+    expect(second.listeners.scroll).toHaveLength(2);
+    expect(second.listeners.follow).toHaveLength(2);
   });
 });
