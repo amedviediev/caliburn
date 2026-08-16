@@ -1,0 +1,11 @@
+<caliburn-editor
+  [userToFollow]="userToFollow()"
+  [onUserFollow]="onUserFollow()"
+  [viewportStatusFrame]="viewportStatusFrame()"
+  [onPointerUpdate]="onPointerUpdate()"
+  [currentUserControls]="currentUserControlsSlot"
+>
+  <ng-template #currentUserControlsSlot>
+    <button type="button">Spotlight me</button>
+  </ng-template>
+</caliburn-editor>
