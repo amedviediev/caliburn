@@ -24,7 +24,9 @@
         [attr.data-testid]="option.testId"
         [class.active]="fillStyleActive(option)"
         (click)="setFillStyle(option, $event)"
-      ></button>
+      >
+        <ng-icon [name]="option.icon" />
+      </button>
       }
     </div>
   </fieldset>
@@ -84,7 +86,9 @@
         [attr.data-testid]="option.testId"
         [class.active]="fillStyleActive(option)"
         (click)="setFillStyle(option, $event)"
-      ></button>
+      >
+        <ng-icon [name]="option.icon" />
+      </button>
       }
     </div>
   </fieldset>
@@ -104,6 +108,7 @@
           [checked]="strokeWidthValue() === option.value"
           (change)="execute(strokeWidthAction, option.value)"
         />
+        <ng-icon [name]="option.icon" />
       </label>
       }
     </div>
@@ -123,6 +128,7 @@
           [checked]="strokeStyleValue() === option.value"
           (change)="execute(strokeStyleAction, option.value)"
         />
+        <ng-icon [name]="option.icon" />
       </label>
       }
     </div>
@@ -142,6 +148,7 @@
           [checked]="sloppinessValue() === option.value"
           (change)="execute(sloppinessAction, option.value)"
         />
+        <ng-icon [name]="option.icon" />
       </label>
       }
     </div>
@@ -161,6 +168,7 @@
           [checked]="roundnessValue() === option.value"
           (change)="execute(roundnessAction, option.value)"
         />
+        <ng-icon [name]="option.icon" />
       </label>
       }
     </div>
@@ -176,7 +184,9 @@
         [attr.data-testid]="option.testId"
         [class.active]="fontFamilyValue() === option.value"
         (click)="setFontFamily(option.value)"
-      ></button>
+      >
+        <ng-icon [name]="option.icon" />
+      </button>
       }
     </div>
   </fieldset>
@@ -195,6 +205,7 @@
           [checked]="fontSizeValue() === option.value"
           (change)="execute(fontSizeAction, option.value)"
         />
+        <ng-icon [name]="option.icon" />
       </label>
       }
     </div>
@@ -215,6 +226,7 @@
           [checked]="textAlignValue() === option.value"
           (change)="execute(textAlignAction, option.value)"
         />
+        <ng-icon [name]="option.icon" />
       </label>
       }
     </div>
@@ -234,6 +246,7 @@
           [checked]="verticalAlignValue() === option.value"
           (change)="execute(verticalAlignAction, option.value)"
         />
+        <ng-icon [name]="verticalAlignIcon(option)" />
       </label>
       }
     </div>
@@ -262,7 +275,9 @@
         [attr.title]="option.text"
         [attr.aria-label]="option.text"
         (click)="execute(option.action, null)"
-      ></button>
+      >
+        <ng-icon [name]="actionIcon(option.action)" />
+      </button>
       }
     </div>
   </fieldset>
@@ -276,7 +291,9 @@
         [attr.title]="option.text"
         [attr.aria-label]="option.text"
         (click)="execute(option.action, null)"
-      ></button>
+      >
+        <ng-icon [name]="actionIcon(option.action)" />
+      </button>
       }
     </div>
   </fieldset>

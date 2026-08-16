@@ -13,6 +13,7 @@ import {
   FONT_FAMILY,
   FONT_SIZES,
   ROUNDNESS,
+  THEME,
   VERTICAL_ALIGN,
 } from "@excalidraw/common";
 import {
@@ -26,6 +27,8 @@ import { getShapeActionPredicates } from "@excalidraw/excalidraw/components/shap
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
 import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
+
+import { NgIcon } from "@ng-icons/core";
 
 import type {
   ExcalidrawElement,
@@ -63,6 +66,7 @@ import {
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
+import { getActionIconName } from "../components/action-icons";
 import { CaliburnColorPickerComponent } from "../components/color-picker/color-picker.component";
 
 import type { CaliburnEditorComponent } from "../editor.component";
@@ -71,6 +75,8 @@ interface RadioOption {
   value: unknown;
   text: string;
   testId?: string;
+  /** the ng-icon registry name of upstream's `RadioSelection` option `icon` */
+  icon?: string;
 }
 
 /**
@@ -81,7 +87,7 @@ interface RadioOption {
  */
 @Component({
   selector: "caliburn-shape-actions",
-  imports: [CaliburnColorPickerComponent],
+  imports: [CaliburnColorPickerComponent, NgIcon],
   templateUrl: "./shape-actions.component.html",
 })
 export class CaliburnShapeActionsComponent {
@@ -127,83 +133,150 @@ export class CaliburnShapeActionsComponent {
         text: `${
           this.allElementsZigZag() ? t("labels.zigzag") : t("labels.hachure")
         }${this.hachureSuffix}`,
+        icon: this.allElementsZigZag() ? "fillZigZagIcon" : "fillHachureIcon",
         testId: "fill-hachure",
       },
       {
         value: "cross-hatch",
         text: t("labels.crossHatch"),
+        icon: "fillCrossHatchIcon",
         testId: "fill-cross-hatch",
       },
-      { value: "solid", text: t("labels.solid"), testId: "fill-solid" },
+      {
+        value: "solid",
+        text: t("labels.solid"),
+        icon: "fillSolidIcon",
+        testId: "fill-solid",
+      },
     ];
   }
 
   readonly strokeWidthOptions: RadioOption[] = [
-    { value: "thin", text: t("labels.thin"), testId: "strokeWidth-thin" },
-    { value: "medium", text: t("labels.medium"), testId: "strokeWidth-medium" },
-    { value: "bold", text: t("labels.bold"), testId: "strokeWidth-bold" },
+    {
+      value: "thin",
+      text: t("labels.thin"),
+      icon: "strokeWidthBaseIcon",
+      testId: "strokeWidth-thin",
+    },
+    {
+      value: "medium",
+      text: t("labels.medium"),
+      icon: "strokeWidthBoldIcon",
+      testId: "strokeWidth-medium",
+    },
+    {
+      value: "bold",
+      text: t("labels.bold"),
+      icon: "strokeWidthExtraBoldIcon",
+      testId: "strokeWidth-bold",
+    },
   ];
 
   readonly strokeStyleOptions: RadioOption[] = [
-    { value: "solid", text: t("labels.strokeStyle_solid") },
-    { value: "dashed", text: t("labels.strokeStyle_dashed") },
-    { value: "dotted", text: t("labels.strokeStyle_dotted") },
+    {
+      value: "solid",
+      text: t("labels.strokeStyle_solid"),
+      icon: "strokeWidthBaseIcon",
+    },
+    {
+      value: "dashed",
+      text: t("labels.strokeStyle_dashed"),
+      icon: "strokeStyleDashedIcon",
+    },
+    {
+      value: "dotted",
+      text: t("labels.strokeStyle_dotted"),
+      icon: "strokeStyleDottedIcon",
+    },
   ];
 
   readonly sloppinessOptions: RadioOption[] = [
-    { value: 0, text: t("labels.architect") },
-    { value: 1, text: t("labels.artist") },
-    { value: 2, text: t("labels.cartoonist") },
+    { value: 0, text: t("labels.architect"), icon: "sloppinessArchitectIcon" },
+    { value: 1, text: t("labels.artist"), icon: "sloppinessArtistIcon" },
+    {
+      value: 2,
+      text: t("labels.cartoonist"),
+      icon: "sloppinessCartoonistIcon",
+    },
   ];
 
   readonly roundnessOptions: RadioOption[] = [
-    { value: "sharp", text: t("labels.sharp") },
-    { value: "round", text: t("labels.round") },
+    { value: "sharp", text: t("labels.sharp"), icon: "edgeSharpIcon" },
+    { value: "round", text: t("labels.round"), icon: "edgeRoundIcon" },
   ];
 
   readonly fontFamilyOptions: RadioOption[] = [
     {
       value: FONT_FAMILY.Excalifont,
       text: t("labels.handDrawn"),
+      icon: "freedrawIcon",
       testId: "font-family-hand-drawn",
     },
     {
       value: FONT_FAMILY.Nunito,
       text: t("labels.normal"),
+      icon: "fontFamilyNormalIcon",
       testId: "font-family-normal",
     },
     {
       value: FONT_FAMILY["Comic Shanns"],
       text: t("labels.code"),
+      icon: "fontFamilyCodeIcon",
       testId: "font-family-code",
     },
   ];
 
   readonly fontSizeOptions: RadioOption[] = [
-    { value: FONT_SIZES.sm, text: t("labels.small"), testId: "fontSize-small" },
+    {
+      value: FONT_SIZES.sm,
+      text: t("labels.small"),
+      icon: "fontSizeSmallIcon",
+      testId: "fontSize-small",
+    },
     {
       value: FONT_SIZES.md,
       text: t("labels.medium"),
+      icon: "fontSizeMediumIcon",
       testId: "fontSize-medium",
     },
-    { value: FONT_SIZES.lg, text: t("labels.large"), testId: "fontSize-large" },
+    {
+      value: FONT_SIZES.lg,
+      text: t("labels.large"),
+      icon: "fontSizeLargeIcon",
+      testId: "fontSize-large",
+    },
     {
       value: FONT_SIZES.xl,
       text: t("labels.veryLarge"),
+      icon: "fontSizeExtraLargeIcon",
       testId: "fontSize-veryLarge",
     },
   ];
 
   readonly textAlignOptions: RadioOption[] = [
-    { value: "left", text: t("labels.left"), testId: "align-left" },
+    {
+      value: "left",
+      text: t("labels.left"),
+      icon: "textAlignLeftIcon",
+      testId: "align-left",
+    },
     {
       value: "center",
       text: t("labels.center"),
+      icon: "textAlignCenterIcon",
       testId: "align-horizontal-center",
     },
-    { value: "right", text: t("labels.right"), testId: "align-right" },
+    {
+      value: "right",
+      text: t("labels.right"),
+      icon: "textAlignRightIcon",
+      testId: "align-right",
+    },
   ];
 
+  /** upstream themes these (`<TextAlignTopIcon theme={appState.theme} />`),
+   * so the icon name is resolved per-render by `verticalAlignIcon()` rather
+   * than baked in here. */
   readonly verticalAlignOptions: RadioOption[] = [
     {
       value: VERTICAL_ALIGN.TOP,
@@ -235,6 +308,27 @@ export class CaliburnShapeActionsComponent {
     { action: actionGroup, text: t("labels.group") },
     { action: actionUngroup, text: t("labels.ungroup") },
   ];
+
+  /** upstream's `<TextAlignTopIcon theme={appState.theme} />` triple —
+   * themed, so resolved per-render rather than baked into the option. */
+  verticalAlignIcon(option: RadioOption): string {
+    const isDark = this.editor().state.theme === THEME.DARK;
+    switch (option.value) {
+      case VERTICAL_ALIGN.TOP:
+        return isDark ? "textAlignTopIconDark" : "textAlignTopIconLight";
+      case VERTICAL_ALIGN.BOTTOM:
+        return isDark ? "textAlignBottomIconDark" : "textAlignBottomIconLight";
+      default:
+        return isDark ? "textAlignMiddleIconDark" : "textAlignMiddleIconLight";
+    }
+  }
+
+  /** the layers/actions rows render upstream's `renderAction(...)`, whose
+   * icon comes off the action itself (also themed for group/ungroup) —
+   * shared with the command palette's identical resolution. */
+  actionIcon(action: Action) {
+    return getActionIconName(action, this.editor().state, this.elements());
+  }
 
   readonly fillStyleAction = actionChangeFillStyle;
   readonly strokeWidthAction = actionChangeStrokeWidth;

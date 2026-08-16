@@ -14,7 +14,6 @@ import {
   DEFAULT_SIDEBAR,
   EVENT,
   KEYS,
-  THEME,
   addEventListener,
   isWritableElement,
 } from "@excalidraw/common";
@@ -39,13 +38,10 @@ import fuzzy from "fuzzy";
 
 import type { MarkRequired } from "@excalidraw/common/utility-types";
 
-import type { ExcalidrawElement } from "@excalidraw/element/types";
-
 import type { ShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
 import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
-import type { AppState } from "@excalidraw/excalidraw/types";
 
 import {
   actionClearCanvas,
@@ -53,6 +49,7 @@ import {
 } from "../../actions/actionCanvas";
 import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+import { getActionIconName } from "../action-icons";
 import { CaliburnDialogComponent } from "../dialog.component";
 import { CaliburnLibraryItemIconComponent } from "../library/library-item-icon.component";
 import { CaliburnTextFieldComponent } from "../text-field.component";
@@ -96,102 +93,6 @@ const isCommandPaletteToggleShortcut = (event: KeyboardEvent) => {
     ((event.shiftKey && event.key.toLowerCase() === KEYS.P) ||
       event.key === KEYS.SLASH)
   );
-};
-
-/**
- * The ng-icon registry name of the React node upstream's actions carry on
- * `action.icon` — caliburn's ported actions can't hold one, so the palette
- * resolves it by action name here. The entries that read the theme or the
- * selection are upstream's `(appState, elements) => ...` icon functions.
- */
-const getActionIconName = (
-  action: Action,
-  appState: AppState,
-  elements: readonly ExcalidrawElement[],
-) => {
-  const isDark = appState.theme === THEME.DARK;
-
-  switch (action.name) {
-    case "group":
-      return isDark ? "groupIconDark" : "groupIconLight";
-    case "ungroup":
-      return isDark ? "ungroupIconDark" : "ungroupIconLight";
-    case "cut":
-      return "cutIcon";
-    case "copy":
-    case "duplicateSelection":
-      return "duplicateIcon";
-    case "deleteSelectedElements":
-    case "clearCanvas":
-      return "trashIcon";
-    case "bringToFront":
-      return "bringToFrontIcon";
-    case "bringForward":
-      return "bringForwardIcon";
-    case "sendBackward":
-      return "sendBackwardIcon";
-    case "sendToBack":
-      return "sendToBackIcon";
-    case "flipHorizontal":
-      return "flipHorizontal";
-    case "flipVertical":
-      return "flipVertical";
-    case "zoomToFit":
-    case "zoomToFitSelection":
-    case "zoomToFitSelectionInViewport":
-      return "zoomAreaIcon";
-    case "increaseFontSize":
-    case "decreaseFontSize":
-      return "fontSizeIcon";
-    case "undo":
-      return "undoIcon";
-    case "redo":
-      return "redoIcon";
-    case "zoomIn":
-      return "zoomInIcon";
-    case "zoomOut":
-      return "zoomOutIcon";
-    case "resetZoom":
-      return "zoomResetIcon";
-    case "toggleShortcuts":
-      return "helpIconThin";
-    case "selectAll":
-      return "selectAllIcon";
-    case "toggleElementLock":
-      return getSelectedElements(elements, appState).every((el) => !el.locked)
-        ? "lockedIcon"
-        : "unlockedIcon";
-    case "unlockAllElements":
-      return "unlockedIcon";
-    case "saveToActiveFile":
-    case "saveFileToDisk":
-      return "exportIcon";
-    case "toggleTheme":
-      return isDark ? "sunIcon" : "moonIcon";
-    case "searchMenu":
-      return "searchIcon";
-    case "copyStyles":
-    case "pasteStyles":
-      return "paintIcon";
-    case "gridMode":
-      return "gridIcon";
-    case "objectsSnapMode":
-      return "magnetIcon";
-    case "zenMode":
-      return "coffeeIcon";
-    case "viewMode":
-      return "eyeIcon";
-    case "stats":
-      return "abacusIcon";
-    case "hyperlink":
-      return "linkIcon";
-    case "copyElementLink":
-      return "copyIcon";
-    case "linkToElement":
-      return "elementLinkIcon";
-    default:
-      return undefined;
-  }
 };
 
 /**
