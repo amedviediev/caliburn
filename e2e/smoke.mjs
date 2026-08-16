@@ -466,23 +466,39 @@ export const runSuite = async (browser, url, runner) => {
 
     await runner.check(
       "help.close-via-button",
-      "the dialog's own close button closes it",
+      "the desktop dialog renders no close button — Escape and the backdrop are its affordances",
       async () => {
         await resetEditor(page);
         await openHelpDialog(page);
         const closeBtn = await rectOf(page, ".HelpDialog .Dialog__close");
-        expect(closeBtn, ".HelpDialog has no `.Dialog__close` button to click");
-        await clickAndExpect(
-          page,
-          ".HelpDialog .Dialog__close",
-          () => !document.querySelector(".Modal.HelpDialog"),
-          { message: "the close button did not close the help dialog" },
+        expect(
+          !closeBtn,
+          ".HelpDialog renders a `.Dialog__close`; upstream `Dialog.tsx` " +
+            "renders one only at phone form factor",
+        );
+        expect(
+          await rectOf(page, ".HelpDialog .Modal__background"),
+          ".HelpDialog has no `.Modal__background` to dismiss it with",
+        );
+        expect(
+          await page.evaluate(() =>
+            document
+              .querySelector(".Modal.HelpDialog")
+              ?.contains(document.activeElement),
+          ),
+          `focus sits outside the dialog, so Escape cannot reach it (${await page.evaluate(
+            () => window.__e2e.describe(document.activeElement),
+          )})`,
         );
       },
       {
         evidence: {
           page,
-          selectors: [".Modal.HelpDialog", ".HelpDialog .Dialog__close"],
+          selectors: [
+            ".Modal.HelpDialog",
+            ".HelpDialog .Dialog__close",
+            ".HelpDialog .Modal__background",
+          ],
         },
       },
     );

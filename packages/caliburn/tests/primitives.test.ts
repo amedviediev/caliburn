@@ -664,9 +664,7 @@ describe("caliburn-dialog", () => {
       "My Dialog",
     );
     expect(inPortal(".Dialog__content")).not.toBeNull();
-    // upstream gates this on the phone form factor, leaving desktop dialogs
-    // with no close affordance; caliburn always renders it
-    expect(inPortal(".Dialog__close")).not.toBeNull();
+    expect(inPortal(".Dialog__close")).toBeNull();
 
     modal.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
@@ -676,7 +674,7 @@ describe("caliburn-dialog", () => {
     expect(fixture.componentInstance.open()).toBe(false);
   });
 
-  it("closes through the Dialog__close button, fullscreen included", async () => {
+  it("renders a Dialog__close button only when fullscreen", async () => {
     const fixture = createComponent(DialogHost);
     fixture.componentInstance.fullscreen.set(true);
     fixture.detectChanges();
