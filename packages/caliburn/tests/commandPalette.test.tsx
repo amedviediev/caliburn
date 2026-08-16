@@ -137,6 +137,9 @@ describe("CommandPalette", () => {
       t("buttons.objectsSnapMode"),
       t("labels.toggleGrid"),
       t("stats.fullTitle"),
+      // upstream's shape-switch command carries no predicate, so it lists
+      // whether or not anything is selected
+      t("labels.shapeSwitch"),
     ]) {
       expect(labels()).toContain(shown);
     }
@@ -144,7 +147,6 @@ describe("CommandPalette", () => {
     for (const gated of [
       t("labels.textToDiagram"),
       t("toolBar.mermaidToExcalidraw"),
-      t("labels.shapeSwitch"),
       t("labels.copyAsPng"),
       t("labels.copyAsSvg"),
       t("labels.copyStyles"),
@@ -220,6 +222,20 @@ describe("CommandPalette", () => {
     expect(h.state.zoom.value).toBeGreaterThan(zoom);
     expect(h.state.openDialog).toBeNull();
     expect(dialog()).toBeNull();
+  });
+
+  it("opens the shape-switch popup from the executed command", () => {
+    API.setElements([API.createElement({ type: "rectangle" })]);
+    API.setAppState({ selectedElementIds: { [h.elements[0].id]: true } });
+
+    filter("switch shape");
+    expect(labels()[0]).toBe(t("labels.shapeSwitch"));
+
+    act(() => {
+      fireEvent.click(items()[0]);
+    });
+
+    expect(document.querySelector(".ConvertElementTypePopup")).not.toBeNull();
   });
 
   it("executes the highlighted command on enter", async () => {

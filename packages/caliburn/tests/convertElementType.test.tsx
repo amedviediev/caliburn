@@ -1,7 +1,6 @@
 import { ROUNDNESS } from "@excalidraw/common";
 
-import { convertElementTypes } from "@excalidraw/excalidraw/components/ConvertElementTypePopup";
-
+import { convertElementTypes } from "../src/components/convert-element-type";
 import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
@@ -24,7 +23,7 @@ describe("convert element type", () => {
     API.setSelectedElements([rectangle]);
 
     act(() => {
-      convertElementTypes(h.app as any, {
+      convertElementTypes(h.app, {
         conversionType: "generic",
         nextType: "diamond",
       });
@@ -34,7 +33,7 @@ describe("convert element type", () => {
     expect(h.elements[0].roundness?.type).toBe(ROUNDNESS.PROPORTIONAL_RADIUS);
 
     act(() => {
-      convertElementTypes(h.app as any, {
+      convertElementTypes(h.app, {
         conversionType: "generic",
         nextType: "rectangle",
       });

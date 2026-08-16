@@ -375,6 +375,63 @@ export const runSuite = async (browser, url, runner) => {
     );
 
     await runner.check(
+      "baseline.shape-switch-popup",
+      "Tab opens the shape-switch popup over the selection and converts the element",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page);
+        await waitFor(
+          page,
+          () => Object.keys(window.h.state.selectedElementIds).length === 1,
+          { message: "the drawn rectangle was not left selected" },
+        );
+        // the first Tab only opens the panel — it must not convert anything
+        await page.keyboard.press("Tab");
+        await waitFor(
+          page,
+          () => !!document.querySelector(".ConvertElementTypePopup"),
+          { message: "Tab did not open the shape-switch popup" },
+        );
+        await expectOwnsPixels(
+          page,
+          ".ConvertElementTypePopup",
+          "shape switch popup",
+        );
+        expectEqual(
+          (await elements(page))[0].type,
+          "rectangle",
+          "element type after the popup opened",
+        );
+        await page.keyboard.press("Tab");
+        await waitFor(
+          page,
+          () => window.__e2e.elements()[0].type === "diamond",
+          { message: "a second Tab did not cycle the rectangle to a diamond" },
+        );
+        await clickCenter(
+          page,
+          '.ConvertElementTypePopup [data-testid="toolbar-ellipse"]',
+        );
+        await waitFor(
+          page,
+          () => window.__e2e.elements()[0].type === "ellipse",
+          {
+            message: "clicking the popup's ellipse did not convert the element",
+          },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [
+            ".ConvertElementTypePopup",
+            '.ConvertElementTypePopup [data-testid="toolbar-ellipse"]',
+          ],
+        },
+      },
+    );
+
+    await runner.check(
       "baseline.hamburger-menu-items",
       "every hamburger menu item and region is present, enabled and clickable",
       async () => {

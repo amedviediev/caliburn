@@ -48,6 +48,7 @@ import {
   actionToggleTheme,
 } from "../../actions/actionCanvas";
 import { actionToggleSearchMenu } from "../../actions/actionToggleSearchMenu";
+import { actionToggleShapeSwitch } from "../../actions/actionToggleShapeSwitch";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 import { getActionIconName } from "../action-icons";
 import { CaliburnDialogComponent } from "../dialog.component";
@@ -587,6 +588,14 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
         viewMode: true,
         perform: () => {
           actionManager.executeAction(actionToggleSearchMenu);
+        },
+      },
+      {
+        label: t("labels.shapeSwitch"),
+        category: DEFAULT_CATEGORIES.elements,
+        icon: "boltIcon",
+        perform: () => {
+          actionManager.executeAction(actionToggleShapeSwitch);
         },
       },
       {

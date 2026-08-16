@@ -79,6 +79,7 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import {
   ARROW_TYPE,
+  CLASSES,
   CODES,
   CURSOR_TYPE,
   KEYS,
@@ -256,6 +257,11 @@ import {
   actionChangeVerticalAlign,
 } from "./actions/actionProperties";
 import { ActionManager } from "./actions/manager";
+import {
+  convertElementTypes,
+  getConversionTypeFromElements,
+} from "./components/convert-element-type";
+import { CaliburnConvertElementTypePopupComponent } from "./components/convert-element-type-popup.component";
 import { CaliburnCursorHintComponent } from "./components/cursor-hint.component";
 import { CursorHints } from "./components/cursor-hints";
 import { CaliburnEyeDropperComponent } from "./components/eye-dropper.component";
@@ -465,6 +471,7 @@ type SetStateArg =
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CaliburnContextMenuComponent,
+    CaliburnConvertElementTypePopupComponent,
     CaliburnCursorHintComponent,
     CaliburnEyeDropperComponent,
     CaliburnFrameNameComponent,
@@ -716,6 +723,17 @@ export class CaliburnEditorComponent
    * per-instance signal, as `activeConfirmDialog` above is.
    */
   readonly activeEyeDropper = signal<EyeDropperProperties | null>(null);
+
+  /**
+   * Upstream keeps the open shape-switch panel in a module-level jotai atom
+   * (`ConvertElementTypePopup.tsx`'s `convertElementTypePopupAtom`) —
+   * mirrored here as a per-instance signal, as `activeEyeDropper` above is.
+   */
+  readonly convertElementTypePopup = signal<{ type: "panel" } | null>(null);
+
+  readonly showShapeSwitchPanel = computed(
+    () => this.convertElementTypePopup()?.type === "panel",
+  );
 
   visibleElements: readonly NonDeletedExcalidrawElement[] = [];
 
@@ -1830,6 +1848,45 @@ export class CaliburnEditorComponent
       return;
     }
 
+    // upstream nests everything from the crop blocks above through the shape
+    // switching below in a single `!isInputLike(event.target)` guard; the
+    // `bail if` above already covers the crop paths, so only this block
+    // still needs it
+    if (!isInputLike(event.target)) {
+      const selectedElements = this.scene.getSelectedElements(this.state);
+
+      // Shape switching
+      if (event.key === KEYS.ESCAPE) {
+        this.convertElementTypePopup.set(null);
+      } else if (
+        event.key === KEYS.TAB &&
+        (document.activeElement === this.containerRef()?.nativeElement ||
+          document.activeElement?.classList.contains(
+            CLASSES.CONVERT_ELEMENT_TYPE_POPUP,
+          ))
+      ) {
+        event.preventDefault();
+
+        const conversionType = getConversionTypeFromElements(selectedElements);
+
+        if (this.convertElementTypePopup()?.type === "panel") {
+          if (
+            convertElementTypes(this, {
+              conversionType,
+              direction: event.shiftKey ? "left" : "right",
+            })
+          ) {
+            this.store.scheduleCapture();
+          }
+        }
+        if (conversionType) {
+          this.convertElementTypePopup.set({
+            type: "panel",
+          });
+        }
+      }
+    }
+
     if (this.maybeHandlePageScrollKeyDown(event)) {
       // the editor consumes the input — the page must not scroll along
       event.preventDefault();
@@ -2688,6 +2745,10 @@ export class CaliburnEditorComponent
         };
       });
       this.searchItemInFocus.set(null);
+    }
+
+    if (this.convertElementTypePopup()) {
+      this.convertElementTypePopup.set(null);
     }
 
     // since contextMenu options are potentially evaluated on each render,
@@ -3771,6 +3832,7 @@ export class CaliburnEditorComponent
     // unmounted.
     this.bucketFill.closeTemporaryEyeDropper();
     this.activeEyeDropper.set(null);
+    this.convertElementTypePopup.set(null);
 
     if (this.state.editingFrame) {
       const frame = this.scene.getNonDeletedElement(this.state.editingFrame);

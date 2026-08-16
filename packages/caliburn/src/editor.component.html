@@ -44,6 +44,9 @@
     (wheel)="handleWheel($event)"
   ></canvas>
   <caliburn-frame-names />
+  @if (isDefaultUIEnabled() && showShapeSwitchPanel()) {
+    <div caliburn-convert-element-type-popup></div>
+  }
   <div class="SVGLayer">
     <svg #svgLayer></svg>
   </div>

@@ -1,0 +1,12 @@
+@for (shape of shapes(); track shape.key) {
+  <button
+    caliburn-icon-button
+    mode="toggle"
+    [icon]="shape.icon"
+    [checked]="shape.isSelected"
+    [title]="shape.type"
+    [ariaLabel]="shape.type"
+    [testId]="'toolbar-' + shape.type"
+    (select)="onSelect(shape)"
+  ></button>
+}
