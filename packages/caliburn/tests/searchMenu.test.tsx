@@ -21,6 +21,7 @@ import {
   getByTestId,
   render,
   waitFor,
+  withExcalidrawDimensions,
 } from "./test-utils";
 
 import type { RenderResult } from "./test-utils";
@@ -178,20 +179,26 @@ describe("SearchMenu", () => {
     expect(h.app.state.searchMatches).toBeNull();
   });
 
+  // the search sidebar is force-docked, and a docked sidebar only survives an
+  // outside click while the editor is wide enough to fit one
+  // (`editorInterface.canFitSidebar`, `Sidebar.tsx`) — so declare the editor's
+  // size first, as upstream's own sidebar tests do
   it("drops the focus from the matches on a canvas pointerdown", async () => {
     API.setElements([API.createElement({ type: "text", text: "test one" })]);
 
-    await search("test", 1);
-    expect(h.app.state.searchMatches?.matches[0].focus).toBe(true);
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      await search("test", 1);
+      expect(h.app.state.searchMatches?.matches[0].focus).toBe(true);
 
-    act(() => {
-      fireEvent.pointerDown(GlobalTestState.interactiveCanvas, {
-        clientX: 400,
-        clientY: 400,
+      act(() => {
+        fireEvent.pointerDown(GlobalTestState.interactiveCanvas, {
+          clientX: 400,
+          clientY: 400,
+        });
       });
-    });
 
-    expect(h.app.state.searchMatches?.matches[0].focus).toBe(false);
-    expect(h.app.state.searchMatches?.focusedId).toBeNull();
+      expect(h.app.state.searchMatches?.matches[0].focus).toBe(false);
+      expect(h.app.state.searchMatches?.focusedId).toBeNull();
+    });
   });
 });

@@ -23,6 +23,7 @@ import {
   Emitter,
   MIME_TYPES,
   MIN_ZOOM,
+  MQ_RIGHT_SIDEBAR_MIN_WIDTH,
   POINTER_BUTTON,
   POINTER_EVENTS,
   ZOOM_STEP,
@@ -31,7 +32,9 @@ import {
   isInputLike,
   isSelectionLikeTool,
   isWritableElement,
+  supportsResizeObserver,
   updateActiveTool,
+  updateObject,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
 import {
@@ -600,14 +603,29 @@ export class CaliburnEditorComponent
 
   hasRenderableElements = false;
 
-  readonly editorInterface: EditorInterface = {
+  /**
+   * Upstream's `editorInterfaceContextInitialValue` (`App.tsx`), narrowed to
+   * the fields caliburn derives: only `canFitSidebar` is measured so far
+   * (`refreshEditorInterface`), the rest stay at the desktop-only literals
+   * the port has always used. Signal-backed rather than a plain field so a
+   * `computed()` that reads `editor.editorInterface.canFitSidebar` — every
+   * consumer does — re-runs when a resize changes it; upstream gets that for
+   * free by re-rendering off `updateObject`'s new identity.
+   */
+  private readonly editorInterfaceSignal = signal<EditorInterface>({
     formFactor: "desktop",
     desktopUIMode: "full",
     userAgent: { isMobileDevice: false, platform: "other" },
     isTouchScreen: false,
-    canFitSidebar: true,
+    canFitSidebar: false,
     isLandscape: true,
-  };
+  });
+
+  get editorInterface(): EditorInterface {
+    return this.editorInterfaceSignal();
+  }
+
+  private resizeObserver: ResizeObserver | null = null;
 
   unmounted = false;
 
@@ -1212,6 +1230,7 @@ export class CaliburnEditorComponent
   }
 
   private onWindowResize = () => {
+    this.refreshEditorInterface();
     this.updateDOMRect();
   };
 
@@ -1237,12 +1256,29 @@ export class CaliburnEditorComponent
       this.lassoTrail.start(svgLayer);
     }
     this.cursor.reset();
+    this.refreshEditorInterface();
     this.updateDOMRect();
+    this.observeContainerResize();
     this.initializeScene();
     if (this.autoFocus()) {
       this.focusContainer();
     }
     renderEditor(this);
+  }
+
+  /** upstream's `componentDidMount` observer, same `supportsResizeObserver`
+   * guard — the container's own resizes (a docked sidebar, a host layout
+   * change) never reach `window`'s `resize` */
+  private observeContainerResize() {
+    const container = this.containerRef()?.nativeElement;
+    if (!supportsResizeObserver || !container) {
+      return;
+    }
+    this.resizeObserver = new ResizeObserver(() => {
+      this.refreshEditorInterface();
+      this.updateDOMRect();
+    });
+    this.resizeObserver.observe(container);
   }
 
   ngOnDestroy() {
@@ -1258,6 +1294,8 @@ export class CaliburnEditorComponent
     window.removeEventListener("resize", this.onWindowResize);
     window.removeEventListener("focus", this.onWindowFocus);
     window.removeEventListener("blur", this.onWindowBlur);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.removeSceneUpdateListener?.();
     this.removeSceneUpdateListener = null;
     this.library.destroy();
@@ -3265,7 +3303,39 @@ export class CaliburnEditorComponent
     );
   }
 
-  refreshEditorInterface() {}
+  /**
+   * Angular port of upstream `App.tsx`'s `refreshEditorInterface`, restricted
+   * to the one field caliburn derives: `canFitSidebar`. Upstream measures the
+   * editor container and compares its width against
+   * `UIOptions.dockedSidebarBreakpoint ?? MQ_RIGHT_SIDEBAR_MIN_WIDTH`, and —
+   * as here — returns early while the container is unmounted, leaving the
+   * initial `false`.
+   *
+   * That early return is also the jsdom fallback: upstream's callers are the
+   * container `ResizeObserver` (guarded by `supportsResizeObserver`, which is
+   * false under jsdom) and the window `resize` handler, neither of which fires
+   * there — so a test that needs a sized editor calls this itself, through
+   * `withExcalidrawDimensions`, exactly as upstream's tests do. `updateObject`
+   * returns the same object when nothing changed, so an unchanged measurement
+   * writes no new signal value and schedules no change detection.
+   */
+  refreshEditorInterface() {
+    const container = this.containerRef()?.nativeElement;
+    if (!container) {
+      return;
+    }
+    const { width: editorWidth } = container.getBoundingClientRect();
+    const sidebarBreakpoint =
+      this.props.UIOptions.dockedSidebarBreakpoint != null
+        ? this.props.UIOptions.dockedSidebarBreakpoint
+        : MQ_RIGHT_SIDEBAR_MIN_WIDTH;
+
+    this.editorInterfaceSignal.set(
+      updateObject(this.editorInterfaceSignal(), {
+        canFitSidebar: editorWidth > sidebarBreakpoint,
+      }),
+    );
+  }
 
   refresh() {}
 

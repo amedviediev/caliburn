@@ -1651,6 +1651,57 @@ export const runSuite = async (browser, url, runner) => {
       },
       { evidence: { page, selectors: [".layer-ui__wrapper", ".sidebar"] } },
     );
+
+    await runner.check(
+      "sidebar.can-fit-sidebar-follows-width",
+      "narrowing the editor past the sidebar breakpoint drops the dock button, widening restores it",
+      async () => {
+        await resetEditor(page);
+        await openSidebar();
+        expect(
+          await page.evaluate(() => window.h.app.editorInterface.canFitSidebar),
+          `canFitSidebar is false at ${VIEWPORT.width}px, above the 1229px breakpoint`,
+        );
+        expect(
+          await rectOf(page, '.sidebar [data-testid="sidebar-dock"]'),
+          "the dock button is missing while the editor is wide enough for it",
+        );
+        // MQ_RIGHT_SIDEBAR_MIN_WIDTH is 1229; 1100 is comfortably under it
+        await page.setViewport({ width: 1100, height: VIEWPORT.height });
+        await waitFor(
+          page,
+          () => window.h.app.editorInterface.canFitSidebar === false,
+          {
+            message:
+              "narrowing the editor to 1100px did not recompute canFitSidebar",
+          },
+        );
+        expect(
+          !(await rectOf(page, '.sidebar [data-testid="sidebar-dock"]')),
+          "the dock button still renders below the sidebar breakpoint",
+        );
+        await page.setViewport(VIEWPORT);
+        await waitFor(
+          page,
+          () => window.h.app.editorInterface.canFitSidebar === true,
+          {
+            message: "widening the editor back did not recompute canFitSidebar",
+          },
+        );
+        await waitFor(
+          page,
+          () =>
+            !!document.querySelector('.sidebar [data-testid="sidebar-dock"]'),
+          { message: "the dock button did not come back with the width" },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: ['.sidebar [data-testid="sidebar-dock"]', ".sidebar"],
+        },
+      },
+    );
   });
 
   // -------------------------------------------------------------- space pan

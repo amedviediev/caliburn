@@ -236,15 +236,20 @@ describe("DefaultSidebar", () => {
     expect(sidebarEl).toHaveClass("sidebar--docked");
   });
 
-  it("hides the top-right trigger while the sidebar is docked", () => {
+  // the dock button only renders while the editor is wide enough for a
+  // sidebar (`editorInterface.canFitSidebar`), so — as upstream's own docking
+  // tests do — this declares the editor's size first
+  it("hides the top-right trigger while the sidebar is docked", async () => {
     openLibrary();
     expect(sidebarTrigger()).not.toBe(null);
 
-    act(() => {
-      fireEvent.click(queryByTestId(sidebar()!, "sidebar-dock")!);
-    });
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, () => {
+      act(() => {
+        fireEvent.click(queryByTestId(sidebar()!, "sidebar-dock")!);
+      });
 
-    expect(sidebarTrigger()).toBe(null);
+      expect(sidebarTrigger()).toBe(null);
+    });
   });
 });
 
