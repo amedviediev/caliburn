@@ -289,3 +289,112 @@ describe("crop editor handle drag", () => {
     expect(h.state.croppingElementId).toBe(image.id);
   });
 });
+
+// Caliburn-authored: upstream's own crop suite
+// (`packages/element/tests/cropElement.test.tsx`) only drives the transform
+// handles, so the drag branch's `#region move crop region` — panning the
+// image inside an unchanged frame — has no upstream case to port.
+describe("crop editor move region", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+  });
+
+  /**
+   * Panning applies to an already-cropped image only (upstream gates the
+   * branch on `crop !== null`), so the image is cropped in from its
+   * top-left first: a 100x100 frame of a 400x400 image cropped to 70x70
+   * leaves the crop rectangle at {x: 120, y: 120, width: 280, height: 280},
+   * i.e. 120 natural pixels of slack in both directions, and 4 natural
+   * pixels of pan per scene pixel dragged.
+   */
+  const seedCroppedImage = () => {
+    const image = seedImage();
+    seedImageCache(image);
+    act(() => {
+      h.app.setState({ croppingElementId: image.id });
+    });
+    UI.crop(image, "nw", 400, 400, [30, 30]);
+    return h.elements[0] as ExcalidrawImageElement;
+  };
+
+  it("dragging inside the region pans the crop and leaves the frame untouched", () => {
+    const image = seedCroppedImage();
+    const { x, y, width, height } = image;
+    const crop = image.crop!;
+    expect(crop).not.toBe(null);
+
+    mouse.reset();
+    mouse.downAt(x + width / 2, y + height / 2);
+    mouse.move(10, 5);
+
+    const dragged = h.elements[0] as ExcalidrawImageElement;
+    expect(dragged.crop!.x).toBeCloseTo(crop.x - 40);
+    expect(dragged.crop!.y).toBeCloseTo(crop.y - 20);
+    // the crop window only moves — it is neither resized nor is the frame
+    expect(dragged.crop!.width).toBeCloseTo(crop.width);
+    expect(dragged.crop!.height).toBeCloseTo(crop.height);
+    expect(dragged.x).toBe(x);
+    expect(dragged.y).toBe(y);
+    expect(dragged.width).toBe(width);
+    expect(dragged.height).toBe(height);
+    // no transform handle is involved, so this is not a crop resize
+    expect(h.state.isCropping).toBe(false);
+
+    mouse.up();
+
+    // the pointer stayed on the cropping element, so the pointer-up "click
+    // outside" check keeps crop mode alive
+    expect(h.state.croppingElementId).toBe(image.id);
+  });
+
+  it("pans by each move's own delta, not by the offset from the drag origin", () => {
+    const image = seedCroppedImage();
+    const crop = image.crop!;
+
+    mouse.reset();
+    mouse.downAt(image.x + image.width / 2, image.y + image.height / 2);
+    mouse.move(10, 5);
+    mouse.move(10, 5);
+    mouse.up();
+
+    const dragged = h.elements[0] as ExcalidrawImageElement;
+    expect(dragged.crop!.x).toBeCloseTo(crop.x - 80);
+    expect(dragged.crop!.y).toBeCloseTo(crop.y - 40);
+  });
+
+  it("clamps the pan to the image's own edges", () => {
+    const image = seedCroppedImage();
+    const { x, y } = image;
+
+    mouse.reset();
+    mouse.downAt(image.x + image.width / 2, image.y + image.height / 2);
+    // 100 scene pixels is 400 natural ones, far past the 120 of slack
+    mouse.move(100, 100);
+    mouse.up();
+
+    const dragged = h.elements[0] as ExcalidrawImageElement;
+    expect(dragged.crop!.x).toBe(0);
+    expect(dragged.crop!.y).toBe(0);
+    expect(dragged.x).toBe(x);
+    expect(dragged.y).toBe(y);
+  });
+
+  it("drags the element itself when the image is not cropped yet", () => {
+    const image = seedImage();
+    seedImageCache(image);
+    act(() => {
+      h.app.setState({ croppingElementId: image.id });
+    });
+    expect(image.crop).toBe(null);
+
+    mouse.reset();
+    mouse.downAt(image.x + image.width / 2, image.y + image.height / 2);
+    mouse.move(10, 5);
+    mouse.up();
+
+    const dragged = h.elements[0] as ExcalidrawImageElement;
+    expect(dragged.x).toBe(30);
+    expect(dragged.y).toBe(25);
+    expect(dragged.crop).toBe(null);
+  });
+});

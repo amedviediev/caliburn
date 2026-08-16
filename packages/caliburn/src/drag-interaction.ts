@@ -31,6 +31,7 @@ import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 import type { KeyboardModifiersObject } from "@excalidraw/excalidraw/types";
 
 import { getEffectiveGridSize } from "./create-interaction";
+import { maybeMoveCropRegion } from "./crop-interaction";
 import { maybeUpdateFrameToHighlightOnDrag } from "./frame-interaction";
 import { isEditingTextContent } from "./text-interaction";
 
@@ -90,6 +91,7 @@ export const maybeDragSelectedElements = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
   event: PointerEvent,
+  lastPointerCoords: { x: number; y: number },
 ): boolean => {
   const pointerCoords = pointerDownState.lastCoords;
 
@@ -166,6 +168,11 @@ export const maybeDragSelectedElements = (
       if (lockY) {
         dragOffset.y = 0;
       }
+    }
+
+    // #region move crop region
+    if (maybeMoveCropRegion(editor, pointerDownState, lastPointerCoords)) {
+      return true;
     }
 
     // Snap cache *must* be synchronously popuplated before initial drag,

@@ -593,6 +593,7 @@ export const handleSelectionPointerMove = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
   event: PointerEvent,
+  lastPointerCoords: { x: number; y: number },
 ) => {
   const coords = viewportCoordsToSceneCoords(event, editor.state);
   pointerDownState.lastCoords = coords;
@@ -606,7 +607,14 @@ export const handleSelectionPointerMove = (
     }
   }
 
-  if (maybeDragSelectedElements(editor, pointerDownState, event)) {
+  if (
+    maybeDragSelectedElements(
+      editor,
+      pointerDownState,
+      event,
+      lastPointerCoords,
+    )
+  ) {
     return;
   }
 

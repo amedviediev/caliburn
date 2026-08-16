@@ -249,6 +249,86 @@ const drawRectangle = async (page, from = [500, 400], to = [700, 550]) => {
   });
 };
 
+/**
+ * Put a real image on the canvas the way a user does — by dropping a file on
+ * it, so the app's own pipeline decodes the bitmap and fills `imageCache`,
+ * which is what the crop editor measures the image against. The file is
+ * painted in the page rather than read off disk, so the check carries no
+ * fixture; JPEG keeps the drop out of the `loadFromBlob` branch that a PNG
+ * (a possible Excalidraw scene container) is put through first.
+ */
+const dropImage = async (page, [clientX, clientY]) => {
+  await page.evaluate(
+    async (x, y) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#4a90d9";
+      ctx.fillRect(0, 0, 400, 400);
+      ctx.fillStyle = "#e6a03c";
+      ctx.fillRect(0, 0, 200, 200);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg"),
+      );
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(
+        new File([blob], "crop.jpg", { type: "image/jpeg" }),
+      );
+      document
+        .querySelector("canvas.excalidraw__canvas.interactive")
+        .dispatchEvent(
+          new DragEvent("drop", {
+            dataTransfer,
+            bubbles: true,
+            cancelable: true,
+            clientX: x,
+            clientY: y,
+          }),
+        );
+    },
+    clientX,
+    clientY,
+  );
+  await waitFor(
+    page,
+    () => {
+      const el = (window.h?.elements ?? []).filter((e) => !e.isDeleted)[0];
+      const cached = el && window.h.app.imageCache.get(el.fileId);
+      return (
+        !!el &&
+        el.type === "image" &&
+        el.status === "saved" &&
+        !!cached?.image?.naturalWidth
+      );
+    },
+    { message: "dropping an image file did not insert a decoded image" },
+  );
+};
+
+/** the dropped image's own box, plus the viewport points a drag needs */
+const imageGeometry = (page) =>
+  page.evaluate(() => {
+    const el = window.h.elements.filter((e) => !e.isDeleted)[0];
+    const { scrollX, scrollY, zoom, offsetLeft, offsetTop } = window.h.state;
+    const toViewport = (x, y) => [
+      (x + scrollX) * zoom.value + offsetLeft,
+      (y + scrollY) * zoom.value + offsetTop,
+    ];
+    return {
+      element: {
+        id: el.id,
+        x: el.x,
+        y: el.y,
+        width: el.width,
+        height: el.height,
+        crop: el.crop,
+      },
+      west: toViewport(el.x, el.y + el.height / 2),
+      centre: toViewport(el.x + el.width / 2, el.y + el.height / 2),
+    };
+  });
+
 /** the scene's first element's box — the geometry `elements()` leaves out */
 const elementBox = (page) =>
   page.evaluate(() => {
@@ -1914,6 +1994,86 @@ export const runSuite = async (browser, url, runner) => {
         );
         const els = await elements(page);
         expectEqual(els.length, 0, "a space-hold pan must not create elements");
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+  });
+
+  // ------------------------------------------------------------- crop editor
+  await withPage("crop", async (page) => {
+    runner.group("image crop editor");
+
+    await runner.check(
+      "crop.drag-inside-region-pans",
+      "dragging inside a cropped image's region pans the image, it does not move or resize it",
+      async () => {
+        await resetEditor(page);
+        await dropImage(page, [500, 350]);
+        // the drop selects the inserted image, so Enter opens the crop editor
+        await page.keyboard.press("Enter");
+        await waitFor(page, () => !!window.h.state.croppingElementId, {
+          message: "Enter did not open the crop editor for the dropped image",
+        });
+
+        // crop the west edge in first: panning applies to an already-cropped
+        // image, and this also leaves slack to pan into
+        const armed = await imageGeometry(page);
+        await dragCanvas(page, armed.west, [armed.west[0] + 40, armed.west[1]]);
+        await waitFor(
+          page,
+          () =>
+            window.h.elements.filter((el) => !el.isDeleted)[0].crop !== null,
+          { message: "dragging the west crop handle did not crop the image" },
+        );
+
+        const before = await imageGeometry(page);
+        expect(
+          before.element.crop.x > 0,
+          `the west crop drag left no slack to pan into (crop ${JSON.stringify(
+            before.element.crop,
+          )})`,
+        );
+
+        await dragCanvas(page, before.centre, [
+          before.centre[0] + 20,
+          before.centre[1] + 12,
+        ]);
+
+        const after = await imageGeometry(page);
+        // the image panned inside its frame...
+        expect(
+          after.element.crop.x < before.element.crop.x,
+          `dragging right inside the region left the crop at x ${after.element.crop.x} (was ${before.element.crop.x})`,
+        );
+        // ...and neither the frame nor the crop window changed size
+        expectEqual(
+          `${after.element.x},${after.element.y},${after.element.width},${after.element.height}`,
+          `${before.element.x},${before.element.y},${before.element.width},${before.element.height}`,
+          "the image's frame after the pan",
+        );
+        expectEqual(
+          `${after.element.crop.width},${after.element.crop.height}`,
+          `${before.element.crop.width},${before.element.crop.height}`,
+          "the crop window's size after the pan",
+        );
+        const state = await page.evaluate(() => ({
+          croppingElementId: window.h.state.croppingElementId,
+          isCropping: window.h.state.isCropping,
+        }));
+        expectEqual(
+          state.croppingElementId,
+          after.element.id,
+          "the element still being cropped after the pan",
+        );
+        expect(
+          state.isCropping === false,
+          "a pan inside the region flagged `isCropping`, which belongs to crop-handle drags",
+        );
       },
       {
         evidence: {

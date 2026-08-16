@@ -1,11 +1,23 @@
 import { KEYS, getGridPoint } from "@excalidraw/common";
 import {
   cropElement,
+  getElementAbsoluteCoords,
+  getUncroppedWidthAndHeight,
   isImageElement,
   isInitializedImageElement,
   updateBoundElements,
 } from "@excalidraw/element";
 import { snapResizingElements } from "@excalidraw/excalidraw/snapping";
+import {
+  clamp,
+  pointFrom,
+  pointRotateRads,
+  vector,
+  vectorDot,
+  vectorFromPoint,
+  vectorNormalize,
+  vectorSubtract,
+} from "@excalidraw/math";
 
 import { getEffectiveGridSize } from "./create-interaction";
 import { maybeCacheReferenceSnapPoints } from "./drag-interaction";
@@ -122,6 +134,116 @@ export const maybeHandleCrop = (
     }
 
     return true;
+  }
+
+  return false;
+};
+
+/**
+ * upstream's `// #region move crop region` — the crop half of the drag
+ * branch, ahead of the snapping and `dragSelectedElements` that would
+ * otherwise move the element: a drag whose pointer-down hit the cropping
+ * image itself (no transform handle involved) pans the image inside its
+ * unchanged frame by moving the crop rectangle, and returns.
+ *
+ * `lastPointerCoords` is upstream's own local of that name, the previous
+ * pointer-move's scene coords (`App.previousPointerMoveCoords`, falling
+ * back to the drag origin) — the crop pans by the instantaneous delta, not
+ * by the offset from the origin, so it must be read before the current move
+ * overwrites it. Caliburn splits the pointer-move handler across modules,
+ * so it is threaded down as a parameter instead of being a closure local.
+ */
+export const maybeMoveCropRegion = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+  lastPointerCoords: { x: number; y: number },
+): boolean => {
+  const pointerCoords = pointerDownState.lastCoords;
+  const elementsMap = editor.scene.getNonDeletedElementsMap();
+
+  if (editor.state.croppingElementId) {
+    const croppingElement = elementsMap.get(editor.state.croppingElementId);
+
+    if (
+      croppingElement &&
+      isImageElement(croppingElement) &&
+      croppingElement.crop !== null &&
+      pointerDownState.hit.element === croppingElement
+    ) {
+      const crop = croppingElement.crop;
+      const image =
+        isInitializedImageElement(croppingElement) &&
+        editor.imageCache.get(croppingElement.fileId)?.image;
+
+      if (image && !(image instanceof Promise)) {
+        const uncroppedSize = getUncroppedWidthAndHeight(croppingElement);
+        const instantDragOffset = vector(
+          pointerCoords.x - lastPointerCoords.x,
+          pointerCoords.y - lastPointerCoords.y,
+        );
+
+        // to reduce cursor:image drift, we need to take into account
+        // the canvas image element scaling so we can accurately
+        // track the pixels on movement
+        instantDragOffset[0] *= image.naturalWidth / uncroppedSize.width;
+        instantDragOffset[1] *= image.naturalHeight / uncroppedSize.height;
+
+        const [x1, y1, x2, y2, cx, cy] = getElementAbsoluteCoords(
+          croppingElement,
+          elementsMap,
+        );
+
+        const topLeft = vectorFromPoint(
+          pointRotateRads(
+            pointFrom(x1, y1),
+            pointFrom(cx, cy),
+            croppingElement.angle,
+          ),
+        );
+        const topRight = vectorFromPoint(
+          pointRotateRads(
+            pointFrom(x2, y1),
+            pointFrom(cx, cy),
+            croppingElement.angle,
+          ),
+        );
+        const bottomLeft = vectorFromPoint(
+          pointRotateRads(
+            pointFrom(x1, y2),
+            pointFrom(cx, cy),
+            croppingElement.angle,
+          ),
+        );
+        const topEdge = vectorNormalize(vectorSubtract(topRight, topLeft));
+        const leftEdge = vectorNormalize(vectorSubtract(bottomLeft, topLeft));
+
+        // project instantDrafOffset onto leftEdge and topEdge to decompose
+        const offsetVector = vector(
+          vectorDot(instantDragOffset, topEdge),
+          vectorDot(instantDragOffset, leftEdge),
+        );
+
+        const nextCrop = {
+          ...crop,
+          x: clamp(
+            crop.x - offsetVector[0] * Math.sign(croppingElement.scale[0]),
+            0,
+            image.naturalWidth - crop.width,
+          ),
+          y: clamp(
+            crop.y - offsetVector[1] * Math.sign(croppingElement.scale[1]),
+            0,
+            image.naturalHeight - crop.height,
+          ),
+        };
+
+        editor.scene.mutateElement(croppingElement, {
+          crop: nextCrop,
+        });
+
+        return true;
+      }
+    }
   }
 
   return false;

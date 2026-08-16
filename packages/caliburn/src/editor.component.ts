@@ -870,6 +870,15 @@ export class CaliburnEditorComponent
 
   lastPointerMoveCoords: { x: number; y: number } | null = null;
 
+  /**
+   * the scene coords of the pointer-move before the one being handled —
+   * upstream `App.previousPointerMoveCoords`, read by the crop-region pan,
+   * which moves by the instantaneous delta between two moves rather than by
+   * the offset from the drag origin. Reset with the rest of the drag on
+   * pointer up.
+   */
+  previousPointerMoveCoords: { x: number; y: number } | null = null;
+
   /** the element whose link icon the pointer is currently over, if any */
   hitLinkElement: NonDeletedExcalidrawElement | undefined;
 
@@ -2910,6 +2919,9 @@ export class CaliburnEditorComponent
       event,
       this.state,
     );
+    const lastPointerCoords =
+      this.previousPointerMoveCoords ?? pointerDownState.origin;
+    this.previousPointerMoveCoords = pointerDownState.lastCoords;
     if (this.state.activeTool.type === "laser") {
       this.laserTrails.addPointToPath(
         pointerDownState.lastCoords.x,
@@ -2929,7 +2941,12 @@ export class CaliburnEditorComponent
       pointerDownState.drag.hasOccurred = true;
       maybeDragNewElement(this, pointerDownState, event);
     } else {
-      handleSelectionPointerMove(this, pointerDownState, event);
+      handleSelectionPointerMove(
+        this,
+        pointerDownState,
+        event,
+        lastPointerCoords,
+      );
     }
   }
 
@@ -3238,6 +3255,11 @@ export class CaliburnEditorComponent
     }
 
     if (this.pointerDownState) {
+      // upstream resets this alongside the rest of the drag teardown, near
+      // the top of its own pointer-up handler — so every branch below gets
+      // it, not just the ones reaching `cleanupAfterDragOnPointerUp`, and
+      // the next gesture's first move measures from its own origin
+      this.previousPointerMoveCoords = null;
       this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
       this.onPointerUpEmitter.trigger(
         this.state.activeTool,
