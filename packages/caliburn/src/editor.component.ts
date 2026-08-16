@@ -47,6 +47,7 @@ import {
   isBindingElement,
   isEmbeddableElement,
   isFrameLikeElement,
+  isImageElement,
   isLinearElement,
   isTextElement,
   makeNextSelectedElementIds,
@@ -274,6 +275,10 @@ import {
 } from "./freedraw-interaction";
 import { getEffectiveGridSize } from "./create-interaction";
 import {
+  finishImageCropping,
+  maybeFinishImageCroppingOnPointerUp,
+} from "./crop-interaction";
+import {
   gesture,
   handleCanvasPanUsingWheelOrSpaceDrag as panCanvasOnWheelOrSpaceDrag,
   isGestureActive,
@@ -288,6 +293,7 @@ import {
   handleTextElementOnPointerUp,
   handleTextOnPointerDown,
   maybeStartTextEditingOnPointerUp,
+  startImageCropping,
 } from "./text-interaction";
 import {
   getElementAtPosition,
@@ -1383,6 +1389,25 @@ export class CaliburnEditorComponent
     ) {
       return;
     }
+
+    if (
+      (event.key === KEYS.ESCAPE || event.key === KEYS.ENTER) &&
+      this.state.croppingElementId
+    ) {
+      finishImageCropping(this);
+      return;
+    }
+
+    const selectedElementsForCrop = this.scene.getSelectedElements(this.state);
+    if (
+      selectedElementsForCrop.length === 1 &&
+      isImageElement(selectedElementsForCrop[0]) &&
+      event.key === KEYS.ENTER
+    ) {
+      startImageCropping(this, selectedElementsForCrop[0]);
+      return;
+    }
+
     if (this.maybeHandlePageScrollKeyDown(event)) {
       // the editor consumes the input — the page must not scroll along
       event.preventDefault();
@@ -2522,6 +2547,9 @@ export class CaliburnEditorComponent
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
         handleSelectionPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
+        // upstream's "click outside the cropping region to exit" — must
+        // read isCropping before the cleanup below resets it
+        maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
         if (
           maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
         ) {

@@ -85,11 +85,22 @@ export const maybeArmResizeOnPointerDown = (
       editor.editorInterface,
     );
     if (elementWithTransformHandleType != null) {
-      editor.setState({
-        resizingElement: elementWithTransformHandleType.element,
-      });
-      pointerDownState.resize.handleType =
-        elementWithTransformHandleType.transformHandleType;
+      // upstream arms the handle without setting `resizingElement` while
+      // cropping (rotation is the one handle type crop has no meaning for,
+      // so it still goes through the normal resizingElement path)
+      if (
+        elementWithTransformHandleType.transformHandleType !== "rotation" &&
+        editor.state.croppingElementId
+      ) {
+        pointerDownState.resize.handleType =
+          elementWithTransformHandleType.transformHandleType;
+      } else {
+        editor.setState({
+          resizingElement: elementWithTransformHandleType.element,
+        });
+        pointerDownState.resize.handleType =
+          elementWithTransformHandleType.transformHandleType;
+      }
     }
   } else if (selectedElements.length > 1) {
     pointerDownState.resize.handleType = getTransformHandleTypeFromCoords(

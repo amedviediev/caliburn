@@ -34,6 +34,7 @@ import { pointFrom } from "@excalidraw/math";
 import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
 
 import { originInGridFromEvent } from "./create-interaction";
+import { finishImageCropping, maybeHandleCrop } from "./crop-interaction";
 import { maybeDragSelectedElements } from "./drag-interaction";
 import { getElementLinkAtPosition } from "./link-interaction";
 import { isEditingTextContent } from "./text-interaction";
@@ -365,6 +366,13 @@ export const handleSelectionPointerDown = (
     return null;
   }
 
+  if (
+    editor.state.croppingElementId &&
+    pointerDownState.hit.element?.id !== editor.state.croppingElementId
+  ) {
+    finishImageCropping(editor);
+  }
+
   if (pointerDownState.hit.element) {
     // Early return if pointer is hitting link icon
     const hitLinkElement = getElementLinkAtPosition(
@@ -540,6 +548,9 @@ export const handleSelectionPointerMove = (
   pointerDownState.lastCoords = coords;
 
   if (pointerDownState.resize.isResizing) {
+    if (maybeHandleCrop(editor, pointerDownState, event)) {
+      return;
+    }
     if (maybeHandleResize(editor, pointerDownState, event)) {
       return;
     }
