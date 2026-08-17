@@ -31,10 +31,12 @@ import {
   syncMovedIndices,
 } from "@excalidraw/element";
 
+import { tryParseSpreadsheet } from "@excalidraw/excalidraw/charts";
 import { parseClipboard } from "@excalidraw/excalidraw/clipboard";
 import { parseDataTransferEvent } from "@excalidraw/excalidraw/clipboard";
 import { loadFromBlob } from "@excalidraw/excalidraw/data";
 import {
+  ImageURLToFile,
   SVGStringToFile,
   isSupportedImageFile,
   loadSceneOrLibraryFromBlob,
@@ -45,6 +47,7 @@ import { distributeLibraryItemsOnSquareGrid } from "@excalidraw/excalidraw/data/
 import { restoreElements } from "@excalidraw/excalidraw/data/restore";
 import { ImageSceneDataError } from "@excalidraw/excalidraw/errors";
 import { t } from "@excalidraw/excalidraw/i18n";
+import { isMaybeMermaidDefinition } from "@excalidraw/excalidraw/mermaid";
 
 import type {
   ExcalidrawElement,
@@ -54,6 +57,7 @@ import type {
 import type {
   ClipboardData,
   ParsedDataTransferFile,
+  PastedMixedContent,
 } from "@excalidraw/excalidraw/clipboard";
 import type { ExcalidrawLibraryIds } from "@excalidraw/excalidraw/data/types";
 import type { BinaryFiles, LibraryItems } from "@excalidraw/excalidraw/types";
@@ -264,6 +268,61 @@ export const addElementsFromPasteOrLibrary = (
   }
 };
 
+// TODO rewrite this to paste both text & images at the same time if
+// pasted data contains both
+const addElementsFromMixedContentPaste = async (
+  editor: CaliburnEditorComponent,
+  mixedContent: PastedMixedContent,
+  {
+    isPlainPaste,
+    sceneX,
+    sceneY,
+  }: { isPlainPaste: boolean; sceneX: number; sceneY: number },
+) => {
+  if (
+    !isPlainPaste &&
+    mixedContent.some((node) => node.type === "imageUrl") &&
+    editor.isToolSupported("image")
+  ) {
+    const imageURLs = mixedContent
+      .filter((node) => node.type === "imageUrl")
+      .map((node) => node.value);
+    const responses = await Promise.all(
+      imageURLs.map(async (url) => {
+        try {
+          return { file: await ImageURLToFile(url) };
+        } catch (error: any) {
+          let errorMessage = error.message;
+          if (error.cause === "FETCH_ERROR") {
+            errorMessage = t("errors.failedToFetchImage");
+          } else if (error.cause === "UNSUPPORTED") {
+            errorMessage = t("errors.unsupportedFileType");
+          }
+          return { errorMessage };
+        }
+      }),
+    );
+
+    const imageFiles = responses
+      .filter((response): response is { file: File } => !!response.file)
+      .map((response) => response.file);
+    await insertImages(editor, imageFiles, sceneX, sceneY);
+    const error = responses.find((response) => !!response.errorMessage);
+    if (error && error.errorMessage) {
+      editor.setState({ errorMessage: error.errorMessage });
+    }
+  } else {
+    const textNodes = mixedContent.filter((node) => node.type === "text");
+    if (textNodes.length) {
+      addTextFromPaste(
+        editor,
+        textNodes.map((node) => node.value).join("\n\n"),
+        isPlainPaste,
+      );
+    }
+  }
+};
+
 const insertClipboardContent = async (
   editor: CaliburnEditorComponent,
   data: ClipboardData,
@@ -282,6 +341,32 @@ const insertClipboardContent = async (
   if (data.errorMessage) {
     editor.setState({ errorMessage: data.errorMessage });
     return;
+  }
+
+  // ------------------- Mixed content with no files -------------------
+  if (dataTransferFiles.length === 0 && !isPlainPaste && data.mixedContent) {
+    await addElementsFromMixedContentPaste(editor, data.mixedContent, {
+      isPlainPaste,
+      sceneX,
+      sceneY,
+    });
+    return;
+  }
+
+  // ------------------- Spreadsheet -------------------
+
+  if (!isPlainPaste && data.text) {
+    const result = tryParseSpreadsheet(data.text);
+    if (result.ok) {
+      editor.setState({
+        openDialog: {
+          name: "charts",
+          data: result.data,
+          rawText: data.text,
+        },
+      });
+      return;
+    }
   }
 
   // ------------------- Images or SVG code -------------------
@@ -327,6 +412,32 @@ const insertClipboardContent = async (
   // ------------------- Only textual stuff remaining -------------------
   if (!data.text) {
     return;
+  }
+
+  // ------------------- Successful Mermaid -------------------
+  if (!isPlainPaste && isMaybeMermaidDefinition(data.text)) {
+    const api = await import("@excalidraw/mermaid-to-excalidraw");
+    try {
+      const { elements: skeletonElements, files = {} } =
+        await api.parseMermaidToExcalidraw(data.text);
+
+      const elements = convertToExcalidrawElements(skeletonElements, {
+        regenerateIds: true,
+      });
+
+      addElementsFromPasteOrLibrary(editor, {
+        elements,
+        files,
+        position:
+          editor.editorInterface.formFactor === "desktop" ? "cursor" : "center",
+      });
+
+      return;
+    } catch (err: any) {
+      console.warn(
+        `parsing pasted text as mermaid definition failed: ${err.message}`,
+      );
+    }
   }
 
   // ------------------- Pure embeddable URLs -------------------
