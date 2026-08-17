@@ -76,6 +76,7 @@ import {
   isMeasureTextSupported,
   isTextElement,
   makeNextSelectedElementIds,
+  maybeHandleArrowPointlikeDrag,
   newElementWith,
   normalizeSVG,
   syncInvalidIndices,
@@ -2118,7 +2119,10 @@ export class CaliburnEditorComponent
       this.batchCommits(() => this.onSpaceKeyUp());
     }
     if (event.key === KEYS.ALT) {
-      this.batchCommits(() => this.bucketFill.closeTemporaryEyeDropper());
+      this.batchCommits(() => {
+        this.bucketFill.closeTemporaryEyeDropper();
+        maybeHandleArrowPointlikeDrag({ app: this as any, event });
+      });
     }
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
     if (!event[KEYS.CTRL_OR_CMD]) {
@@ -2130,6 +2134,10 @@ export class CaliburnEditorComponent
           this.arrowText.refresh();
         });
       }
+
+      this.batchCommits(() =>
+        maybeHandleArrowPointlikeDrag({ app: this as any, event }),
+      );
     }
 
     this.batchCommits(() => this.flowchart.handleKeyEvent(event));
@@ -2317,10 +2325,14 @@ export class CaliburnEditorComponent
       return;
     }
 
-    if (event.key === KEYS.ALT && this.state.activeTool.type === "bucketfill") {
-      this.bucketFill.openTemporaryEyeDropper();
-      event.preventDefault();
-      return;
+    // Handle Alt key for bind mode
+    if (event.key === KEYS.ALT) {
+      if (this.state.activeTool.type === "bucketfill") {
+        this.bucketFill.openTemporaryEyeDropper();
+        event.preventDefault();
+        return;
+      }
+      maybeHandleArrowPointlikeDrag({ app: this as any, event });
     }
 
     if (this.actionManager.handleKeyDown(event)) {
@@ -2403,6 +2415,8 @@ export class CaliburnEditorComponent
       // the toggle changes what a text-tool click at the current position
       // would do, with no pointermove to refresh the affordance
       this.arrowText.refresh();
+
+      maybeHandleArrowPointlikeDrag({ app: this as any, event });
     }
 
     if (isArrowKey(event.key)) {

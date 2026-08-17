@@ -17,7 +17,9 @@ import {
   getBindingStrategyForDraggingBindingElementEndpoints,
   getHoveredElementForBinding,
   getSnapOutlineMidPoint,
+  handleFocusPointDrag,
   handleFocusPointHover,
+  handleFocusPointPointerUp,
   hitElementItself,
   isBindingElement,
   isBindingEnabled,
@@ -408,6 +410,31 @@ export const maybeDragLinearPoint = (
         isDragging: true,
         segmentMidPointHoveredCoords: ret.segmentMidPointHoveredCoords,
         initialState: ret.initialState,
+      },
+    });
+    return true;
+  }
+
+  // Handle focus point dragging if needed
+  if (linearElementEditor.draggedFocusPointBinding) {
+    handleFocusPointDrag(
+      linearElementEditor,
+      elementsMap,
+      pointerCoords,
+      editor.scene,
+      editor.state,
+      getEffectiveGridSize(editor),
+      event.altKey,
+    );
+    editor.setState({
+      selectedLinearElement: {
+        ...linearElementEditor,
+        isDragging: false,
+        selectedPointsIndices: [],
+        initialState: {
+          ...linearElementEditor.initialState,
+          lastClickedPoint: -1,
+        },
       },
     });
     return true;
@@ -970,7 +997,22 @@ export const handleLinearEditorPointerUp = (
       }
     }
   } else if (editor.state.selectedLinearElement) {
-    if (editor.state.selectedLinearElement.isDragging) {
+    if (editor.state.selectedLinearElement.draggedFocusPointBinding) {
+      handleFocusPointPointerUp(
+        editor.state.selectedLinearElement,
+        editor.scene,
+      );
+      editor.setState({
+        selectedLinearElement: {
+          ...editor.state.selectedLinearElement,
+          draggedFocusPointBinding: null,
+          initialState: {
+            ...editor.state.selectedLinearElement.initialState,
+            arrowOtherEndpointInitialBinding: null,
+          },
+        },
+      });
+    } else if (editor.state.selectedLinearElement.isDragging) {
       editor.setState({
         selectedLinearElement: {
           ...editor.state.selectedLinearElement,

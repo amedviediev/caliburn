@@ -18,11 +18,13 @@ import {
   getElementsInGroup,
   getElementsWithinSelection,
   getSelectedElements,
+  handleFocusPointPointerDown,
   hasBoundingBox,
   hitElementBoundingBox,
   hitElementBoundingBoxOnly,
   hitElementBoundText,
   hitElementItself,
+  isBindingElement,
   isCursorInFrame,
   isElbowArrow,
   isElementInGroup,
@@ -361,12 +363,13 @@ export const handleSelectionPointerDown = (
   }
 
   if (editor.state.selectedLinearElement) {
+    const linearElementEditor = editor.state.selectedLinearElement;
     const ret = LinearElementEditor.handlePointerDown(
       event as any,
       editor as any,
       editor.store,
       pointerDownState.origin,
-      editor.state.selectedLinearElement,
+      linearElementEditor,
       editor.scene,
     );
     if (ret.hitElement) {
@@ -377,6 +380,47 @@ export const handleSelectionPointerDown = (
     }
     if (ret.didAddPoint) {
       return null;
+    }
+
+    // Also check at current pointer position if focus point is being hovered
+    // (in case we're clicking directly without a prior move event)
+    const elementsMap = editor.scene.getNonDeletedElementsMap();
+    const arrow = LinearElementEditor.getElement(
+      linearElementEditor.elementId,
+      elementsMap,
+    );
+
+    if (arrow && isBindingElement(arrow)) {
+      const { hitFocusPoint, pointerOffset, arrowOtherEndpointInitialBinding } =
+        handleFocusPointPointerDown(
+          arrow,
+          pointerDownState,
+          elementsMap,
+          editor.state,
+        );
+
+      // If focus point is hit, update state and prevent element selection
+      if (hitFocusPoint) {
+        editor.setState({
+          selectedLinearElement: {
+            ...linearElementEditor,
+            hoveredFocusPointBinding: hitFocusPoint,
+            draggedFocusPointBinding: hitFocusPoint,
+            pointerOffset,
+            initialState: {
+              ...linearElementEditor.initialState,
+              arrowOtherEndpointInitialBinding,
+            },
+          },
+        });
+        // upstream's `return false` here: the selection handling below is
+        // skipped, but the gesture still starts — its caller goes on to
+        // create the box-selection element, which is caliburn's tail
+        if (editor.state.activeTool.type !== "lasso") {
+          createSelectionElementOnPointerDown(editor, pointerDownState);
+        }
+        return pointerDownState;
+      }
     }
   }
 

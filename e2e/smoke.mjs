@@ -2605,6 +2605,119 @@ export const runSuite = async (browser, url, runner) => {
         },
       },
     );
+
+    await runner.check(
+      "focuspoint.drag-moves-the-binding",
+      "dragging a bound arrow's focus point moves the binding and the release clears the drag",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page, [600, 300], [800, 500]);
+
+        await page.keyboard.press("a");
+        await waitFor(page, () => window.h.state.activeTool.type === "arrow", {
+          message: "the arrow tool's shortcut did not activate it",
+        });
+        // into the shape, which binds the arrow's end to it
+        await dragCanvas(page, [300, 250], [592, 330]);
+        await waitFor(
+          page,
+          () =>
+            window.h.elements.some(
+              (el) => el.type === "arrow" && el.endBinding,
+            ) && window.h.state.selectedLinearElement != null,
+          { message: "the drawn arrow did not end up bound and selected" },
+        );
+
+        // the focus point: where the binding is fixed within the shape
+        const scenePoint = await page.evaluate(() => {
+          const els = window.h.elements.filter((el) => !el.isDeleted);
+          const arrow = els.find((el) => el.type === "arrow");
+          const shape = els.find((el) => el.id === arrow.endBinding.elementId);
+          const [ratioX, ratioY] = arrow.endBinding.fixedPoint;
+          return [
+            shape.x + ratioX * shape.width,
+            shape.y + ratioY * shape.height,
+          ];
+        });
+        const at = await sceneToViewport(page, scenePoint);
+
+        await page.mouse.move(at[0], at[1]);
+        await waitFor(
+          page,
+          () =>
+            window.h.state.selectedLinearElement?.hoveredFocusPointBinding ===
+            "end",
+          { message: "the pointer did not land on the focus point" },
+        );
+
+        const before = await page.evaluate(
+          () =>
+            window.h.elements.find((el) => el.type === "arrow").endBinding
+              .fixedPoint,
+        );
+
+        await page.mouse.down();
+        await waitFor(
+          page,
+          () =>
+            window.h.state.selectedLinearElement?.draggedFocusPointBinding ===
+            "end",
+          { message: "pressing the focus point did not arm its drag" },
+        );
+        await page.mouse.move(at[0] - 50, at[1] + 40, { steps: 8 });
+        await waitFor(
+          page,
+          (previous) => {
+            const binding = window.h.elements.find(
+              (el) => el.type === "arrow",
+            ).endBinding;
+            return (
+              binding.fixedPoint[0] !== previous[0] ||
+              binding.fixedPoint[1] !== previous[1]
+            );
+          },
+          {
+            args: [before],
+            message: "dragging the focus point did not move the binding",
+          },
+        );
+
+        const dragged = await page.evaluate(
+          () =>
+            window.h.elements.find((el) => el.type === "arrow").endBinding
+              .fixedPoint,
+        );
+        await page.mouse.up();
+        await waitFor(
+          page,
+          () =>
+            window.h.state.selectedLinearElement?.draggedFocusPointBinding ==
+            null,
+          { message: "the release did not clear the armed focus point drag" },
+        );
+
+        const committed = await page.evaluate(
+          () =>
+            window.h.elements.find((el) => el.type === "arrow").endBinding
+              .fixedPoint,
+        );
+        expectEqual(
+          `${committed[0]},${committed[1]}`,
+          `${dragged[0]},${dragged[1]}`,
+          "the bound focus point after the release",
+        );
+        expect(
+          committed[0] < before[0] && committed[1] > before[1],
+          `the focus point moved to ${committed} from ${before}, not down and to the left`,
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
   });
 
   // --------------------------------------------------------------- pen mode
