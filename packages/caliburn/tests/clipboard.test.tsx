@@ -20,6 +20,7 @@ import { h } from "../src/test-hook";
 import { API } from "./helpers/api";
 import { Pointer, Keyboard } from "./helpers/ui";
 import {
+  fireEvent,
   render,
   waitFor,
   GlobalTestState,
@@ -122,6 +123,25 @@ describe("general paste behavior", () => {
       expect(h.elements.length).toBe(1);
       expect(h.elements[0].seed).toBe(rectangle.seed);
     });
+  });
+
+  it("tracks the cursor off the canvas, so a paste over the UI lands under the pointer", async () => {
+    mouse.moveTo(100, 100);
+    expect(h.app.viewport.lastPosition).toEqual({ x: 100, y: 100 });
+
+    // upstream tracks the cursor on `document`, so a move over an island —
+    // or anywhere else off the canvas — counts just the same
+    fireEvent.pointerMove(document.body, { clientX: 300, clientY: 400 });
+    expect(h.app.viewport.lastPosition).toEqual({ x: 300, y: 400 });
+
+    pasteWithCtrlCmdV("caliburn");
+    await waitFor(() => {
+      expect(h.elements.length).toBe(1);
+    });
+    // a pasted line is centred on the cursor
+    const pasted = h.elements[0];
+    expect(pasted.x + pasted.width / 2).toBeCloseTo(300);
+    expect(pasted.y + pasted.height / 2).toBeCloseTo(400);
   });
 });
 

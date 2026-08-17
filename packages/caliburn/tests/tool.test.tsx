@@ -15,7 +15,7 @@ import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { Pointer } from "./helpers/ui";
+import { Keyboard, Pointer } from "./helpers/ui";
 import { act, fireEvent, GlobalTestState, render } from "./test-utils";
 
 import type { CaliburnImperativeAPI as ExcalidrawImperativeAPI } from "../src/editor.component";
@@ -346,5 +346,26 @@ describe("props.activeTool (forced tool)", () => {
       />,
     );
     expect(h.state.activeTool.type).toBe("laser");
+  });
+});
+
+describe("missing pointer-up cleanup", () => {
+  const mouse = new Pointer("mouse");
+
+  it("hands back a hanging lasso-from-selection gesture", async () => {
+    await render(<Excalidraw />);
+    mouse.reset();
+
+    mouse.downAt(100, 100);
+    Keyboard.withModifierKeys({ alt: true }, () => {
+      mouse.moveTo(150, 150);
+    });
+    expect(h.state.activeTool.type).toBe("lasso");
+    expect(h.state.activeTool.fromSelection).toBe(true);
+
+    // the release never arrives; the focus cleanup replays the gesture's
+    // teardown, which reverts the tool as any real release would
+    fireEvent.focus(window);
+    expect(h.state.activeTool.type).toBe("selection");
   });
 });

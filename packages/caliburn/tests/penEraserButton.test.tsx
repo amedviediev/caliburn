@@ -178,15 +178,19 @@ describe("pen hardware eraser button", () => {
     eraserButtonDown();
     expect(h.state.activeTool.type).toBe("eraser");
 
-    // the missing-pointer-up cleanup runs on window focus; the subscription
-    // is deferred by a frame so a focus arriving with this very pointerdown
-    // (coming from a blurred document) doesn't cancel the erase
+    // the missing-pointer-up cleanup runs on window focus and replays the
+    // whole pointer-up teardown, whose tail hands the tool back exactly as a
+    // real release would
     fireEvent.focus(window);
-    expect(h.state.activeTool.type).toBe("eraser");
+    expect(h.state.activeTool.type).toBe("selection");
 
+    // the pen-eraser restore subscribes a frame later, so a focus arriving
+    // with this very pointerdown (coming from a blurred document) can't reach
+    // it; once it can, the eraser is already gone and it no-ops — which is why
+    // the tool it interrupted is still sitting in `lastActiveTool`
     await nextAnimationFrame();
     fireEvent.focus(window);
     expect(h.state.activeTool.type).toBe("selection");
-    expect(h.state.activeTool.lastActiveTool).toBe(null);
+    expect(h.state.activeTool.lastActiveTool?.type).toBe("selection");
   });
 });

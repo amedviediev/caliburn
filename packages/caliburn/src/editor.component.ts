@@ -1630,6 +1630,7 @@ export class CaliburnEditorComponent
 
     document.addEventListener("keydown", this.onKeyDown);
     document.addEventListener("keyup", this.onKeyUp);
+    document.addEventListener("pointermove", this.updateCurrentCursorPosition);
     document.addEventListener("paste", this.pasteFromClipboard);
     document.addEventListener("copy", this.onCopy);
     document.addEventListener("cut", this.onCut);
@@ -1651,6 +1652,24 @@ export class CaliburnEditorComponent
 
   private onWindowFocus = () => {
     this.maybeCleanupAfterMissingPointerUp(null);
+  };
+
+  /**
+   * Upstream's `updateCurrentCursorPosition` (`App.tsx`), bound to DOCUMENT
+   * pointermove so the last cursor position keeps tracking while the pointer
+   * is over the UI islands, the sidebar, or anywhere else off the canvas —
+   * paste placement, the eye dropper, the cursor hints and the wheel-zoom
+   * anchor all read it. Upstream registers it from both the navigation-only
+   * and the view+edit listener branches, so it is live whenever either is on
+   * and frozen when neither is; caliburn registers once and reads the same
+   * pair of gates here.
+   */
+  private updateCurrentCursorPosition = (event: PointerEvent) => {
+    if (!this.isInteractionEnabled() && !this.isNavigationEnabled()) {
+      return;
+    }
+    this.viewport.lastPosition.x = event.clientX;
+    this.viewport.lastPosition.y = event.clientY;
   };
 
   /**
@@ -1746,6 +1765,10 @@ export class CaliburnEditorComponent
     endPointerSession();
     document.removeEventListener("keydown", this.onKeyDown);
     document.removeEventListener("keyup", this.onKeyUp);
+    document.removeEventListener(
+      "pointermove",
+      this.updateCurrentCursorPosition,
+    );
     document.removeEventListener("paste", this.pasteFromClipboard);
     document.removeEventListener("copy", this.onCopy);
     document.removeEventListener("cut", this.onCut);
@@ -3368,9 +3391,6 @@ export class CaliburnEditorComponent
         this.savePointer(event.clientX, event.clientY, this.state.cursorButton);
       }
       if (this.isNavigationEnabled()) {
-        // wheel zoom is anchored on `viewport.lastPosition`
-        this.viewport.lastPosition.x = event.clientX;
-        this.viewport.lastPosition.y = event.clientY;
         // two-finger pinch zoom/pan (single-pointer panning is handled by
         // the pan session set up on pointerdown)
         updateMultiTouchGesture(this, event);
@@ -3386,9 +3406,6 @@ export class CaliburnEditorComponent
 
     this.savePointer(event.clientX, event.clientY, this.state.cursorButton);
     this.lastPointerMoveEvent = event;
-
-    this.viewport.lastPosition.x = event.clientX;
-    this.viewport.lastPosition.y = event.clientY;
 
     const scenePointer = viewportCoordsToSceneCoords(event, this.state);
     this.lastPointerMoveCoords = {
@@ -3749,12 +3766,12 @@ export class CaliburnEditorComponent
         }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
         // upstream's tail — the tool revert every branch above carries its
-        // own copy of. A deselect ends upstream's handler before it, and a
-        // synthesized teardown (the missing-pointer-up replay, which runs
-        // this with the gesture's pointer DOWN event) must not spend the
-        // user's tool on a release that never happened, the same rule the
-        // armed bucket fill above follows.
-        if (!deselected && isGenuinePointerUp) {
+        // own copy of. Only a deselect skips it: that ends upstream's handler
+        // before the tail. A missing-pointer-up replay reaches it as any
+        // other release does, since upstream's cleanup emitter re-runs the
+        // whole pointer-up handler with the gesture's pointer DOWN event
+        // (`App.tsx`'s `missingPointerEventCleanupEmitter.once`).
+        if (!deselected) {
           revertActiveToolOnPointerUp(this);
         }
       }
