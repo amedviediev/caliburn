@@ -30,6 +30,7 @@ import {
   MQ_RIGHT_SIDEBAR_MIN_WIDTH,
   POINTER_BUTTON,
   POINTER_EVENTS,
+  TAP_TWICE_TIMEOUT,
   ZOOM_STEP,
   createUserAgentDescriptor,
   debounce,
@@ -2891,6 +2892,29 @@ export class CaliburnEditorComponent
   handleCanvasPanUsingWheelOrSpaceDrag = (event: PointerEvent | MouseEvent) =>
     panCanvasOnWheelOrSpaceDrag(this, event as PointerEvent);
 
+  /**
+   * Upstream's `handleCanvasClick` (`App.tsx`): keeps the last two completed
+   * canvas clicks so `shouldHandleBrowserCanvasDoubleClick` can tell a real
+   * double click from two clicks that drifted apart.
+   */
+  handleCanvasClick(event: MouseEvent) {
+    if (!this.isInteractionEnabled()) {
+      return;
+    }
+    if (event.button !== POINTER_BUTTON.MAIN) {
+      this.lastCompletedCanvasClicks = [];
+      return;
+    }
+
+    this.lastCompletedCanvasClicks = [
+      ...this.lastCompletedCanvasClicks.slice(-1),
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    ];
+  }
+
   handleCanvasDoubleClick(event: MouseEvent) {
     this.batchCommits(() => handleCanvasDoubleClick(this, event));
   }
@@ -3610,6 +3634,13 @@ export class CaliburnEditorComponent
     }
 
     if (isGenuinePointerUp) {
+      // upstream's `isDoubleClick` (`App.tsx`), read by the pointer-up text
+      // edit so the second release of a double click leaves the caret to the
+      // double-click handler instead of placing it at the click point
+      this.lastPointerUpIsDoubleClick =
+        this.lastPointerUpEvent != null &&
+        event.timeStamp - this.lastPointerUpEvent.timeStamp <=
+          TAP_TWICE_TIMEOUT;
       this.lastPointerUpEvent = event;
     }
 
