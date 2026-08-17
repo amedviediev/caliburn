@@ -96,6 +96,7 @@ import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { LassoTrail } from "@excalidraw/excalidraw/lasso";
 import { LaserTrails } from "@excalidraw/excalidraw/laserTrails";
 import { AppCursor } from "@excalidraw/excalidraw/components/App.cursor";
+import { AppStateObserver } from "@excalidraw/excalidraw/components/AppStateObserver";
 import {
   AppViewport,
   RIGHT_SIDEBAR_WIDTH,
@@ -125,6 +126,7 @@ import type {
   OrderedExcalidrawElement,
   Theme,
 } from "@excalidraw/element/types";
+import type { OnStateChange } from "@excalidraw/excalidraw/components/AppStateObserver";
 import type { ExportedElements } from "@excalidraw/excalidraw/data";
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 import type { ElementUpdate } from "@excalidraw/element";
@@ -441,6 +443,7 @@ export interface CaliburnImperativeAPI {
       event: PointerEvent,
     ) => void,
   ) => () => void;
+  onStateChange: CaliburnEditorComponent["onStateChange"];
   onEvent: CaliburnEditorComponent["onEvent"];
 }
 
@@ -965,6 +968,21 @@ export class CaliburnEditorComponent
     CaliburnImperativeAPIEventMap,
     typeof editorLifecycleEventBehavior
   >["on"];
+
+  private readonly appStateObserver = new AppStateObserver(() => this.state);
+
+  readonly onStateChange: OnStateChange = this.appStateObserver.onStateChange;
+
+  /**
+   * The appState the observer was last flushed against — upstream reads it off
+   * `componentDidUpdate(prevProps, prevState)`, caliburn snapshots it at the
+   * same point in `commit()`. Seeded with the constructed state (not lazily at
+   * the first flush) because a child's field initializer can subscribe before
+   * `ngOnInit` seeds appState from the inputs — upstream applies those in the
+   * constructor, ahead of any consumer, so this first flush is what closes
+   * the same gap here.
+   */
+  private observedState: AppState = this.state;
 
   /** emits a follow/unfollow intent to the host (which owns the
    *  `userToFollow` state) via both the `onUserFollow` prop and the
@@ -1520,7 +1538,9 @@ export class CaliburnEditorComponent
     this.api = { ...api, isDestroyed: true };
     for (const key of Object.keys(this.api) as (keyof typeof api)[]) {
       if (
-        (key.startsWith("get") || key === "onEvent") &&
+        (key.startsWith("get") ||
+          key === "onStateChange" ||
+          key === "onEvent") &&
         typeof this.api[key] === "function"
       ) {
         (this.api as any)[key] = () => {
@@ -1559,6 +1579,7 @@ export class CaliburnEditorComponent
     this.onChangeEmitter.clear();
     this.store.onStoreIncrementEmitter.clear();
     this.store.onDurableIncrementEmitter.clear();
+    this.appStateObserver.clear();
     this.editorLifecycleEvents.clear();
     this.scene.destroy();
   }
@@ -3425,6 +3446,7 @@ export class CaliburnEditorComponent
       onUserFollow: (cb) => this.onUserFollowEmitter.on(cb),
       onPointerDown: (cb) => this.onPointerDownEmitter.on(cb),
       onPointerUp: (cb) => this.onPointerUpEmitter.on(cb),
+      onStateChange: this.onStateChange,
       onEvent: this.onEvent,
     };
   }
@@ -4060,6 +4082,9 @@ export class CaliburnEditorComponent
     // must be updated *before* the change listeners are triggered below
     this.maybeEmitInitialize();
     this.changeGeneration.update((generation) => generation + 1);
+    const prevState = this.observedState;
+    this.observedState = this.state;
+    this.appStateObserver.flush(prevState);
     this.updateEmbeddables();
     // assigned rather than `setState`d, which would re-enter this commit; the
     // flag is not observed by the store, so the delta is unaffected either way

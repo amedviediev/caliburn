@@ -15,24 +15,28 @@ import type {
 } from "@excalidraw/excalidraw/types";
 
 /**
- * caliburn gate — both cases below are skipped: the surface under test is
- * React-only and has no caliburn counterpart.
+ * caliburn gate — both cases below stay skipped, and what stays React-only is
+ * now only their *measurement*: `renderSpy`, which fires once per React render
+ * of a consumer component mounted under `ExcalidrawAPIContext.Provider`. There
+ * is no render to count in caliburn (a signal read is not a render), and both
+ * bodies mount `useAppStateValue` / `useOnAppStateChange`
+ * (`hooks/useAppStateValue.ts`) themselves, so as written they exercise the
+ * vendored React hooks, not the Angular editor — which the vendored copy of
+ * this same file (`packages/excalidraw/tests/appStateHooks.test.tsx`) already
+ * does in the `editor` project of this very workspace run.
  *
- * `useAppStateValue` / `useOnAppStateChange` (`hooks/useAppStateValue.ts`)
- * are React hooks read through `ExcalidrawAPIContext`, and both assertions
- * are React *render-count* assertions (`renderSpy` fires once per React
- * render of the consumer component). Caliburn has no hooks, no React
- * context, and no render-count notion to translate them into. The one piece
- * of the contract underneath that is framework-free — the
- * `ExcalidrawImperativeAPI.onStateChange` / `AppStateObserver` subscription
- * the hooks are built on — is itself unported: caliburn's
- * `CaliburnImperativeAPI` (`src/editor.component.ts`) carries no
- * `onStateChange`, and no `AppStateObserver` is instantiated anywhere in
- * `packages/caliburn/src`.
- *
- * The bodies are kept verbatim so the port is unskippable-in-place once that
- * API surface lands; as written they would exercise the vendored React
- * implementation only, not the Angular editor.
+ * What the two cases assert *underneath* the render counts is framework-free,
+ * and is now ported as caliburn-authored suites against the real editor:
+ *  - "rerenders when the selected value changes" → `appStateValue.test.ts`,
+ *    where the value tracks the selected prop and a downstream `computed`
+ *    re-evaluates on that change and on nothing else (the counter that stands
+ *    in for the render count).
+ *  - "notifies without rerendering" → `onStateChange.test.tsx`, where
+ *    `api.onStateChange` delivers `(value, appState)` for each change,
+ *    honours `once`/unsubscribe/the promise form, and never touches a view.
+ * `useOnAppStateChange`'s extra hook-level courtesy — invoking the callback
+ * once on mount, before any change — has no counterpart on the API itself;
+ * `appStateValue()` covers that need by seeding its signal eagerly.
  */
 
 const createAppState = (): AppState => ({
