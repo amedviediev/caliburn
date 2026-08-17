@@ -164,7 +164,8 @@ export const getElementHitThreshold = (
   );
 };
 
-const hitElement = (
+/** upstream `App.hitElement` */
+export const hitElement = (
   editor: CaliburnEditorComponent,
   x: number,
   y: number,

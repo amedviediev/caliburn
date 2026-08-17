@@ -53,12 +53,17 @@ import {
   ShapeCache,
   Store,
   embeddableURLValidator,
+  getCommonBounds,
+  getCursorForResizingElement,
+  getElementWithTransformHandleType,
   getFrameChildrenInsertionIndex,
   getBoundTextElement,
   getObservedAppState,
+  getTransformHandleTypeFromCoords,
   hasBackground,
   isElementInGroup,
   isBindingElement,
+  isElbowArrow,
   isEmbeddableElement,
   isFrameLikeElement,
   isImageElement,
@@ -326,6 +331,7 @@ import {
 } from "./create-interaction";
 import {
   finalizeLinearOnPointerUp,
+  handleHoverSelectedLinearElement,
   handleLinearEditorPointerUp,
   handleLinearElementOnPointerDown,
   handleMultiElementPointerMove,
@@ -3507,6 +3513,101 @@ export class CaliburnEditorComponent
     scenePointer: { x: number; y: number },
     event: PointerEvent,
   ) {
+    // upstream opens the hover block here with the POINTER cursor over a text
+    // element's auto-resize handle (`isHittingTextAutoResizeHandle`,
+    // App.tsx:7927-7930) — that hit test is not ported yet; the README's
+    // known gaps track it.
+
+    // upstream's pointer-move gate (App.tsx:7908-7920) admits only these tools
+    // to the hover affordances, while caliburn gates its own branches further
+    // down (the laser short-circuit, `isSelectionLikeTool`) — so the
+    // transform-handle block carries upstream's tool list itself. Its
+    // `!isOverScrollBar` conditions are dropped throughout: caliburn renders
+    // no canvas scrollbars.
+    if (
+      isSelectionLikeTool(this.state.activeTool.type) ||
+      this.state.activeTool.type === "text" ||
+      this.state.activeTool.type === "eraser" ||
+      this.state.activeTool.type === "laser"
+    ) {
+      const elements = this.scene.getNonDeletedElements();
+
+      const selectedElements = this.scene.getSelectedElements(this.state);
+
+      if (
+        selectedElements.length === 1 &&
+        !this.state.selectedLinearElement?.isEditing
+      ) {
+        // for linear elements, we'd like to prioritize point dragging over edge resizing
+        // therefore, we update and check hovered point index first
+        if (this.state.selectedLinearElement) {
+          handleHoverSelectedLinearElement(
+            this,
+            this.state.selectedLinearElement,
+            scenePointer.x,
+            scenePointer.y,
+          );
+        }
+
+        if (
+          (!this.state.selectedLinearElement ||
+            this.state.selectedLinearElement.hoverPointIndex === -1) &&
+          this.state.openDialog?.name !== "elementLinkSelector" &&
+          !(
+            selectedElements.length === 1 && isElbowArrow(selectedElements[0])
+          ) &&
+          // HACK: Disable transform handles for linear elements on mobile until a
+          // better way of showing them is found
+          !(
+            isLinearElement(selectedElements[0]) &&
+            (this.editorInterface.userAgent.isMobileDevice ||
+              selectedElements[0].points.length === 2)
+          )
+        ) {
+          const elementWithTransformHandleType =
+            getElementWithTransformHandleType(
+              elements,
+              this.state,
+              scenePointer.x,
+              scenePointer.y,
+              this.state.zoom,
+              event.pointerType as PointerType,
+              this.scene.getNonDeletedElementsMap(),
+              this.editorInterface,
+            );
+          if (
+            elementWithTransformHandleType &&
+            elementWithTransformHandleType.transformHandleType
+          ) {
+            this.cursor.set(
+              getCursorForResizingElement(elementWithTransformHandleType),
+            );
+            return;
+          }
+        }
+      } else if (
+        selectedElements.length > 1 &&
+        this.state.openDialog?.name !== "elementLinkSelector"
+      ) {
+        const transformHandleType = getTransformHandleTypeFromCoords(
+          getCommonBounds(selectedElements),
+          scenePointer.x,
+          scenePointer.y,
+          this.state.zoom,
+          event.pointerType as PointerType,
+          this.editorInterface,
+        );
+        if (transformHandleType) {
+          this.cursor.set(
+            getCursorForResizingElement({
+              transformHandleType,
+            }),
+          );
+          return;
+        }
+      }
+    }
+
     // upstream's hover path leaves the eraser alone: it reaches here (its
     // tool gate lets the eraser through so the transform-handle cursors
     // still run) and returns before every hit-element affordance below
@@ -3554,6 +3655,11 @@ export class CaliburnEditorComponent
       return;
     }
 
+    // upstream's `else if` chain (App.tsx:8043-8104): each branch is terminal
+    // for the cursor, but every one of them falls through to the selected
+    // linear element's hover pass below (App.tsx:8106) — which is what draws
+    // the point & midpoint handles while the line editor is open, the one
+    // case the transform-handle block above skips
     if (
       hitElement &&
       (hitElement.link || isEmbeddableElement(hitElement)) &&
@@ -3562,32 +3668,35 @@ export class CaliburnEditorComponent
       !this.state.showHyperlinkPopup
     ) {
       this.setState({ showHyperlinkPopup: "info" });
-      return;
+    } else if (this.state.viewModeEnabled) {
+      this.cursor.set(CURSOR_TYPE.GRAB);
+    } else if (isSelectionLikeTool(this.state.activeTool.type)) {
+      if (
+        // if using cmd/ctrl, we're not dragging
+        !event[KEYS.CTRL_OR_CMD] &&
+        // editing text -> don't show move cursor when hovering over its bbox
+        hitElement?.id !== this.state.editingTextElement?.id &&
+        (hitElement ||
+          isHittingCommonBoundingBoxOfSelectedElements(
+            this,
+            scenePointer,
+            this.scene.getSelectedElements(this.state),
+          )) &&
+        !hitElement?.locked
+      ) {
+        this.cursor.set(CURSOR_TYPE.MOVE);
+      } else {
+        this.cursor.reset();
+      }
     }
 
-    if (this.state.viewModeEnabled) {
-      this.cursor.set(CURSOR_TYPE.GRAB);
-      return;
-    }
-    if (!isSelectionLikeTool(this.state.activeTool.type)) {
-      return;
-    }
-    if (
-      // if using cmd/ctrl, we're not dragging
-      !event[KEYS.CTRL_OR_CMD] &&
-      // editing text -> don't show move cursor when hovering over its bbox
-      hitElement?.id !== this.state.editingTextElement?.id &&
-      (hitElement ||
-        isHittingCommonBoundingBoxOfSelectedElements(
-          this,
-          scenePointer,
-          this.scene.getSelectedElements(this.state),
-        )) &&
-      !hitElement?.locked
-    ) {
-      this.cursor.set(CURSOR_TYPE.MOVE);
-    } else {
-      this.cursor.reset();
+    if (this.state.selectedLinearElement) {
+      handleHoverSelectedLinearElement(
+        this,
+        this.state.selectedLinearElement,
+        scenePointer.x,
+        scenePointer.y,
+      );
     }
   }
 

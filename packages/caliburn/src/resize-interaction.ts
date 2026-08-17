@@ -75,6 +75,12 @@ export const maybeArmResizeOnPointerDown = (
       isLinearElement(selectedElements[0]) &&
       (editor.editorInterface.userAgent.isMobileDevice ||
         selectedElements[0].points.length === 2)
+    ) &&
+    // a hovered linear point wins over an edge resize handle, so the press
+    // that follows the hover must not arm a resize instead of the point drag
+    !(
+      editor.state.selectedLinearElement &&
+      editor.state.selectedLinearElement.hoverPointIndex !== -1
     )
   ) {
     const elementWithTransformHandleType = getElementWithTransformHandleType(

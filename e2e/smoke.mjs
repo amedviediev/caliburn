@@ -408,6 +408,12 @@ const elementPositions = (page) =>
       .map((el) => ({ x: el.x, y: el.y })),
   );
 
+/** the cursor the editor has painted on the interactive canvas */
+const canvasCursor = (page) =>
+  page.evaluate(
+    () => document.querySelector("canvas.interactive")?.style.cursor ?? null,
+  );
+
 /** a toolbar button's icon — the `<svg>` a drag crossing the toolbar passes over */
 const TOOLBAR_ICON = '[data-testid="toolbar-ellipse"] svg';
 
@@ -2375,6 +2381,72 @@ export const runSuite = async (browser, url, runner) => {
         );
         const els = await elements(page);
         expectEqual(els.length, 0, "a space-hold pan must not create elements");
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+  });
+
+  // ------------------------------------------------------- hover affordances
+  await withPage("hover", async (page) => {
+    runner.group("hover affordances");
+
+    await runner.check(
+      "hover.resize-and-point-cursors",
+      "a transform handle hovers a resize cursor, a line's point a pointer one",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page, [500, 400], [700, 550]);
+        // the nw transform handle, which sits on the selection's top-left corner
+        await page.mouse.move(500, 400);
+        await waitFor(
+          page,
+          () =>
+            document.querySelector("canvas.interactive").style.cursor ===
+            "nwse-resize",
+          { message: "hovering the nw transform handle set no resize cursor" },
+        );
+
+        // the shape's middle, where there is no handle to resize from
+        await page.mouse.move(600, 475);
+        await waitFor(
+          page,
+          () =>
+            document.querySelector("canvas.interactive").style.cursor ===
+            "move",
+          { message: "hovering the shape itself set no move cursor" },
+        );
+
+        await resetEditor(page);
+        await page.keyboard.press("l");
+        await waitFor(page, () => window.h.state.activeTool.type === "line", {
+          message: "the line tool's shortcut did not activate it",
+        });
+        await dragCanvas(page, [500, 700], [800, 700]);
+        await waitFor(
+          page,
+          () => window.h.state.selectedLinearElement != null,
+          { message: "the drawn line did not end up selected" },
+        );
+
+        // its last point, which the hover must claim for the point handle
+        await page.mouse.move(800, 700);
+        await waitFor(
+          page,
+          () => window.h.state.selectedLinearElement?.hoverPointIndex === 1,
+          {
+            message: "hovering the line's last point set no hoverPointIndex",
+          },
+        );
+        expectEqual(
+          await canvasCursor(page),
+          "pointer",
+          "cursor over the line's last point",
+        );
       },
       {
         evidence: {

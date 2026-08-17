@@ -1,5 +1,6 @@
 import {
   ARROW_TYPE,
+  CURSOR_TYPE,
   KEYS,
   LINE_CONFIRM_THRESHOLD,
   MINIMUM_ARROW_SIZE,
@@ -15,6 +16,7 @@ import {
   getBindingStrategyForDraggingBindingElementEndpoints,
   getHoveredElementForBinding,
   getSnapOutlineMidPoint,
+  hitElementItself,
   isBindingElement,
   isBindingEnabled,
   isElbowArrow,
@@ -33,6 +35,7 @@ import type { ExcalidrawLinearElement } from "@excalidraw/element/types";
 
 import { actionFinalize } from "./actions/actionFinalize";
 import { getEffectiveGridSize } from "./create-interaction";
+import { getElementHitThreshold, hitElement } from "./selection-interaction";
 
 import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
 
@@ -627,6 +630,121 @@ export const maybeSuggestBindingOnHover = (
         ),
       },
     });
+  }
+};
+
+/**
+ * upstream `App.handleHoverSelectedLinearElement` — the hover affordance of a
+ * selected linear element: the POINTER cursor over a point handle or a segment
+ * midpoint, the MOVE cursor over the element itself, and the
+ * `hoverPointIndex` / `segmentMidPointHoveredCoords` the interactive renderer
+ * draws the handles from.
+ */
+export const handleHoverSelectedLinearElement = (
+  editor: CaliburnEditorComponent,
+  linearElementEditor: LinearElementEditor,
+  scenePointerX: number,
+  scenePointerY: number,
+) => {
+  const elementsMap = editor.scene.getNonDeletedElementsMap();
+
+  const element = LinearElementEditor.getElement(
+    linearElementEditor.elementId,
+    elementsMap,
+  );
+
+  if (!element) {
+    return;
+  }
+  if (editor.state.selectedLinearElement) {
+    let hoverPointIndex = -1;
+    let segmentMidPointHoveredCoords = null;
+    if (
+      hitElementItself({
+        point: pointFrom(scenePointerX, scenePointerY),
+        element,
+        elementsMap,
+        threshold: getElementHitThreshold(editor, element),
+      })
+    ) {
+      hoverPointIndex = LinearElementEditor.getPointIndexUnderCursor(
+        element,
+        elementsMap,
+        editor.state.zoom,
+        scenePointerX,
+        scenePointerY,
+      );
+      segmentMidPointHoveredCoords =
+        LinearElementEditor.getSegmentMidpointHitCoords(
+          linearElementEditor,
+          { x: scenePointerX, y: scenePointerY },
+          editor.state,
+          editor.scene.getNonDeletedElementsMap(),
+        );
+      const isHoveringAPointHandle = isElbowArrow(element)
+        ? hoverPointIndex === 0 || hoverPointIndex === element.points.length - 1
+        : hoverPointIndex >= 0;
+      if (isHoveringAPointHandle || segmentMidPointHoveredCoords) {
+        editor.cursor.set(CURSOR_TYPE.POINTER);
+      } else if (hitElement(editor, scenePointerX, scenePointerY, element)) {
+        if (
+          // Elbow arrows can only be moved when unconnected
+          !isElbowArrow(element) ||
+          !(element.startBinding || element.endBinding)
+        ) {
+          if (
+            editor.state.activeTool.type !== "lasso" ||
+            Object.keys(editor.state.selectedElementIds).length > 0
+          ) {
+            editor.cursor.set(CURSOR_TYPE.MOVE);
+          }
+        }
+      }
+    } else if (hitElement(editor, scenePointerX, scenePointerY, element)) {
+      if (
+        // Elbow arrow can only be moved when unconnected
+        !isElbowArrow(element) ||
+        !(element.startBinding || element.endBinding)
+      ) {
+        if (
+          editor.state.activeTool.type !== "lasso" ||
+          Object.keys(editor.state.selectedElementIds).length > 0
+        ) {
+          editor.cursor.set(CURSOR_TYPE.MOVE);
+        }
+      }
+    }
+
+    if (
+      editor.state.selectedLinearElement.hoverPointIndex !== hoverPointIndex
+    ) {
+      editor.setState({
+        selectedLinearElement: {
+          ...editor.state.selectedLinearElement,
+          hoverPointIndex,
+        },
+      });
+    }
+
+    if (
+      !LinearElementEditor.arePointsEqual(
+        editor.state.selectedLinearElement.segmentMidPointHoveredCoords,
+        segmentMidPointHoveredCoords,
+      )
+    ) {
+      editor.setState({
+        selectedLinearElement: {
+          ...editor.state.selectedLinearElement,
+          segmentMidPointHoveredCoords,
+        },
+      });
+    }
+
+    // upstream follows with the arrow focus-point hover
+    // (`hoveredFocusPointBinding`, App.tsx:8264-8292), which caliburn does not
+    // write yet — see the README's known gaps
+  } else {
+    editor.cursor.set(CURSOR_TYPE.AUTO);
   }
 };
 
