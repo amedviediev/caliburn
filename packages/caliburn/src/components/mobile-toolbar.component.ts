@@ -17,6 +17,7 @@ import {
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import {
   TOOLS,
+  getToolLetter,
   getToolShortcut,
 } from "@excalidraw/excalidraw/components/Tools";
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -49,6 +50,8 @@ type ToolButtonView = {
   fillable: boolean;
   title: string;
   ariaLabel: string;
+  shortcut: string | null;
+  keyBindingLabel: string | null;
   testId: string;
   checked: boolean;
   disabled: boolean;
@@ -205,14 +208,30 @@ export class CaliburnMobileToolbarComponent
     return forcedTool != null && forcedTool.type !== type;
   }
 
-  protected toolButton(type: ToolbarToolType): ToolButtonView {
+  /**
+   * `hideShortcut` is upstream's flag for "no keyboard here": it drops the
+   * tooltip hint, `aria-keyshortcuts` and the keybinding badge alike. Every
+   * button in this toolbar sets it except the hand tool, which upstream passes
+   * only `hideKeyBinding` — so it keeps "Hand — H" and its `aria-keyshortcuts`
+   * and loses just the corner badge.
+   */
+  protected toolButton(
+    type: ToolbarToolType,
+    { hideShortcut = true, hideKeyBinding = false } = {},
+  ): ToolButtonView {
     const label = capitalizeString(t(`toolBar.${type}`));
+    const shortcut = hideShortcut ? null : getToolShortcut(type);
     return {
       type,
       icon: TOOL_ICONS[type],
       fillable: TOOLS[type].fillable === true,
-      title: label,
+      title: shortcut ? `${label} — ${shortcut}` : label,
       ariaLabel: label,
+      shortcut,
+      keyBindingLabel:
+        hideKeyBinding || hideShortcut
+          ? null
+          : TOOLS[type].numericKey || getToolLetter(type) || null,
       testId: `toolbar-${type}`,
       checked: this.state().activeTool.type === type,
       disabled: this.isToolButtonDisabled(type),

@@ -511,7 +511,12 @@
     </div>
   </caliburn-island>
 } @else if (visible()) {
-  <caliburn-island class="compact-shape-actions-island" [padding]="0">
+  <caliburn-island
+    class="compact-shape-actions-island"
+    viewportUi="side"
+    viewportUiName="stylesPanel"
+    [padding]="0"
+  >
   <div class="compact-shape-actions">
     @if (predicates().strokeColor) {
       <ng-container [ngTemplateOutlet]="strokeColor" />

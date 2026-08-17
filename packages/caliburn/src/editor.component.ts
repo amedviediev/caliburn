@@ -2927,6 +2927,18 @@ export class CaliburnEditorComponent
       this.setState({ openPopup: null });
     }
 
+    // upstream latches this the first time a pen or a finger touches the
+    // canvas (`App.tsx`), before its own panning early return — the pointer
+    // type is all it looks at
+    if (
+      !this.editorInterfaceSignal().isTouchScreen &&
+      ["pen", "touch"].includes(event.pointerType)
+    ) {
+      this.editorInterfaceSignal.set(
+        updateObject(this.editorInterfaceSignal(), { isTouchScreen: true }),
+      );
+    }
+
     if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;
     }

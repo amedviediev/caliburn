@@ -1,5 +1,9 @@
 @if (visible()) { @if (isBucketFillTool()) {
-<div class="selected-shape-actions {{ shapeActionsMenuClass }}">
+<div
+  class="selected-shape-actions {{ shapeActionsMenuClass }}"
+  data-viewport-ui="side"
+  data-viewport-ui-name="stylesPanel"
+>
   <div>
     <h3 aria-hidden="true">{{ labels().background }}</h3>
     <caliburn-color-picker
@@ -45,7 +49,11 @@
   </fieldset>
 </div>
 } @else {
-<div class="selected-shape-actions {{ shapeActionsMenuClass }}">
+<div
+  class="selected-shape-actions {{ shapeActionsMenuClass }}"
+  data-viewport-ui="side"
+  data-viewport-ui-name="stylesPanel"
+>
   <div>
     @if (predicates().strokeColor) {
     <h3 aria-hidden="true">{{ labels().stroke }}</h3>

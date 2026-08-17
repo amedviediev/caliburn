@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   forwardRef,
   inject,
   input,
@@ -10,7 +11,7 @@ import {
   signal,
 } from "@angular/core";
 
-import { EVENT, KEYS, capitalizeString } from "@excalidraw/common";
+import { capitalizeString } from "@excalidraw/common";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 
@@ -83,13 +84,26 @@ export class CaliburnToolPopoverComponent implements OnInit, OnDestroy {
     return this.editor.state.activeTool.type;
   }
 
-  /** upstream closes the popup as soon as the active tool leaves the group */
   protected open() {
-    return (
-      this.popupOpen() &&
-      this.options().some((option) => option.type === this.currentType())
-    );
+    return this.popupOpen();
   }
+
+  /**
+   * Upstream closes the popup as soon as the active tool leaves the group, and
+   * does so by *writing* the state (`setIsPopupOpen(false)` mid-render) rather
+   * than by deriving it — so coming back to a tool of the group later does not
+   * reopen the popup. The effect is that write; a derived `open` would be the
+   * behaviour upstream deliberately doesn't have.
+   */
+  private readonly closeWhenToolLeavesGroup = effect(() => {
+    const currentType = this.currentType();
+    if (
+      this.popupOpen() &&
+      !this.options().some((option) => option.type === currentType)
+    ) {
+      this.popupOpen.set(false);
+    }
+  });
 
   protected isActive() {
     return this.displayedOption().type === this.currentType();
@@ -158,38 +172,18 @@ export class CaliburnToolPopoverComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** upstream closes the popover as soon as the canvas takes a pointer down */
+  /** upstream closes the popover as soon as the canvas takes a pointer down —
+   * its only dismissal, since `<Popover.Root open>` is controlled and passes
+   * no `onOpenChange`, leaving Radix's own dismissal inert */
   private unsubscribePointerDown: (() => void) | null = null;
-
-  private readonly onDocPointerDown = (event: Event) => {
-    const target = event.target as Node | null;
-    if (!target || this.host.nativeElement.contains(target)) {
-      return;
-    }
-    this.popupOpen.set(false);
-  };
-
-  private readonly onDocKeydown = (event: KeyboardEvent) => {
-    if (event.key === KEYS.ESCAPE) {
-      this.popupOpen.set(false);
-    }
-  };
 
   ngOnInit() {
     this.unsubscribePointerDown = this.editor.onPointerDownEmitter.on(() => {
       this.popupOpen.set(false);
     });
-    document.addEventListener(EVENT.POINTER_DOWN, this.onDocPointerDown);
-    document.addEventListener(EVENT.KEYDOWN, this.onDocKeydown, {
-      capture: true,
-    });
   }
 
   ngOnDestroy() {
     this.unsubscribePointerDown?.();
-    document.removeEventListener(EVENT.POINTER_DOWN, this.onDocPointerDown);
-    document.removeEventListener(EVENT.KEYDOWN, this.onDocKeydown, {
-      capture: true,
-    });
   }
 }

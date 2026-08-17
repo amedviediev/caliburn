@@ -3094,6 +3094,73 @@ export const runSuite = async (browser, url, runner) => {
       );
 
       await runner.check(
+        "mobile.overflow-promotion",
+        "a wide enough phone promotes duplicate and delete out of the popover",
+        async () => {
+          // upstream's `MobileShapeActions` measures its own island and lifts
+          // delete, then duplicate, out of the "…" popover as room appears
+          await page.setViewport(PHONE_LANDSCAPE);
+          await waitFor(
+            page,
+            () => window.h.app.editorInterface.isLandscape === true,
+            { message: "rotating to landscape left isLandscape false" },
+          );
+
+          // the panel's extra actions need a selection
+          await dragCanvas(page, [260, 130], [420, 240]);
+          await waitFor(page, () => window.h.elements.length === 1, {
+            message: "dragging on the canvas created no element",
+          });
+          await waitFor(
+            page,
+            () => !!document.querySelector(".mobile-shape-actions"),
+            { message: "the mobile styles panel did not render" },
+          );
+
+          const promoted = await page.evaluate(() => {
+            const panel = document.querySelector(".mobile-shape-actions");
+            return {
+              width: Math.round(panel.getBoundingClientRect().width),
+              duplicate: panel.querySelectorAll('[aria-label="Duplicate"]')
+                .length,
+              delete: panel.querySelectorAll('[aria-label="Delete"]').length,
+              popoverOpen: !!document.querySelector(".properties-content"),
+            };
+          });
+          // 9 * 32 + 8 * 6 + 2 * (32 + 6) = 412px is upstream's threshold for
+          // promoting both
+          expect(
+            promoted.width >= 412,
+            `the landscape styles panel measured ${promoted.width}px, too narrow to promote either action`,
+          );
+          expect(
+            !promoted.popoverOpen,
+            "the properties popover was open, so its own copies would be counted",
+          );
+          expectEqual(promoted.delete, 1, "delete buttons outside the popover");
+          expectEqual(
+            promoted.duplicate,
+            1,
+            "duplicate buttons outside the popover",
+          );
+
+          await resetEditor(page);
+          await page.setViewport(PHONE.viewport);
+          await waitFor(
+            page,
+            () => window.h.app.editorInterface.isLandscape === false,
+            { message: "rotating back to portrait left isLandscape true" },
+          );
+        },
+        {
+          evidence: {
+            page,
+            selectors: [".mobile-shape-actions", ".App-bottom-bar"],
+          },
+        },
+      );
+
+      await runner.check(
         "mobile.rotation",
         "rotating the device re-derives the form factor",
         async () => {
@@ -3152,6 +3219,11 @@ export const runSuite = async (browser, url, runner) => {
             "the compact toolbar has no grouped selection trigger",
           );
 
+          // the styles panel only renders for a selection or a drawing tool
+          await tapCenter(
+            page,
+            '.App-toolbar [data-testid="toolbar-rectangle"]',
+          );
           await waitFor(
             page,
             () => !!document.querySelector(".compact-shape-actions"),
@@ -3168,8 +3240,6 @@ export const runSuite = async (browser, url, runner) => {
           },
         },
       );
-
-      await page.setViewport(PHONE.viewport);
     },
     { emulate: PHONE },
   );

@@ -2,7 +2,9 @@ import { NgTemplateOutlet } from "@angular/common";
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
+  effect,
   input,
   signal,
   viewChild,
@@ -32,7 +34,7 @@ import { translated } from "../i18n";
 
 import { CaliburnShapeActionsComponent } from "./shape-actions.component";
 
-import type { AfterViewInit, OnDestroy, ElementRef } from "@angular/core";
+import type { OnDestroy } from "@angular/core";
 
 type CompactPopup = Extract<
   AppState["openPopup"],
@@ -78,7 +80,7 @@ const ADDITIONAL_WIDTH = WIDTH + GAP;
 })
 export class CaliburnCompactShapeActionsComponent
   extends CaliburnShapeActionsComponent
-  implements AfterViewInit, OnDestroy
+  implements OnDestroy
 {
   readonly variant = input<"compact" | "mobile">("compact");
 
@@ -94,7 +96,14 @@ export class CaliburnCompactShapeActionsComponent
     redo: t("buttons.redo"),
   }));
 
-  private readonly islandRef = viewChild<ElementRef<HTMLElement>>("island");
+  /** `#island` sits on `<caliburn-island>`, a component — a valueless template
+   * reference resolves to the component instance there, so the element has to
+   * be asked for explicitly (`library-menu-items.component.ts` does the same
+   * on `<caliburn-stack-col>`) */
+  private readonly islandRef = viewChild<unknown, ElementRef<HTMLElement>>(
+    "island",
+    { read: ElementRef },
+  );
 
   /** the mobile island's measured width, upstream's `ACTIONS_WIDTH` */
   private readonly actionsWidth = signal(0);
@@ -112,11 +121,14 @@ export class CaliburnCompactShapeActionsComponent
   protected readonly rowHeight = WIDTH * 1.35;
 
   /** upstream re-reads the island's width off its ref on every render; the
-   * same `supportsResizeObserver` guard the editor's own observer uses keeps
-   * this inert under jsdom, where the measurement is 0 either way */
-  ngAfterViewInit() {
+   * `supportsResizeObserver` guard is the editor's own, and keeps this inert
+   * under jsdom, where the measurement is 0 either way */
+  private readonly measureIsland = effect(() => {
     const island = this.islandRef()?.nativeElement;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     if (!island) {
+      this.actionsWidth.set(0);
       return;
     }
     this.actionsWidth.set(island.getBoundingClientRect().width);
@@ -127,7 +139,7 @@ export class CaliburnCompactShapeActionsComponent
       this.actionsWidth.set(island.getBoundingClientRect().width);
     });
     this.resizeObserver.observe(island);
-  }
+  });
 
   ngOnDestroy() {
     this.resizeObserver?.disconnect();

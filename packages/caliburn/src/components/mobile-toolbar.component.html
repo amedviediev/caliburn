@@ -1,5 +1,5 @@
 <div #toolbar class="mobile-toolbar">
-  @let hand = toolButton("hand");
+  @let hand = toolButton("hand", { hideShortcut: false, hideKeyBinding: true });
   <button
     caliburn-icon-button
     mode="toggle"
@@ -9,6 +9,8 @@
     [disabled]="hand.disabled"
     [title]="hand.title"
     [ariaLabel]="hand.ariaLabel"
+    [ariaKeyshortcuts]="hand.shortcut"
+    [keyBindingLabel]="hand.keyBindingLabel"
     [testId]="hand.testId"
     (select)="onToolSelect(hand.type)"
   ></button>
