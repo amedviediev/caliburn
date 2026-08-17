@@ -3318,6 +3318,198 @@ export const runSuite = async (browser, url, runner) => {
     );
   });
 
+  // ------------------------------------------------------------- embeds
+  await withPage("embeds", async (page) => {
+    runner.group("embeddable iframes");
+
+    await runner.check(
+      "embeds.pasted-link-mounts-an-iframe",
+      "pasting a video link mounts a sandboxed iframe the centre click activates",
+      async () => {
+        await resetEditor(page);
+
+        // the embed's own src is youtube: the check asserts the mounted DOM,
+        // never a loaded video, so the frame is kept off the network entirely
+        await page.setRequestInterception(true);
+        const blockEmbedHosts = (request) => {
+          if (
+            /youtube\.com|youtu\.be|ytimg\.com|googlevideo\.com/.test(
+              request.url(),
+            )
+          ) {
+            request.abort().catch(() => {});
+          } else {
+            request.continue().catch(() => {});
+          }
+        };
+        page.on("request", blockEmbedHosts);
+
+        try {
+          // paste lands where the cursor is, and only while the editor holds
+          // focus with the canvas under the pointer
+          await page.mouse.move(700, 450);
+          await page.mouse.click(700, 450);
+          await page.evaluate((link) => {
+            const data = new DataTransfer();
+            data.setData("text/plain", link);
+            document.dispatchEvent(
+              new ClipboardEvent("paste", {
+                clipboardData: data,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          }, "https://www.youtube.com/watch?v=gkGMXY0wekg");
+
+          await waitFor(
+            page,
+            () =>
+              window.__e2e.elements().some((el) => el.type === "embeddable"),
+            { message: "pasting a youtube link created no embeddable element" },
+          );
+
+          await waitFor(
+            page,
+            () =>
+              !!document.querySelector(
+                ".excalidraw__embeddable-container iframe.excalidraw__embeddable",
+              ),
+            { message: "the embeddable element mounted no iframe" },
+          );
+
+          const mounted = await page.evaluate(() => {
+            const container = document.querySelector(
+              ".excalidraw__embeddable-container",
+            );
+            const iframe = container.querySelector(
+              "iframe.excalidraw__embeddable",
+            );
+            const inner = container.querySelector(
+              ".excalidraw__embeddable-container__inner",
+            );
+            return {
+              parent: container.parentElement.tagName.toLowerCase(),
+              inEditor: !!container.closest(".excalidraw"),
+              display: getComputedStyle(container).display,
+              position: getComputedStyle(container).position,
+              src: iframe.getAttribute("src"),
+              sandbox: iframe.getAttribute("sandbox"),
+              allow: iframe.getAttribute("allow"),
+              referrerPolicy: iframe.getAttribute("referrerpolicy"),
+              title: iframe.getAttribute("title"),
+              allowFullscreen: iframe.hasAttribute("allowfullscreen"),
+              pointerEvents: getComputedStyle(inner).pointerEvents,
+            };
+          });
+
+          expect(
+            mounted.inEditor,
+            "the embeddable container mounted outside the editor container",
+          );
+          expectEqual(mounted.position, "absolute", "container position");
+          expectEqual(mounted.display, "block", "container display");
+          expectEqual(
+            mounted.src,
+            "https://www.youtube.com/embed/gkGMXY0wekg?enablejsapi=1",
+            "the iframe's resolved embed src",
+          );
+          expectEqual(
+            mounted.sandbox,
+            "allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-downloads",
+            "the iframe's sandbox",
+          );
+          expectEqual(
+            mounted.allow,
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+            "the iframe's allow list",
+          );
+          expectEqual(
+            mounted.referrerPolicy,
+            "no-referrer-when-downgrade",
+            "the iframe's referrer policy",
+          );
+          expectEqual(
+            mounted.title,
+            "Excalidraw Embedded Content",
+            "the iframe's title",
+          );
+          expect(mounted.allowFullscreen, "the iframe is not allowFullscreen");
+          expectEqual(
+            mounted.pointerEvents,
+            "none",
+            "an inactive embed's pointer-events",
+          );
+
+          // the centre third of an embed is its activation target
+          const centre = await page.evaluate(() => {
+            const el = window.h.elements.find(
+              (element) => element.type === "embeddable",
+            );
+            const { zoom, offsetLeft, offsetTop, scrollX, scrollY } =
+              window.h.state;
+            return [
+              (el.x + el.width / 2 + scrollX) * zoom.value + offsetLeft,
+              (el.y + el.height / 2 + scrollY) * zoom.value + offsetTop,
+            ];
+          });
+          await page.mouse.click(centre[0], centre[1]);
+
+          await waitFor(
+            page,
+            () => window.h.state.activeEmbeddable?.state === "active",
+            {
+              message: "clicking the centre of the embed did not activate it",
+              timeout: 3000,
+            },
+          );
+          await waitFor(
+            page,
+            () =>
+              getComputedStyle(
+                document.querySelector(
+                  ".excalidraw__embeddable-container__inner",
+                ),
+              ).pointerEvents === "all",
+            {
+              message:
+                "an active embed still refuses pointer events, so it cannot be interacted with",
+            },
+          );
+
+          await page.keyboard.press("Escape");
+          await waitFor(page, () => window.h.state.activeEmbeddable === null, {
+            message: "Escape did not deactivate the embed",
+          });
+          await waitFor(
+            page,
+            () =>
+              getComputedStyle(
+                document.querySelector(
+                  ".excalidraw__embeddable-container__inner",
+                ),
+              ).pointerEvents === "none",
+            {
+              message:
+                "a deactivated embed still swallows pointer events meant for the canvas",
+            },
+          );
+        } finally {
+          page.off("request", blockEmbedHosts);
+          await page.setRequestInterception(false);
+        }
+      },
+      {
+        evidence: {
+          page,
+          selectors: [
+            ".excalidraw__embeddable-container",
+            "iframe.excalidraw__embeddable",
+          ],
+        },
+      },
+    );
+  });
+
   // ------------------------------------------------------------- mobile
   await withPage(
     "mobile",
