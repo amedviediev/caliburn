@@ -393,6 +393,15 @@ const imageGeometry = (page) =>
   });
 
 /** the scene's first element's box — the geometry `elements()` leaves out */
+/** every non-deleted element's position — `__e2e.elements()` carries only
+ * id and type */
+const elementPositions = (page) =>
+  page.evaluate(() =>
+    (window.h?.elements ?? [])
+      .filter((el) => !el.isDeleted)
+      .map((el) => ({ x: el.x, y: el.y })),
+  );
+
 const elementBox = (page) =>
   page.evaluate(() => {
     const el = (window.h?.elements ?? []).filter((e) => !e.isDeleted)[0];
@@ -401,6 +410,9 @@ const elementBox = (page) =>
 
 /** a toolbar button's icon — the `<svg>` a drag crossing the toolbar passes over */
 const TOOLBAR_ICON = '[data-testid="toolbar-ellipse"] svg';
+
+/** the styles panel's align row, which only renders for a multi-selection */
+const ALIGN_LEFT_BUTTON = '.excalidraw button[aria-label="Align left"]';
 
 const readLinksIn = (page, containerSelector) =>
   page.evaluate(
@@ -882,6 +894,65 @@ export const runSuite = async (browser, url, runner) => {
           selectors: [VISUAL_DEBUG_ITEM, DEBUG_CANVAS],
         },
       },
+    );
+
+    // ------------------------------------------------------- styles panel
+    runner.group("styles panel");
+
+    await runner.check(
+      "styles.align-left",
+      "Align left in the styles panel equalizes the selection's x",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page, [400, 300], [500, 400]);
+        await clickCenter(page, '[data-testid="toolbar-rectangle"]');
+        await dragCanvas(page, [700, 500], [800, 600]);
+        await waitFor(page, () => window.__e2e.elements().length === 2, {
+          message: "the second rectangle was not created",
+        });
+
+        await pressWithMod(page, "a");
+        await waitFor(
+          page,
+          () => Object.keys(window.h.state.selectedElementIds).length === 2,
+          { message: "select-all did not select both rectangles" },
+        );
+
+        await waitFor(page, (sel) => !!document.querySelector(sel), {
+          args: [ALIGN_LEFT_BUTTON],
+          message: "the styles panel rendered no Align left button",
+        });
+
+        const before = await elementPositions(page);
+        expect(
+          before[0].x !== before[1].x,
+          "the two rectangles already shared an x before aligning",
+        );
+        const leftmost = Math.min(before[0].x, before[1].x);
+
+        await clickCenter(page, ALIGN_LEFT_BUTTON);
+        await waitFor(
+          page,
+          () => {
+            const els = (window.h?.elements ?? []).filter(
+              (el) => !el.isDeleted,
+            );
+            return els.length === 2 && els[0].x === els[1].x;
+          },
+          { message: "clicking Align left did not equalize x" },
+        );
+
+        const after = await elementPositions(page);
+        expectEqual(after[0].x, leftmost, "the first rectangle's x");
+        expectEqual(after[1].x, leftmost, "the second rectangle's x");
+        // the perpendicular axis is untouched
+        expectEqual(
+          `${after[0].y},${after[1].y}`,
+          `${before[0].y},${before[1].y}`,
+          "the y coordinates after aligning",
+        );
+      },
+      { evidence: { page, selectors: [ALIGN_LEFT_BUTTON] } },
     );
   });
 
