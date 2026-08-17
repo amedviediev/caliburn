@@ -414,6 +414,19 @@ const canvasCursor = (page) =>
     () => document.querySelector("canvas.interactive")?.style.cursor ?? null,
   );
 
+/** a scene point in the client coords the mouse is driven with */
+const sceneToViewport = (page, [sceneX, sceneY]) =>
+  page.evaluate(
+    ([x, y]) => {
+      const { zoom, scrollX, scrollY, offsetLeft, offsetTop } = window.h.state;
+      return [
+        (x + scrollX) * zoom.value + offsetLeft,
+        (y + scrollY) * zoom.value + offsetTop,
+      ];
+    },
+    [sceneX, sceneY],
+  );
+
 /** a toolbar button's icon — the `<svg>` a drag crossing the toolbar passes over */
 const TOOLBAR_ICON = '[data-testid="toolbar-ellipse"] svg';
 
@@ -2447,6 +2460,66 @@ export const runSuite = async (browser, url, runner) => {
           "pointer",
           "cursor over the line's last point",
         );
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+
+    await runner.check(
+      "hover.text-auto-resize-handle",
+      "a wrapped text's auto-resize handle hovers a pointer cursor and unwraps the text on click",
+      async () => {
+        await resetEditor(page);
+        await page.keyboard.press("t");
+        await waitFor(page, () => window.h.state.activeTool.type === "text", {
+          message: "the text tool's shortcut did not activate it",
+        });
+        await page.mouse.click(500, 400);
+        await page.keyboard.type("Excalidraw\nEditor");
+        await page.keyboard.press("Escape");
+        await waitFor(
+          page,
+          () =>
+            window.__e2e.elements().length === 1 &&
+            window.h.state.selectedElementIds[window.__e2e.elements()[0].id],
+          { message: "the submitted text did not end up selected" },
+        );
+
+        // narrowing the box is what wraps the text and clears `autoResize`,
+        // which is what puts the handle on the canvas in the first place
+        const typed = await elementBox(page);
+        const eastHandle = await sceneToViewport(page, [
+          typed.x + typed.width + 4,
+          typed.y + typed.height / 2,
+        ]);
+        await dragCanvas(page, eastHandle, [eastHandle[0] - 60, eastHandle[1]]);
+        await waitFor(page, () => window.h.elements[0].autoResize === false, {
+          message: "narrowing the text did not wrap it",
+        });
+
+        // `getTextAutoResizeHandle`: the box's right edge plus the text box's
+        // padding (`DEFAULT_TRANSFORM_HANDLE_SPACING * 2`) and the handle's
+        // own 12px gap, at the box's vertical centre
+        const wrapped = await elementBox(page);
+        const autoResizeHandle = await sceneToViewport(page, [
+          wrapped.x + wrapped.width + 4 + 12,
+          wrapped.y + wrapped.height / 2,
+        ]);
+        await page.mouse.move(autoResizeHandle[0], autoResizeHandle[1]);
+        expectEqual(
+          await canvasCursor(page),
+          "pointer",
+          "cursor over the text's auto-resize handle",
+        );
+
+        await page.mouse.click(autoResizeHandle[0], autoResizeHandle[1]);
+        await waitFor(page, () => window.h.elements[0].autoResize === true, {
+          message: "clicking the auto-resize handle did not unwrap the text",
+        });
       },
       {
         evidence: {

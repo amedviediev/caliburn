@@ -53,6 +53,7 @@ import {
   ShapeCache,
   Store,
   embeddableURLValidator,
+  getActiveTextElement,
   getCommonBounds,
   getCursorForResizingElement,
   getElementWithTransformHandleType,
@@ -122,6 +123,7 @@ import {
   getViewportForZoomWithScrollConstraints,
 } from "@excalidraw/excalidraw/viewport";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
+import { isPointHittingTextAutoResizeHandle } from "@excalidraw/excalidraw/textAutoResizeHandle";
 import { Renderer } from "@excalidraw/excalidraw/scene/Renderer";
 import rough from "roughjs/bin/rough";
 
@@ -3199,6 +3201,22 @@ export class CaliburnEditorComponent
       return;
     }
 
+    this.setState({
+      selectedElementsAreBeingDragged: false,
+    });
+
+    // upstream reads the origin off the pointer-down state it builds here for
+    // every tool; caliburn builds it inside the per-tool dispatch below, and
+    // the origin is that state's own `viewportCoordsToSceneCoords`
+    if (
+      this.handleTextAutoResizeHandlePointerDown(
+        this.scene.getSelectedElements(this.state),
+        viewportCoordsToSceneCoords(event, this.state),
+      )
+    ) {
+      return;
+    }
+
     const activeToolType = this.state.activeTool.type;
 
     // in pen mode a finger neither draws nor erases — only the tools that
@@ -3509,21 +3527,71 @@ export class CaliburnEditorComponent
     }
   }
 
+  /** upstream `App.isHittingTextAutoResizeHandle` */
+  private isHittingTextAutoResizeHandle = (
+    selectedElements: NonDeleted<ExcalidrawElement>[],
+    point: Readonly<{ x: number; y: number }>,
+  ): boolean => {
+    const activeTextElement = getActiveTextElement(
+      selectedElements,
+      this.state,
+    );
+
+    if (
+      activeTextElement &&
+      !activeTextElement.isDeleted &&
+      !activeTextElement.autoResize &&
+      isPointHittingTextAutoResizeHandle(
+        point,
+        activeTextElement,
+        this.state.zoom.value,
+        this.editorInterface.formFactor,
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  /** upstream `App.handleTextAutoResizeHandlePointerDown` */
+  private handleTextAutoResizeHandlePointerDown = (
+    selectedElements: NonDeleted<ExcalidrawElement>[],
+    point: Readonly<{ x: number; y: number }>,
+  ) => {
+    const activeTextElement = getActiveTextElement(
+      selectedElements,
+      this.state,
+    );
+    if (
+      !activeTextElement ||
+      !this.isHittingTextAutoResizeHandle(selectedElements, point)
+    ) {
+      return false;
+    }
+
+    this.actionManager.executeAction(
+      actionTextAutoResize,
+      "ui",
+      // we need to pass down the element since it may already be deselected
+      // due to the pointerdown
+      activeTextElement,
+    );
+    this.cursor.reset();
+    return true;
+  };
+
   private maybeUpdateHoverCursor(
     scenePointer: { x: number; y: number },
     event: PointerEvent,
   ) {
-    // upstream opens the hover block here with the POINTER cursor over a text
-    // element's auto-resize handle (`isHittingTextAutoResizeHandle`,
-    // App.tsx:7927-7930) — that hit test is not ported yet; the README's
-    // known gaps track it.
-
     // upstream's pointer-move gate (App.tsx:7908-7920) admits only these tools
     // to the hover affordances, while caliburn gates its own branches further
-    // down (the laser short-circuit, `isSelectionLikeTool`) — so the
-    // transform-handle block carries upstream's tool list itself. Its
-    // `!isOverScrollBar` conditions are dropped throughout: caliburn renders
-    // no canvas scrollbars.
+    // down (the laser short-circuit, `isSelectionLikeTool`) — so this block
+    // carries upstream's tool list itself, and everything upstream runs behind
+    // that gate (the auto-resize handle, then the transform handles) lives
+    // inside it. Its `!isOverScrollBar` conditions are dropped throughout:
+    // caliburn renders no canvas scrollbars.
     if (
       isSelectionLikeTool(this.state.activeTool.type) ||
       this.state.activeTool.type === "text" ||
@@ -3533,6 +3601,11 @@ export class CaliburnEditorComponent
       const elements = this.scene.getNonDeletedElements();
 
       const selectedElements = this.scene.getSelectedElements(this.state);
+
+      if (this.isHittingTextAutoResizeHandle(selectedElements, scenePointer)) {
+        this.cursor.set(CURSOR_TYPE.POINTER);
+        return;
+      }
 
       if (
         selectedElements.length === 1 &&
