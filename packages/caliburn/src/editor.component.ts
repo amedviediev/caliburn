@@ -291,6 +291,7 @@ import { actionToggleCropEditor } from "./actions/actionCropEditor";
 
 import { createTestHook } from "./test-hook";
 import {
+  createFrameElementOnPointerDown,
   createGenericElementOnPointerDown,
   finalizeNewElementOnPointerUp,
   maybeDragNewElement,
@@ -2975,6 +2976,16 @@ export class CaliburnEditorComponent
     } else if (activeToolType === "text") {
       this.pointerDownState = initialPointerDownState(this, event);
       handleTextOnPointerDown(this, event, this.pointerDownState);
+    } else if (
+      activeToolType === TOOL_TYPE.frame ||
+      activeToolType === TOOL_TYPE.magicframe
+    ) {
+      this.pointerDownState = initialPointerDownState(this, event);
+      createFrameElementOnPointerDown(
+        this,
+        this.pointerDownState,
+        activeToolType,
+      );
     } else if (activeToolType === "laser") {
       this.pointerDownState = initialPointerDownState(this, event);
       this.laserTrails.startPath(

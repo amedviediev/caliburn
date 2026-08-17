@@ -2315,44 +2315,41 @@ export const runSuite = async (browser, url, runner) => {
 
     await runner.check(
       "frames.name-label-selects-frame",
-      "clicking a frame's name label selects the frame",
+      "drawing a frame takes in what it covers, and its name label selects it",
       async () => {
         await resetEditor(page);
-        // NOTE the frame tool itself creates nothing in caliburn (upstream's
-        // `createFrameElementOnPointerDown` is not ported yet), so the frame
-        // is drawn the other way a user can: wrap a shape in one
         await drawRectangle(page);
         await waitFor(
           page,
           () => Object.keys(window.h.state.selectedElementIds).length === 1,
           { message: "the drawn rectangle was not left selected" },
         );
-        await pressWithMod(page, "/");
+        // the frame tool, through its shortcut — dragging one around the
+        // rectangle both creates the frame and makes the rectangle its member
+        await page.keyboard.press("f");
+        await waitFor(page, () => window.h.state.activeTool.type === "frame", {
+          message: "the F shortcut did not activate the frame tool",
+        });
+        await dragCanvas(page, [420, 320], [820, 640]);
         await waitFor(
           page,
-          () => !!document.querySelector(".command-palette-dialog input"),
-          { message: "Cmd+/ did not open the command palette" },
-        );
-        await page.keyboard.type("wrap selection in frame");
-        await waitFor(
-          page,
-          () => {
-            const first = document.querySelector(
-              ".command-palette-dialog .command-item",
-            );
-            return !!first && /frame/i.test(first.textContent ?? "");
-          },
-          { message: "no Wrap selection in frame command to run" },
-        );
-        await clickAndExpect(
-          page,
-          ".command-palette-dialog .command-item",
           () => window.__e2e.elements().some((el) => el.type === "frame"),
-          { message: "running the wrap command created no frame" },
+          { message: "dragging with the frame tool created no frame" },
         );
-        const frame = (await elements(page)).find((el) => el.type === "frame");
+        const els = await elements(page);
+        const frame = els.find((el) => el.type === "frame");
+        const rectangle = els.find((el) => el.type === "rectangle");
+        const frameId = await page.evaluate(
+          (id) => window.h.elements.find((el) => el.id === id)?.frameId ?? null,
+          rectangle.id,
+        );
+        expectEqual(
+          frameId,
+          frame.id,
+          "the drawn frame did not take in the rectangle it covers",
+        );
 
-        // wrapping leaves the frame selected — the label click has to be what
+        // drawing leaves the frame selected — the label click has to be what
         // selects it
         await page.mouse.click(1150, 800);
         await waitFor(

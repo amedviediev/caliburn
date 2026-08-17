@@ -1,6 +1,8 @@
 import {
+  FRAME_STYLE,
   KEYS,
   ROUNDNESS,
+  TOOL_TYPE,
   distance,
   getGridPoint,
   shouldMaintainAspectRatio,
@@ -10,15 +12,21 @@ import {
 } from "@excalidraw/common";
 import {
   CaptureUpdateAction,
+  addElementsToFrame,
   dragNewElement,
+  getElementsInNewFrame,
+  getElementsInResizingFrame,
   getNormalizedDimensions,
   isEmbeddableElement,
+  isFrameLikeElement,
   isInvisiblySmallElement,
   isSomeElementSelected,
   isUsingAdaptiveRadius,
   makeNextSelectedElementIds,
   newElement,
   newEmbeddableElement,
+  newFrameElement,
+  newMagicFrameElement,
 } from "@excalidraw/element";
 import {
   SnapCache,
@@ -30,11 +38,15 @@ import {
 
 import { updateActiveTool } from "@excalidraw/common";
 
-import type { ExcalidrawGenericElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawFrameLikeElement,
+  ExcalidrawGenericElement,
+} from "@excalidraw/element/types";
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 import type {
   KeyboardModifiersObject,
   NullableGridSize,
+  ToolType,
 } from "@excalidraw/excalidraw/types";
 
 import { getTopLayerFrameAtSceneCoords } from "./text-interaction";
@@ -138,6 +150,40 @@ export const createGenericElementOnPointerDown = (
   }
 };
 
+export const createFrameElementOnPointerDown = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+  type: Extract<ToolType, "frame" | "magicframe">,
+): void => {
+  const [gridX, gridY] = getGridPoint(
+    pointerDownState.origin.x,
+    pointerDownState.origin.y,
+    editor.lastPointerDownEvent?.[KEYS.CTRL_OR_CMD]
+      ? null
+      : getEffectiveGridSize(editor),
+  );
+
+  const constructorOpts = {
+    x: gridX,
+    y: gridY,
+    opacity: editor.state.currentItemOpacity,
+    locked: false,
+    ...FRAME_STYLE,
+  } as const;
+
+  const frame =
+    type === TOOL_TYPE.magicframe
+      ? newMagicFrameElement(constructorOpts)
+      : newFrameElement(constructorOpts);
+
+  editor.insertNewElement(frame);
+
+  editor.setState({
+    multiElement: null,
+    newElement: frame,
+  });
+};
+
 const maybeCacheReferenceSnapPoints = (
   editor: CaliburnEditorComponent,
   event: KeyboardModifiersObject,
@@ -234,6 +280,21 @@ export const maybeDragNewElement = (
   editor.setState({
     newElement,
   });
+
+  // highlight elements that are to be added to frames on frames creation
+  if (
+    editor.state.activeTool.type === TOOL_TYPE.frame ||
+    editor.state.activeTool.type === TOOL_TYPE.magicframe
+  ) {
+    editor.setState({
+      elementsToHighlight: getElementsInResizingFrame(
+        editor.scene.getNonDeletedElements(),
+        newElement as ExcalidrawFrameLikeElement,
+        editor.state,
+        editor.scene.getNonDeletedElementsMap(),
+      ) as NonDeletedExcalidrawElement[], // Obvious typecast, no need to runtime typecheck
+    });
+  }
 };
 
 export const finalizeNewElementOnPointerUp = (
@@ -261,6 +322,22 @@ export const finalizeNewElementOnPointerUp = (
     });
 
     return;
+  }
+
+  if (isFrameLikeElement(newElement)) {
+    const elementsInsideFrame = getElementsInNewFrame(
+      editor.scene.getElementsIncludingDeleted(),
+      newElement,
+      editor.scene.getNonDeletedElementsMap(),
+    );
+
+    editor.scene.replaceAllElements(
+      addElementsToFrame(
+        editor.scene.getElementsMapIncludingDeleted(),
+        elementsInsideFrame,
+        newElement,
+      ),
+    );
   }
 
   editor.scene.mutateElement(newElement, getNormalizedDimensions(newElement), {
