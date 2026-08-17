@@ -2402,6 +2402,110 @@ export const runSuite = async (browser, url, runner) => {
     );
   });
 
+  // ----------------------------------------------------------------- eraser
+  await withPage("eraser", async (page) => {
+    runner.group("eraser tool");
+
+    await runner.check(
+      "eraser.drag-erases-only-what-it-crossed",
+      "dragging the eraser paints its trail and erases only the shape it crossed",
+      async () => {
+        await resetEditor(page);
+
+        const drawAt = async (from, to, expected) => {
+          await clickCenter(page, '[data-testid="toolbar-rectangle"]');
+          await waitFor(
+            page,
+            () => window.h.state.activeTool.type === "rectangle",
+            {
+              message: "the toolbar click did not activate the rectangle tool",
+            },
+          );
+          await dragCanvas(page, from, to);
+          await waitFor(page, (n) => window.__e2e.elements().length === n, {
+            args: [expected],
+            message: `dragging the rectangle tool did not bring the scene to ${expected} element(s)`,
+          });
+        };
+
+        await drawAt([300, 250], [500, 400], 1);
+        await drawAt([800, 250], [1000, 400], 2);
+        const [crossed, spared] = await elements(page);
+
+        await clickCenter(page, '[data-testid="toolbar-eraser"]');
+        await waitFor(page, () => window.h.state.activeTool.type === "eraser", {
+          message: "the toolbar click did not activate the eraser tool",
+        });
+
+        /**
+         * The trail is an SVG path in the editor's own `.SVGLayer`, painted
+         * with the eraser's light-theme fill (`EraserTrail`'s options) — so a
+         * painted path with that fill is the eraser's, not the laser's or the
+         * lasso's.
+         */
+        const ERASER_TRAIL_FILL = "rgba(0, 0, 0, 0.2)";
+        const paintedTrailFills = () =>
+          page.evaluate(() =>
+            [...document.querySelectorAll(".SVGLayer svg path")]
+              .filter((path) => (path.getAttribute("d") || "").length > 0)
+              .map((path) => path.getAttribute("fill")),
+          );
+
+        expectEqual(
+          JSON.stringify(await paintedTrailFills()),
+          "[]",
+          "the painted SVG trails before the erase drag",
+        );
+
+        await page.mouse.move(250, 325);
+        await page.mouse.down();
+        const paintedDuringDrag = [];
+        for (let x = 270; x <= 550; x += 20) {
+          await page.mouse.move(x, 325);
+          paintedDuringDrag.push(...(await paintedTrailFills()));
+        }
+        expect(
+          paintedDuringDrag.includes(ERASER_TRAIL_FILL),
+          `no eraser trail was painted during the drag (painted fills: ${JSON.stringify(
+            paintedDuringDrag,
+          )})`,
+        );
+        await page.mouse.up();
+
+        await waitFor(
+          page,
+          (id) =>
+            !window.h.elements.find((el) => el.id === id) ||
+            window.h.elements.find((el) => el.id === id).isDeleted,
+          {
+            args: [crossed.id],
+            message: "the shape the eraser crossed survived the drag",
+          },
+        );
+        expectEqual(
+          JSON.stringify(await elements(page)),
+          JSON.stringify([spared]),
+          "the scene after the erase drag",
+        );
+
+        await waitFor(
+          page,
+          () =>
+            [...document.querySelectorAll(".SVGLayer svg path")].every(
+              (path) => (path.getAttribute("d") || "").length === 0,
+            ),
+          { message: "the eraser trail outlived the gesture that drew it" },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".SVGLayer svg", "canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+  });
+
   // ------------------------------------------------------------- crop editor
   await withPage("crop", async (page) => {
     runner.group("image crop editor");

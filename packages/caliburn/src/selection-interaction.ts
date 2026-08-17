@@ -668,7 +668,11 @@ const maybeDragNewGenericElement = (
 ) => {
   const selectionElement = editor.state.selectionElement;
   const pointerCoords = pointerDownState.lastCoords;
-  if (selectionElement && pointerDownState.boxSelection.hasOccurred) {
+  if (
+    selectionElement &&
+    pointerDownState.boxSelection.hasOccurred &&
+    editor.state.activeTool.type !== "eraser"
+  ) {
     dragNewElement({
       newElement: selectionElement,
       elementType: editor.state.activeTool.type,

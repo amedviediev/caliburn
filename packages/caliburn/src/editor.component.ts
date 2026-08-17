@@ -97,6 +97,7 @@ import {
   isHandToolActive,
 } from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
+import { EraserTrail } from "@excalidraw/excalidraw/eraser";
 import { LassoTrail } from "@excalidraw/excalidraw/lasso";
 import { LaserTrails } from "@excalidraw/excalidraw/laserTrails";
 import { AppCursor } from "@excalidraw/excalidraw/components/App.cursor";
@@ -139,6 +140,7 @@ import type {
   BinaryFileData,
   BinaryFiles,
   CollaboratorPointer,
+  ElementsPendingErasure,
   FrameNameBoundsCache,
   Gesture,
   InteractionConfig,
@@ -305,6 +307,7 @@ import {
   maybeSuggestBindingOnHover,
 } from "./linear-interaction";
 import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
+import { handleEraser, maybeEraseOnPointerUp } from "./eraser-interaction";
 import {
   maybeUpdateFrameToHighlightOnPointerMove,
   resetEditingFrame,
@@ -693,7 +696,7 @@ export class CaliburnEditorComponent
 
   embedsValidationStatus: Map<ExcalidrawElement["id"], boolean> = new Map();
 
-  elementsPendingErasure: Set<ExcalidrawElement["id"]> = new Set();
+  elementsPendingErasure: ElementsPendingErasure = new Set();
 
   private scheduleImageRefresh = createScheduleImageRefresh(this);
 
@@ -722,6 +725,7 @@ export class CaliburnEditorComponent
   readonly redoAction = createRedoAction(this.history);
   readonly lassoTrail = new LassoTrail(this as any);
   readonly laserTrails = new LaserTrails(this as any);
+  readonly eraserTrail = new EraserTrail(this as any);
   readonly cursorHints = new CursorHints(this);
 
   /** the mounted `<caliburn-cursor-hint>`, if any (see `CursorHints`) */
@@ -933,6 +937,11 @@ export class CaliburnEditorComponent
   > = new Map();
 
   lastPointerDownEvent: PointerEvent | null = null;
+
+  /** the last pointer move the canvas itself saw — upstream
+   * `App.lastPointerMoveEvent`, which stands in for a missing pointer up when
+   * the eraser's gesture is torn down without one */
+  lastPointerMoveEvent: PointerEvent | null = null;
 
   lastPointerMoveCoords: { x: number; y: number } | null = null;
 
@@ -1561,6 +1570,7 @@ export class CaliburnEditorComponent
     if (svgLayer) {
       this.lassoTrail.start(svgLayer);
       this.laserTrails.start(svgLayer);
+      this.eraserTrail.start(svgLayer);
       this.drawShape.trail.start(svgLayer);
     }
     this.cursor.reset();
@@ -1632,6 +1642,7 @@ export class CaliburnEditorComponent
     this.lassoTrail.stop();
     this.laserTrails.stop();
     this.drawShape.stop();
+    this.eraserTrail.stop();
     resetGesture();
     endPointerSession();
     document.removeEventListener("keydown", this.onKeyDown);
@@ -2410,11 +2421,34 @@ export class CaliburnEditorComponent
     this.applyStateInvariants();
     this.commit();
     if (
+      Object.keys(this.state.selectedElementIds).length &&
+      isEraserActive(this.state) &&
+      // must not switch tools while the active tool is host-controlled, the
+      // rule the pen's eraser button follows too: `applyStateInvariants`
+      // would put the forced eraser straight back, and this `setState` runs
+      // synchronously and re-entrantly, so the two would recurse unbounded
+      // (upstream defers to React's next render instead)
+      !this.activeTool()
+    ) {
+      this.setState({
+        activeTool: updateActiveTool(this.state, { type: "selection" }),
+      });
+    }
+    if (
+      this.state.activeTool.type === "eraser" &&
+      prevState.theme !== this.state.theme
+    ) {
+      this.cursor.applyForTool();
+    }
+    if (
       this.state.activeTool.type === "bucketfill" &&
       prevState.currentItemBackgroundColor !==
         this.state.currentItemBackgroundColor
     ) {
       this.cursor.applyForTool();
+    }
+    if (isEraserActive(prevState) && !isEraserActive(this.state)) {
+      this.eraserTrail.endPath();
     }
     if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
       this.cursor.reset();
@@ -2992,6 +3026,12 @@ export class CaliburnEditorComponent
         this.pointerDownState.lastCoords.x,
         this.pointerDownState.lastCoords.y,
       );
+    } else if (activeToolType === "eraser") {
+      // upstream creates the pointer-down state for every tool and only
+      // excludes the eraser from `createGenericElementOnPointerDown`; the
+      // trail's own `startPath` comes further down, after the public
+      // pointer-down callbacks, where upstream has it
+      this.pointerDownState = initialPointerDownState(this, event);
     } else if (activeToolType === "autoshape") {
       this.pointerDownState = initialPointerDownState(this, event);
       this.drawShape.handlePointerDown(this.pointerDownState);
@@ -3022,6 +3062,13 @@ export class CaliburnEditorComponent
         this.state.activeTool,
         this.pointerDownState,
         event,
+      );
+    }
+
+    if (this.pointerDownState && this.state.activeTool.type === "eraser") {
+      this.eraserTrail.startPath(
+        this.pointerDownState.lastCoords.x,
+        this.pointerDownState.lastCoords.y,
       );
     }
 
@@ -3060,6 +3107,10 @@ export class CaliburnEditorComponent
     const lastPointerCoords =
       this.previousPointerMoveCoords ?? pointerDownState.origin;
     this.previousPointerMoveCoords = pointerDownState.lastCoords;
+    if (isEraserActive(this.state)) {
+      handleEraser(this, event, pointerDownState.lastCoords);
+      return;
+    }
     if (this.state.activeTool.type === "laser") {
       this.laserTrails.addPointToPath(
         pointerDownState.lastCoords.x,
@@ -3114,6 +3165,7 @@ export class CaliburnEditorComponent
     }
 
     this.savePointer(event.clientX, event.clientY, this.state.cursorButton);
+    this.lastPointerMoveEvent = event;
 
     this.viewport.lastPosition.x = event.clientX;
     this.viewport.lastPosition.y = event.clientY;
@@ -3218,6 +3270,13 @@ export class CaliburnEditorComponent
     scenePointer: { x: number; y: number },
     event: PointerEvent,
   ) {
+    // upstream's hover path leaves the eraser alone: it reaches here (its
+    // tool gate lets the eraser through so the transform-handle cursors
+    // still run) and returns before every hit-element affordance below
+    if (isEraserActive(this.state)) {
+      return;
+    }
+
     const hitElementMightBeLocked = getElementAtPosition(
       this,
       scenePointer.x,
@@ -3434,6 +3493,11 @@ export class CaliburnEditorComponent
         // the deselect below, which returns from upstream's handler, and
         // must read isCropping before the cleanup at the end resets it
         maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
+        if (maybeEraseOnPointerUp(this)) {
+          this.clearHighlightsOnPointerUp();
+          this.pointerDownState = null;
+          return;
+        }
         // a click that deselected ends upstream's pointer-up handler right
         // there — only the teardown it had already run stays
         if (!maybeDeselectOnPointerUp(this, this.pointerDownState)) {
