@@ -102,6 +102,56 @@ describe("language change", () => {
     await waitFor(() => expect(strokeLabel()).toBe("Trait"));
   });
 
+  it("relabels the hint viewer, which resolves its text per commit", async () => {
+    act(() => {
+      h.app.setActiveTool({ type: "eraser" });
+    });
+
+    const hint = () => queryContainer(".HintViewer")?.textContent?.trim();
+
+    await waitFor(() =>
+      expect(hint()).toBe(
+        "Hold Alt to revert the elements marked for deletion",
+      ),
+    );
+
+    await act(() => setEditorLanguage(FRENCH));
+
+    await waitFor(() =>
+      expect(hint()).toBe(
+        "Maintenez Alt pour annuler les éléments marqués pour suppression",
+      ),
+    );
+  });
+
+  it("relabels a panel button whose title resolves per commit", async () => {
+    act(() => {
+      h.app.setState({ selectedElementIds: { [h.elements[0].id]: true } });
+    });
+
+    const linkTitle = () =>
+      queryContainer("caliburn-hyperlink-button button")?.getAttribute("title");
+
+    await waitFor(() => expect(linkTitle()).toMatch(/^Link - /));
+
+    await act(() => setEditorLanguage(FRENCH));
+
+    await waitFor(() => expect(linkTitle()).toMatch(/^Lien - /));
+  });
+
+  it("relabels a section heading, which resolves off its key alone", async () => {
+    const heading = () =>
+      queryContainer(
+        "section[aria-labelledby$='-canvasActions-title'] h2",
+      )!.textContent!.trim();
+
+    expect(heading()).toBe("Canvas actions");
+
+    await act(() => setEditorLanguage(FRENCH));
+
+    await waitFor(() => expect(heading()).toBe("Actions du canevas"));
+  });
+
   it("applies the writing direction of an RTL language", async () => {
     expect(document.documentElement.dir).toBe("ltr");
 

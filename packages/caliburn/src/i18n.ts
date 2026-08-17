@@ -21,6 +21,15 @@ import type { Signal } from "@angular/core";
  */
 const languageGeneration = signal(0);
 
+/**
+ * Moves on every language change. The editor commits on it, which is how the
+ * readers that re-resolve `t()` off `changeGeneration()` rather than through
+ * `translated()` are reached — upstream's `updateLanguage` follows
+ * `setLanguage` with a `setAppState({})` (`App.tsx`) for the same reason.
+ */
+export const languageGenerationSignal: Signal<number> =
+  languageGeneration.asReadonly();
+
 export const setEditorLanguage = async (lang: Language) => {
   await setLanguage(lang);
   languageGeneration.update((generation) => generation + 1);

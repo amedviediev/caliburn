@@ -6,6 +6,7 @@ import { POINTER_BUTTON } from "@excalidraw/common";
 import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
+import { API } from "./helpers/api";
 import { act, fireEvent, GlobalTestState, render } from "./test-utils";
 
 const eraserButtonDown = (clientX = 30, clientY = 30) => {
@@ -90,6 +91,37 @@ describe("pen hardware eraser button", () => {
     }
 
     expect(passes).toEqual(["selection", "eraser"]);
+  });
+
+  it("gives up the switch when a selection sends the tool straight back", async () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+    await render(<Excalidraw initialData={{ elements: [rectangle] }} />);
+    API.setAppState({ selectedElementIds: { [rectangle.id]: true } });
+
+    const { passes, restore } = recordPointerDownPasses();
+
+    try {
+      // the eraser guard reverts the switch before the re-entry reads it, so
+      // re-entering would take the same branch again, without bound
+      expect(() => eraserButtonDown()).not.toThrow();
+    } finally {
+      restore();
+    }
+
+    // upstream's observable end state: the tool never sticks on the eraser
+    // and nothing is erased
+    expect(passes).toEqual(["selection"]);
+    expect(h.state.activeTool.type).toBe("selection");
+    expect(h.elements[0].isDeleted).toBe(false);
+
+    eraserButtonUp();
+    expect(h.state.activeTool.type).toBe("selection");
   });
 
   it("lets the eraser button through the primary-button gate", async () => {

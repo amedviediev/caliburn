@@ -9,6 +9,8 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
 
+import { translated } from "../i18n";
+
 let nextSectionId = 0;
 
 /**
@@ -41,7 +43,9 @@ export class CaliburnSectionComponent {
   >();
 
   readonly titleId = computed(() => `${this.id}-${this.heading()}-title`);
-  readonly headingLabel = computed(() =>
+  // the heading key never changes, so a plain `computed` would cache the label
+  // of whichever language was current when the section was first rendered
+  readonly headingLabel = translated(() =>
     t(`headings.${this.heading()}` as TranslationKeys),
   );
 }

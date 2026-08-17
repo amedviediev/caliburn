@@ -248,6 +248,7 @@ import {
   getElementLinkAtPosition,
   maybeHandleElementLinkClick,
 } from "./link-interaction";
+import { languageGenerationSignal } from "./i18n";
 import { renderEditor } from "./render";
 import {
   actionAlignBottom,
@@ -1100,6 +1101,10 @@ export class CaliburnEditorComponent
    */
   private observedState: AppState = this.state;
 
+  private flushingObservers = false;
+
+  private observerFlushPending = false;
+
   /** emits a follow/unfollow intent to the host (which owns the
    *  `userToFollow` state) via both the `onUserFollow` prop and the
    *  imperative API emitter */
@@ -1351,6 +1356,7 @@ export class CaliburnEditorComponent
 
   private readonly cdr = inject(ChangeDetectorRef);
   private removeSceneUpdateListener: (() => void) | null = null;
+  private observedLanguageGeneration = untracked(languageGenerationSignal);
   private pointerDownState: PointerDownState | null = null;
 
   constructor() {
@@ -1387,6 +1393,28 @@ export class CaliburnEditorComponent
         this.prevViewModeEnabled = viewModeEnabled;
         this.prevForcedTool = forcedTool;
         this.handlePropsChange(prevProps);
+      });
+    });
+
+    // upstream's `updateLanguage` follows `setLanguage` with a
+    // `setAppState({})` so the whole tree re-renders and every `t()` in a
+    // render body re-resolves. The chrome's `translated()` labels track the
+    // language edge on their own; this commit is what reaches the readers
+    // that re-resolve `t()` off `changeGeneration()` instead.
+    effect(() => {
+      const generation = languageGenerationSignal();
+      untracked(() => {
+        if (
+          generation === this.observedLanguageGeneration ||
+          this.unmounted ||
+          !this.removeSceneUpdateListener
+        ) {
+          // pre-mount there is nothing to relabel yet; `ngOnInit` renders
+          // against whichever language is current by then
+          return;
+        }
+        this.observedLanguageGeneration = generation;
+        this.setState({});
       });
     });
 
@@ -3052,6 +3080,15 @@ export class CaliburnEditorComponent
           lastActiveTool: this.state.activeTool,
         }),
       });
+      if (!isEraserActive(this.state)) {
+        // the eraser guard sends a tool that meets a selection straight back
+        // to selection. Upstream's callback still sees the eraser because the
+        // revert only lands on the next render, so it re-enters once and the
+        // tool is back on selection by the time anything is erased; here the
+        // revert is already in `this.state`, so re-entering would take this
+        // same branch again, without bound. Stopping at upstream's end state.
+        return;
+      }
       this.handleCanvasPointerDown(event);
       const onPointerUp = () => {
         unsubPointerUp();
@@ -4480,6 +4517,36 @@ export class CaliburnEditorComponent
     }
   }
 
+  /**
+   * Notifies the `onStateChange` listeners of everything committed since the
+   * last flush. Upstream flushes from `componentDidUpdate`, so a listener that
+   * writes state only schedules another render and its notification arrives
+   * from a later, complete pass. Caliburn's `setState` is synchronous, so such
+   * a listener re-enters `commit()` mid-flush — and the vendored flush reads
+   * the state once before iterating and reassigns its listener list at the
+   * end, so a nested pass would leave the listeners after it holding the older
+   * value and would drop the `once` bookkeeping the outer pass then redoes.
+   * Deferring the nested flush to a second pass of the outer one is upstream's
+   * re-render-then-flush-again shape.
+   */
+  private flushObservers() {
+    if (this.flushingObservers) {
+      this.observerFlushPending = true;
+      return;
+    }
+    this.flushingObservers = true;
+    try {
+      do {
+        this.observerFlushPending = false;
+        const prevState = this.observedState;
+        this.observedState = this.state;
+        this.appStateObserver.flush(prevState);
+      } while (this.observerFlushPending);
+    } finally {
+      this.flushingObservers = false;
+    }
+  }
+
   private commit() {
     if (this.batchDepth > 0) {
       this.commitPending = true;
@@ -4488,9 +4555,7 @@ export class CaliburnEditorComponent
     // must be updated *before* the change listeners are triggered below
     this.maybeEmitInitialize();
     this.changeGeneration.update((generation) => generation + 1);
-    const prevState = this.observedState;
-    this.observedState = this.state;
-    this.appStateObserver.flush(prevState);
+    this.flushObservers();
     this.updateEmbeddables();
     // assigned rather than `setState`d, which would re-enter this commit; the
     // flag is not observed by the store, so the delta is unaffected either

@@ -124,6 +124,39 @@ describe("api.onStateChange", () => {
     );
   });
 
+  it("should settle every listener on the live value when one of them writes", () => {
+    const seen: string[] = [];
+    const seenOnce: string[] = [];
+
+    excalidrawAPI.onStateChange("activeTool", (activeTool) => {
+      if (activeTool.type === "rectangle") {
+        excalidrawAPI.setActiveTool({ type: "ellipse" });
+      }
+    });
+    excalidrawAPI.onStateChange("activeTool", (activeTool) => {
+      seen.push(activeTool.type);
+    });
+    excalidrawAPI.onStateChange(
+      "activeTool",
+      (activeTool) => {
+        seenOnce.push(activeTool.type);
+      },
+      { once: true },
+    );
+
+    act(() => {
+      UI.clickTool("rectangle");
+    });
+
+    expect(h.state.activeTool.type).toBe("ellipse");
+    // upstream's writing listener only schedules a render, so the pass it
+    // interrupts finishes on the state it started with and the write is
+    // delivered by a later, complete pass — never as an older value arriving
+    // after a newer one
+    expect(seen).toEqual(["rectangle", "ellipse"]);
+    expect(seenOnce).toEqual(["rectangle"]);
+  });
+
   it("should honor `once`", () => {
     const callback = vi.fn();
     excalidrawAPI.onStateChange("currentItemStrokeColor", callback, {
