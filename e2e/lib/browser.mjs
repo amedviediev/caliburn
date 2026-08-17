@@ -398,6 +398,38 @@ export const tapCenter = async (page, selector) => {
 };
 
 /**
+ * Cancel one of Chrome's own synthesized events — `dblclick` from two taps,
+ * `contextmenu` from a long press — in the capture phase, before it reaches
+ * the editor's bindings. A check that asserts the editor's response to a
+ * gesture then measures the editor's own touch handling rather than the
+ * browser's shortcut to the same place. `restoreNativeEvent` puts it back.
+ */
+export const suppressNativeEvent = (page, type) =>
+  page.evaluate((eventType) => {
+    window.__suppressedNative = window.__suppressedNative || {};
+    const stop = (event) => event.stopImmediatePropagation();
+    window.__suppressedNative[eventType] = stop;
+    window.addEventListener(eventType, stop, true);
+  }, type);
+
+export const restoreNativeEvent = (page, type) =>
+  page.evaluate((eventType) => {
+    const stop = window.__suppressedNative?.[eventType];
+    if (stop) {
+      window.removeEventListener(eventType, stop, true);
+      delete window.__suppressedNative[eventType];
+    }
+  }, type);
+
+/**
+ * Wait out the vendored `TAP_TWICE_TIMEOUT` (300 ms) so the next touch opens a
+ * gesture of its own instead of completing the previous one's tap twice. A
+ * fixed protocol delay, not a poll — the timer exposes no state to observe.
+ */
+export const settleTapTwiceWindow = (page) =>
+  page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+
+/**
  * Press and release a stylus at real pixels. Neither `page.mouse` nor
  * `page.touchscreen` can make Chrome report `pointerType: "pen"`; the raw CDP
  * `Input.dispatchMouseEvent` takes a `pointerType`, and does.

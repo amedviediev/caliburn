@@ -1052,11 +1052,8 @@ export class CaliburnEditorComponent
 
   readonly arrowText = new CaliburnArrowText(this);
 
-  /** how many `setState` calls have written `selectedElementIds` */
-  private selectionWriteCount = 0;
-
-  /** the `selectionWriteCount` a pending selection clear was armed at */
-  private selectionClearArmedAt: number | null = null;
+  /** upstream's `clearSelectionIfNotUsingSelection`, queued but not applied */
+  private pendingSelectionClear = false;
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
 
@@ -2600,11 +2597,19 @@ export class CaliburnEditorComponent
   };
 
   setState(state: SetStateArg, callback?: () => void) {
+    if (typeof state === "function" && this.pendingSelectionClear) {
+      // React runs a queued updater against the state the updates before it
+      // have already produced, so an updater queued after the pending clear
+      // reads a cleared selection. Apply it before the updater runs.
+      this.applyPendingSelectionClear();
+    }
     const prevState = this.state;
     const partial = typeof state === "function" ? state(this.state) : state;
     if (partial) {
-      if ("selectedElementIds" in partial) {
-        this.selectionWriteCount++;
+      if (this.pendingSelectionClear && "selectedElementIds" in partial) {
+        // an object-form write was computed from the pre-clear selection and
+        // is queued behind the clear, so it wins outright
+        this.pendingSelectionClear = false;
       }
       this.state = { ...this.state, ...partial };
     }
@@ -3050,7 +3055,7 @@ export class CaliburnEditorComponent
         this.isInteractionEnabled() ||
         this.isToolSupported(this.state.activeTool.type);
       this.handleCanvasPointerDownImpl(event);
-      this.applyArmedSelectionClear();
+      this.applyPendingSelectionClear();
       if (canRestoreIsBindingEnabled) {
         this.restoreIsBindingEnabledToPreference(event);
       }
@@ -3114,8 +3119,6 @@ export class CaliburnEditorComponent
     const newElementOnPointerDown = this.state.newElement;
 
     this.maybeCleanupAfterMissingPointerUp(event);
-
-    this.lastPointerDownEvent = event;
 
     // laser pointer is a presentation aid, not an edit — using it while
     // following someone shouldn't break follow
@@ -3199,6 +3202,13 @@ export class CaliburnEditorComponent
       return;
     }
 
+    // remove any active selection when we start to interact with canvas
+    // (mainly, we care about removing selection outside the component which
+    //  would prevent our copy handling otherwise)
+    const selection = document.getSelection();
+    if (selection?.anchorNode) {
+      selection.removeAllRanges();
+    }
     this.touchInput.maybeOpenContextMenuAfterPointerDownOnTouchDevices(event);
 
     //fires only once, if pen is detected, penMode is enabled
@@ -3224,6 +3234,8 @@ export class CaliburnEditorComponent
         updateObject(this.editorInterfaceSignal(), { isTouchScreen: true }),
       );
     }
+
+    this.lastPointerDownEvent = event;
 
     if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;
@@ -3698,27 +3710,41 @@ export class CaliburnEditorComponent
   };
 
   /**
-   * Upstream's `clearSelectionIfNotUsingSelection`, split in two around the
-   * tool dispatch it precedes. Upstream queues the clear as a plain
-   * `setState`, so nothing in the same pointer-down reads it back — the
-   * dispatch still sees the pre-clear selection, which is how `actionFinalize`
-   * carries a multi-point element's own selection through it — and a
-   * selection the dispatch writes lands after the clear and wins. Caliburn's
-   * `setState` is synchronous, so clearing at upstream's call site would be
-   * read back by the dispatch; arming it there and applying it once the
-   * dispatch has returned, only when the dispatch wrote no selection of its
-   * own, is both halves of React's queue.
+   * Upstream's `clearSelectionIfNotUsingSelection`, queued here and applied
+   * where React's own queue would let it land. Upstream writes it as a plain
+   * `setState` in the middle of the pointer-down handler, which puts it under
+   * three of React's rules, all reproduced by `setState` and by
+   * `applyPendingSelectionClear` running once the tool dispatch has returned:
+   *
+   * - a FUNCTIONAL updater queued after it reads the state the clear has
+   *   already produced, so the clear is applied before the updater runs.
+   *   Both pointer-down writes that matter take this route:
+   *   `handleFreeDrawElementOnPointerDown` subtracts its own id from a
+   *   selection upstream has by then emptied, and an action result
+   *   (`syncActionResult`) spreads over it the appState the action computed
+   *   from the pre-clear selection — which is how `actionFinalize` keeps a
+   *   multi-point element selected across the clear;
+   * - an OBJECT-form write queued after it wins outright, having been
+   *   computed from the pre-clear selection `this.state` still shows the
+   *   handler. No pointer-down dispatch writes a selection that way today,
+   *   so this arm holds the rule rather than carrying a case;
+   * - nothing else in the handler observes the clear, and with no later
+   *   write it lands as-is.
+   *
+   * That last arm is all-or-nothing on `selectedElementIds`, where React
+   * resolves it per key: an object write of that one key alone would leave
+   * `selectedGroupIds`, `editingGroupId` and `activeEmbeddable` uncleared,
+   * where upstream still clears them. No caller writes that shape either.
    */
   private armClearSelectionIfNotUsingSelection = (): void => {
-    this.selectionClearArmedAt = isSelectionLikeTool(this.state.activeTool.type)
-      ? null
-      : this.selectionWriteCount;
+    this.pendingSelectionClear = !isSelectionLikeTool(
+      this.state.activeTool.type,
+    );
   };
 
-  private applyArmedSelectionClear = (): void => {
-    const armedAt = this.selectionClearArmedAt;
-    this.selectionClearArmedAt = null;
-    if (armedAt !== null && armedAt === this.selectionWriteCount) {
+  private applyPendingSelectionClear = (): void => {
+    if (this.pendingSelectionClear) {
+      this.pendingSelectionClear = false;
       deselectElements(this);
     }
   };

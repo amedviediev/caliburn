@@ -15,7 +15,7 @@ import { gesture } from "../src/pan-gesture";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { UI } from "./helpers/ui";
+import { Pointer, UI } from "./helpers/ui";
 import {
   act,
   fireEvent,
@@ -25,6 +25,8 @@ import {
 } from "./test-utils";
 
 unmountComponent();
+
+const mouse = new Pointer("mouse");
 
 /** jsdom has no `Touch` constructor; `TouchEvent` takes the plain shape */
 const finger = (clientX: number, clientY: number) =>
@@ -367,6 +369,56 @@ describe("touch input", () => {
       touchDown(rectangle.x + 50, rectangle.y + 50);
 
       expect(h.state.selectedElementIds[rectangle.id]).toBe(true);
+    });
+
+    // the clear is queued where React would queue it, so what the tool's own
+    // pointer-down handler writes settles the selection instead
+    it("is superseded by a selection the pointer-down dispatch writes", () => {
+      const rectangle = seedRectangle();
+      act(() => {
+        h.app.setActiveTool({ type: "arrow" });
+      });
+      API.setSelectedElements([rectangle]);
+
+      mouse.downAt(300, 300);
+
+      const arrow = h.elements.find((el) => el.type === "arrow");
+      expect(arrow).toBeDefined();
+      expect(h.state.selectedElementIds).toEqual({ [arrow!.id]: true });
+    });
+
+    // upstream's freedraw handler subtracts its own id from the selection with
+    // a functional updater, which reads the cleared selection, not the one the
+    // pointer went down with
+    it("is read back by a dispatch that updates the selection relatively", () => {
+      const rectangle = seedRectangle();
+      act(() => {
+        h.app.setActiveTool({ type: "freedraw" });
+      });
+      API.setSelectedElements([rectangle]);
+      expect(h.state.selectedElementIds[rectangle.id]).toBe(true);
+
+      mouse.downAt(300, 300);
+
+      expect(h.state.selectedElementIds).toEqual({});
+    });
+
+    // the case the queued clear exists for: the second click of an elbow arrow
+    // finalizes it from inside the same pointer down, and `actionFinalize`
+    // reads the selection the clear has not been applied to
+    it("leaves a multi-point element the pointer down finalizes selected", () => {
+      UI.clickTool("arrow");
+      UI.clickOnTestId("elbow-arrow");
+      mouse.reset();
+      mouse.moveTo(0, 0);
+      mouse.click();
+      mouse.moveTo(250, 200);
+      mouse.downAt(250, 200);
+
+      const arrow = h.elements.find((el) => el.type === "arrow");
+      expect(arrow).toBeDefined();
+      expect(h.state.multiElement).toBeNull();
+      expect(h.state.selectedElementIds[arrow!.id]).toBe(true);
     });
   });
 });

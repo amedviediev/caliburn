@@ -30,7 +30,10 @@ import {
   probe,
   rectOf,
   resetEditor,
+  restoreNativeEvent,
   screenshot,
+  settleTapTwiceWindow,
+  suppressNativeEvent,
   TABLET,
   tapCenter,
   VIEWPORT,
@@ -3563,16 +3566,26 @@ export const runSuite = async (browser, url, runner) => {
         "tapping twice with one finger opens the text editor",
         async () => {
           await resetEditor(page);
-          await page.touchscreen.tap(196, 420);
-          await page.touchscreen.tap(196, 420);
-          await waitFor(
-            page,
-            () =>
-              !!document.querySelector(
-                ".excalidraw-textEditorContainer textarea",
-              ),
-            { message: "tapping twice opened no text editor" },
-          );
+          // Chrome synthesizes a `dblclick` from two taps, which the editor's
+          // own double-click binding would answer whether or not the touch
+          // layer is ported. Cancelling it in the capture phase leaves the
+          // tap-twice handler — which calls `handleCanvasDoubleClick` directly
+          // — as the only thing that can open an editor here.
+          await suppressNativeEvent(page, "dblclick");
+          try {
+            await page.touchscreen.tap(196, 420);
+            await page.touchscreen.tap(196, 420);
+            await waitFor(
+              page,
+              () =>
+                !!document.querySelector(
+                  ".excalidraw-textEditorContainer textarea",
+                ),
+              { message: "tapping twice opened no text editor" },
+            );
+          } finally {
+            await restoreNativeEvent(page, "dblclick");
+          }
           await page.keyboard.press("Escape");
           await resetEditor(page);
         },
@@ -3589,6 +3602,10 @@ export const runSuite = async (browser, url, runner) => {
         "holding a finger still on the canvas opens the context menu",
         async () => {
           await resetEditor(page);
+          // same again for Chrome's own long-press `contextmenu` event: the
+          // ported timer calls `handleCanvasContextMenu` directly, so only it
+          // can still open the menu once the native event is cancelled
+          await suppressNativeEvent(page, "contextmenu");
           await page.touchscreen.touchStart(196, 420);
           try {
             await waitFor(
@@ -3598,6 +3615,7 @@ export const runSuite = async (browser, url, runner) => {
             );
           } finally {
             await page.touchscreen.touchEnd();
+            await restoreNativeEvent(page, "contextmenu");
           }
           await page.keyboard.press("Escape");
           await resetEditor(page);
@@ -3612,10 +3630,13 @@ export const runSuite = async (browser, url, runner) => {
         "a second finger on the canvas drops the selection",
         async () => {
           await resetEditor(page);
-          // draw a rectangle with a finger — creating it leaves it selected
-          await page.evaluate(() =>
-            window.h.app.setActiveTool({ type: "rectangle" }),
-          );
+          // draw a rectangle with a finger — creating it leaves it selected.
+          // It is filled, so that a press inside it hits the element and
+          // keeps the selection instead of clearing it as a canvas miss
+          await page.evaluate(() => {
+            window.h.setState({ currentItemBackgroundColor: "#ffec99" });
+            window.h.app.setActiveTool({ type: "rectangle" });
+          });
           const drawing = await page.touchscreen.touchStart(120, 500);
           await drawing.move(260, 620);
           await drawing.end();
@@ -3624,14 +3645,30 @@ export const runSuite = async (browser, url, runner) => {
             () => Object.keys(window.h.state.selectedElementIds).length === 1,
             { message: "drawing a rectangle by touch selected nothing" },
           );
+          // let the tap-twice window close, so the first finger below is a
+          // fresh gesture rather than the second tap of the drawing one
+          await settleTapTwiceWindow(page);
 
-          const first = await page.touchscreen.touchStart(120, 300);
-          const second = await page.touchscreen.touchStart(280, 300);
+          // both fingers land ON the selected rectangle: a press there keeps
+          // the selection (it starts a drag), so only the two-finger
+          // `touchstart` branch can drop it
+          const first = await page.touchscreen.touchStart(160, 540);
+          const second = await page.touchscreen.touchStart(230, 600);
           try {
             await waitFor(
               page,
               () => Object.keys(window.h.state.selectedElementIds).length === 0,
               { message: "a second finger left the selection in place" },
+            );
+            const textEditor = await page.evaluate(
+              () =>
+                !!document.querySelector(
+                  ".excalidraw-textEditorContainer textarea",
+                ),
+            );
+            expect(
+              !textEditor,
+              "the fingers were read as a double tap, not as two fingers",
             );
           } finally {
             await second.end();
