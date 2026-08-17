@@ -12,12 +12,28 @@ import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { Keyboard, Pointer } from "./helpers/ui";
-import { GlobalTestState, render } from "./test-utils";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
+import { act, fireEvent, GlobalTestState, render } from "./test-utils";
 
 const mouse = new Pointer("mouse");
 
 const cursor = () => GlobalTestState.interactiveCanvas.style.cursor;
+
+/**
+ * A pointer move with the platform's primary modifier held. `Pointer` carries
+ * `ctrlKey` only, and `KEYS.CTRL_OR_CMD` reads `metaKey` on darwin, so the
+ * event is fired here with both.
+ */
+const moveWithModifier = (x: number, y: number) => {
+  fireEvent.pointerMove(GlobalTestState.interactiveCanvas, {
+    clientX: x,
+    clientY: y,
+    pointerType: "mouse",
+    pointerId: 1,
+    ctrlKey: true,
+    metaKey: true,
+  });
+};
 
 /** the client coords of the centre of a single element's transform handle */
 const handleCenter = (
@@ -230,6 +246,129 @@ describe("hover affordances", () => {
         h.state.selectedLinearElement?.segmentMidPointHoveredCoords,
       ).toEqual(pointFrom(125, 120));
       expect(cursor()).toBe(CURSOR_TYPE.POINTER);
+    });
+  });
+
+  // every case here moves with CTRL_OR_CMD held, which keeps the tail's own
+  // move branch out of it (`!event[KEYS.CTRL_OR_CMD]`), so the cursor each
+  // asserts is the hover helper's alone
+  describe("the move branch", () => {
+    it("hovering the element itself shows the move cursor", () => {
+      selectedLine(THREE_POINT_LINE);
+
+      // on the stroke, between a point and a segment midpoint
+      moveWithModifier(140, 132);
+
+      expect(h.state.selectedLinearElement?.hoverPointIndex).toBe(-1);
+      expect(cursor()).toBe(CURSOR_TYPE.MOVE);
+    });
+
+    it("hovering inside the bounding box but off the stroke shows it too", () => {
+      selectedLine(THREE_POINT_LINE);
+
+      // inside the bounding box, ~27px off the nearest segment: the element
+      // itself is missed, the selection's bounding box is not
+      moveWithModifier(150, 105);
+
+      expect(cursor()).toBe(CURSOR_TYPE.MOVE);
+    });
+
+    it("shows no move cursor for the lasso tool with nothing selected", () => {
+      selectedLine(THREE_POINT_LINE);
+      act(() => {
+        h.app.setActiveTool({ type: "lasso" });
+      });
+      API.setAppState({ selectedElementIds: {} });
+      expect(h.state.selectedLinearElement).not.toBe(null);
+
+      moveWithModifier(140, 132);
+      expect(cursor()).not.toBe(CURSOR_TYPE.MOVE);
+
+      act(() => {
+        h.app.setActiveTool({ type: "selection" });
+      });
+      API.setAppState({ selectedElementIds: {} });
+      moveWithModifier(140, 132);
+      expect(cursor()).toBe(CURSOR_TYPE.MOVE);
+    });
+  });
+
+  describe("elbow arrows", () => {
+    /** an elbow arrow routed (0, 0) → (125, 0) → (125, 200) → (250, 200) */
+    const selectedElbowArrow = () => {
+      UI.clickTool("arrow");
+      UI.clickOnTestId("elbow-arrow");
+      mouse.reset();
+      mouse.moveTo(0, 0);
+      mouse.click();
+      mouse.moveTo(250, 200);
+      mouse.click();
+      expect(h.state.selectedLinearElement).not.toBe(null);
+    };
+
+    it("only the endpoints count as point handles", () => {
+      selectedElbowArrow();
+
+      // a routing corner: hovered, but no point handle to grab
+      mouse.moveTo(125, 0);
+      expect(h.state.selectedLinearElement?.hoverPointIndex).toBe(1);
+      expect(cursor()).toBe(CURSOR_TYPE.MOVE);
+
+      // the last point, which is one
+      mouse.moveTo(250, 200);
+      expect(h.state.selectedLinearElement?.hoverPointIndex).toBe(3);
+      expect(cursor()).toBe(CURSOR_TYPE.POINTER);
+    });
+  });
+
+  describe("bound arrow focus point", () => {
+    it("hovering it sets the hovered binding and the pointer cursor", () => {
+      const rect = API.createElement({
+        type: "rectangle",
+        x: 200,
+        y: 100,
+        width: 100,
+        height: 100,
+      });
+      const arrow = API.createElement({
+        type: "arrow",
+        x: 50,
+        y: 150,
+        width: 100,
+        height: 0,
+        points: [pointFrom(0, 0), pointFrom(100, 0)],
+        endBinding: {
+          elementId: rect.id,
+          fixedPoint: [0.5, 0.5],
+          mode: "orbit",
+        },
+      });
+      API.setElements([rect, arrow]);
+      mouse.clickAt(100, 150);
+      expect(h.state.selectedLinearElement?.elementId).toBe(arrow.id);
+
+      // the focus point: the rectangle's centre, where the binding is fixed
+      mouse.moveTo(250, 150);
+
+      expect(h.state.selectedLinearElement?.hoveredFocusPointBinding).toBe(
+        "end",
+      );
+      expect(cursor()).toBe(CURSOR_TYPE.POINTER);
+    });
+  });
+
+  describe("while a multi-point element is being drawn", () => {
+    it("does not hover the point the pointer is laying down", () => {
+      UI.clickTool("line");
+      mouse.reset();
+      mouse.clickAt(100, 100);
+      expect(h.state.multiElement).not.toBe(null);
+      expect(h.state.selectedLinearElement).not.toBe(null);
+
+      mouse.moveTo(200, 100);
+
+      expect(h.state.selectedLinearElement?.hoverPointIndex).toBe(-1);
+      expect(cursor()).toBe(CURSOR_TYPE.CROSSHAIR);
     });
   });
 });

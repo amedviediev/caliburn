@@ -12,6 +12,7 @@ import {
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
 import {
+  LinearElementEditor,
   fixBindingsAfterDeletion,
   getApproxMinLineHeight,
   getApproxMinLineWidth,
@@ -978,6 +979,68 @@ export const handleCanvasDoubleClick = (
       // Use the proper action to ensure immediate history capture
       editor.actionManager.executeAction(actionToggleLinearEditor);
       return;
+    } else if (
+      editor.state.selectedLinearElement &&
+      isElbowArrow(selectedElements[0])
+    ) {
+      const hitCoords = LinearElementEditor.getSegmentMidpointHitCoords(
+        editor.state.selectedLinearElement,
+        { x: sceneX, y: sceneY },
+        editor.state,
+        editor.scene.getNonDeletedElementsMap(),
+      );
+      const midPoint = hitCoords
+        ? LinearElementEditor.getSegmentMidPointIndex(
+            editor.state.selectedLinearElement,
+            editor.state,
+            hitCoords,
+            editor.scene.getNonDeletedElementsMap(),
+          )
+        : -1;
+
+      if (midPoint && midPoint > -1) {
+        editor.store.scheduleCapture();
+        LinearElementEditor.deleteFixedSegment(
+          selectedElements[0],
+          editor.scene,
+          midPoint,
+        );
+
+        const nextCoords = LinearElementEditor.getSegmentMidpointHitCoords(
+          {
+            ...editor.state.selectedLinearElement,
+            segmentMidPointHoveredCoords: null,
+          },
+          { x: sceneX, y: sceneY },
+          editor.state,
+          editor.scene.getNonDeletedElementsMap(),
+        );
+        const nextIndex = nextCoords
+          ? LinearElementEditor.getSegmentMidPointIndex(
+              editor.state.selectedLinearElement,
+              editor.state,
+              nextCoords,
+              editor.scene.getNonDeletedElementsMap(),
+            )
+          : null;
+
+        editor.setState({
+          selectedLinearElement: {
+            ...editor.state.selectedLinearElement,
+            initialState: {
+              ...editor.state.selectedLinearElement.initialState,
+              segmentMidpoint: {
+                index: nextIndex,
+                value: hitCoords,
+                added: false,
+              },
+            },
+            segmentMidPointHoveredCoords: nextCoords,
+          },
+        });
+
+        return;
+      }
     } else if (
       editor.state.selectedLinearElement?.isEditing &&
       editor.state.selectedLinearElement.elementId ===

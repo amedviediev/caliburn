@@ -7,6 +7,7 @@ import {
   ROUNDNESS,
   getGridPoint,
   invariant,
+  isShallowEqual,
   updateActiveTool,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
@@ -16,6 +17,7 @@ import {
   getBindingStrategyForDraggingBindingElementEndpoints,
   getHoveredElementForBinding,
   getSnapOutlineMidPoint,
+  handleFocusPointHover,
   hitElementItself,
   isBindingElement,
   isBindingEnabled,
@@ -31,7 +33,10 @@ import {
 import { pointDistance, pointFrom } from "@excalidraw/math";
 
 import type { GlobalPoint, LocalPoint } from "@excalidraw/math";
-import type { ExcalidrawLinearElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawArrowElement,
+  ExcalidrawLinearElement,
+} from "@excalidraw/element/types";
 
 import { actionFinalize } from "./actions/actionFinalize";
 import { getEffectiveGridSize } from "./create-interaction";
@@ -473,7 +478,30 @@ export const maybeDragLinearPoint = (
 
   if (newState) {
     pointerDownState.drag.hasOccurred = true;
-    editor.setState(newState);
+
+    // NOTE: Optimize setState calls because it
+    // affects history and performance
+    if (
+      newState.suggestedBinding !== editor.state.suggestedBinding ||
+      !isShallowEqual(
+        newState.selectedLinearElement?.selectedPointsIndices ?? [],
+        editor.state.selectedLinearElement?.selectedPointsIndices ?? [],
+      ) ||
+      newState.selectedLinearElement?.hoverPointIndex !==
+        editor.state.selectedLinearElement?.hoverPointIndex ||
+      newState.selectedLinearElement?.customLineAngle !==
+        editor.state.selectedLinearElement?.customLineAngle ||
+      // upstream reads `this.state.selectedLinearElement.isDragging` here,
+      // non-optionally; `linearElementEditor` is that same object, taken off
+      // the state at the top of this function and never replaced since
+      linearElementEditor.isDragging !==
+        newState.selectedLinearElement?.isDragging ||
+      editor.state.selectedLinearElement?.initialState?.altFocusPoint !==
+        newState.selectedLinearElement?.initialState?.altFocusPoint
+    ) {
+      editor.setState(newState);
+    }
+
     return true;
   }
 
@@ -740,9 +768,36 @@ export const handleHoverSelectedLinearElement = (
       });
     }
 
-    // upstream follows with the arrow focus-point hover
-    // (`hoveredFocusPointBinding`, App.tsx:8264-8292), which caliburn does not
-    // write yet — see the README's known gaps
+    // Check for focus point hover
+    let hoveredFocusPointBinding: "start" | "end" | null = null;
+    const arrow = element as any;
+    if (arrow.startBinding || arrow.endBinding) {
+      hoveredFocusPointBinding = handleFocusPointHover(
+        element as ExcalidrawArrowElement,
+        scenePointerX,
+        scenePointerY,
+        editor.scene,
+        editor.state,
+      );
+    }
+
+    if (
+      editor.state.selectedLinearElement.hoveredFocusPointBinding !==
+      hoveredFocusPointBinding
+    ) {
+      editor.setState({
+        selectedLinearElement: {
+          ...editor.state.selectedLinearElement,
+          isDragging: false,
+          hoveredFocusPointBinding,
+        },
+      });
+    }
+
+    // Set cursor to pointer when hovering over a focus point
+    if (hoveredFocusPointBinding) {
+      editor.cursor.set(CURSOR_TYPE.POINTER);
+    }
   } else {
     editor.cursor.set(CURSOR_TYPE.AUTO);
   }

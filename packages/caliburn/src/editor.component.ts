@@ -3690,7 +3690,19 @@ export class CaliburnEditorComponent
       }
     }
 
-    if (this.state.selectedLinearElement) {
+    // upstream reaches this second call (App.tsx:8106) only with the
+    // selection, lasso or text tool — its pointer-move gate (:7908-7920)
+    // minus the eraser (:8004) and laser (:8041) returns above. The tool
+    // list has to be spelled out because caliburn has no such gate: a
+    // drawing tool laying down a multi-point line keeps a
+    // `selectedLinearElement` between clicks, whose uncommitted last point
+    // follows the pointer, so every move would hover a point of its own —
+    // taking the crosshair away and drawing a hovered-point handle.
+    if (
+      (isSelectionLikeTool(this.state.activeTool.type) ||
+        this.state.activeTool.type === "text") &&
+      this.state.selectedLinearElement
+    ) {
       handleHoverSelectedLinearElement(
         this,
         this.state.selectedLinearElement,
