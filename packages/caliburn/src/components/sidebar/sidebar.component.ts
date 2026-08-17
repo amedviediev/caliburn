@@ -62,10 +62,12 @@ export class CaliburnSidebarComponent implements OnInit, OnDestroy {
 
   private readonly island = viewChild<ElementRef<HTMLDivElement>>("island");
 
-  private readonly isPhone = this.editor.editorInterface.formFactor === "phone";
+  private readonly isPhone = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
-  readonly viewportUi = this.isPhone ? null : "side";
-  readonly viewportUiName = this.isPhone ? null : "sidebar";
+  readonly viewportUi = computed(() => (this.isPhone() ? null : "side"));
+  readonly viewportUiName = computed(() => (this.isPhone() ? null : "sidebar"));
 
   readonly isOpen = computed(() => {
     this.editor.changeGeneration();

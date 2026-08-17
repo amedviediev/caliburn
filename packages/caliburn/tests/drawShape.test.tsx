@@ -807,12 +807,7 @@ describe("autoshape tool activation", () => {
 });
 
 describe("autoshape compact toolbar placement", () => {
-  // caliburn gate — mobile chrome is unported (README "Known gaps"):
-  // `editorInterface.formFactor` is the hardcoded `"desktop"` literal
-  // (editor.component.ts), `UIOptions.getFormFactor` is never consulted, and
-  // the compact toolbar's `.tool-popover-content` tool grouping has no
-  // Angular counterpart at all
-  it.skip.each(["tablet", "phone"] as const)(
+  it.each(["tablet", "phone"] as const)(
     "groups autoshape under freedraw on %s",
     async (formFactor) => {
       const { container } = await render(

@@ -4,20 +4,20 @@
     icon="settingsIcon"
     testId="preferences-menu-item"
     [ariaLabel]="label()"
-    [mobile]="isMobile"
+    [mobile]="isMobile()"
   >
     {{ label() }}
   </button>
   <caliburn-dropdown-menu-sub-content
     class="excalidraw-main-menu-preferences-submenu"
-    [mobile]="isMobile"
+    [mobile]="isMobile()"
   >
     <caliburn-dropdown-menu-item-content-radio
       icon="emptyIcon"
       name="boxSelectionMode"
       [value]="boxSelectionMode()"
       [choices]="boxSelectionChoices()"
-      [mobile]="isMobile"
+      [mobile]="isMobile()"
       (valueChange)="setBoxSelectionMode($event)"
     >
       {{ boxSelectionLabel() }}

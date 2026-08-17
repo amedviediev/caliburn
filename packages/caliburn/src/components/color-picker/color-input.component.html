@@ -17,7 +17,7 @@
       (focus)="onFocus()"
       (keydown)="onKeyDown($event)"
     />
-    @if (showEyeDropper) {
+    @if (showEyeDropper()) {
     <div
       style="
         width: 1px;

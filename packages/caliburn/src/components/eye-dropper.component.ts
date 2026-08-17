@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
   viewChild,
@@ -59,8 +60,9 @@ export class CaliburnEyeDropperComponent implements AfterViewInit, OnDestroy {
     viewChild.required<ElementRef<HTMLDivElement>>("preview");
 
   protected readonly cursor = eyeDropperCursor;
-  protected readonly isPhone =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isPhone = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   private isHoldingPointerDown = false;
 

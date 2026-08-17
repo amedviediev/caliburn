@@ -8,7 +8,10 @@ import {
   viewChild,
 } from "@angular/core";
 
-import { supportsResizeObserver } from "@excalidraw/common";
+import {
+  MOBILE_ACTION_BUTTON_BG,
+  supportsResizeObserver,
+} from "@excalidraw/common";
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
@@ -202,6 +205,21 @@ export class CaliburnCompactShapeActionsComponent
       this.freedrawModeAction,
       this.freedrawModeValue() === "constant" ? "variable" : "constant",
     );
+  }
+
+  /** upstream's `MOBILE_ACTION_BUTTON_BG`, which the mobile undo/redo buttons
+   * always carry (`actionHistory.tsx`) — the island they sit on is
+   * transparent, so they paint their own background */
+  protected mobileActionBackground() {
+    return this.isMobile() ? MOBILE_ACTION_BUTTON_BG.background : null;
+  }
+
+  /** the same background on duplicate/delete, which upstream drops while the
+   * popover that also holds them is open */
+  protected promotedActionBackground() {
+    return this.isMobile() && this.openPopup() !== "compactOtherProperties"
+      ? MOBILE_ACTION_BUTTON_BG.background
+      : null;
   }
 
   protected undo() {

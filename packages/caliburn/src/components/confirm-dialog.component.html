@@ -2,7 +2,7 @@
   [class]="dialogClass()"
   size="small"
   [title]="title()"
-  [fullscreen]="isMobile"
+  [fullscreen]="isMobile()"
   (closeRequest)="cancel.emit()"
 >
   <ng-content />

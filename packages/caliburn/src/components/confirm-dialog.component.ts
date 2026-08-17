@@ -53,8 +53,9 @@ export class CaliburnConfirmDialogComponent {
     () => this.cancelText() ?? t("buttons.cancel"),
   );
 
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected readonly dialogClass = computed(() =>
     `confirm-dialog ${this.extraClass()}`.trim(),

@@ -126,8 +126,9 @@ export class CaliburnLibraryMenuItemsComponent
   protected readonly searchPlaceholder = translated(() =>
     t("library.search.inputPlaceholder"),
   );
-  protected readonly isPhone =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isPhone = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected readonly searchInputValue = signal("");
   private readonly lastSelectedItem = signal<LibraryItem["id"] | null>(null);

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
 } from "@angular/core";
@@ -59,8 +60,9 @@ export class CaliburnJSONExportDialogComponent {
   );
   protected readonly fileTitleLabel = translated(() => t("labels.fileTitle"));
   protected readonly nativeFileSystemSupported = nativeFileSystemSupported;
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected visible() {
     this.editor.changeGeneration();

@@ -67,8 +67,9 @@ export class CaliburnColorInputComponent {
   private readonly eyeDropperTriggerRef =
     viewChild<ElementRef<HTMLDivElement>>("eyeDropperTrigger");
 
-  protected readonly showEyeDropper =
-    this.editor.editorInterface.formFactor !== "phone";
+  protected readonly showEyeDropper = computed(
+    () => this.editor.editorInterface.formFactor !== "phone",
+  );
 
   protected readonly eyeDropperTitle = translated(
     () =>

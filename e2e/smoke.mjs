@@ -23,11 +23,15 @@ import {
   elements,
   occlusion,
   openPage,
+  PHONE,
+  PHONE_LANDSCAPE,
   pressWithMod,
   probe,
   rectOf,
   resetEditor,
   screenshot,
+  TABLET,
+  tapCenter,
   VIEWPORT,
   waitFor,
   waitForAnimations,
@@ -423,8 +427,8 @@ const upstreamLinks = (links) =>
     .map((link) => `${link.label} -> ${link.href}`);
 
 export const runSuite = async (browser, url, runner) => {
-  const withPage = async (name, body) => {
-    const page = await openPage(browser, url);
+  const withPage = async (name, body, { emulate } = {}) => {
+    const page = await openPage(browser, url, { emulate });
     try {
       await body(page);
     } finally {
@@ -2918,4 +2922,255 @@ export const runSuite = async (browser, url, runner) => {
       },
     );
   });
+
+  // ------------------------------------------------------------- mobile
+  await withPage(
+    "mobile",
+    async (page) => {
+      runner.group("mobile chrome (phone emulation)");
+
+      await runner.check(
+        "mobile.form-factor",
+        "a phone viewport and user agent derive the phone form factor",
+        async () => {
+          const derived = await page.evaluate(() => ({
+            formFactor: window.h.app.editorInterface.formFactor,
+            isMobileDevice:
+              window.h.app.editorInterface.userAgent.isMobileDevice,
+            platform: window.h.app.editorInterface.userAgent.platform,
+            isLandscape: window.h.app.editorInterface.isLandscape,
+            canFitSidebar: window.h.app.editorInterface.canFitSidebar,
+          }));
+          expectEqual(derived.formFactor, "phone", "the derived form factor");
+          expectEqual(
+            derived.isMobileDevice,
+            true,
+            "userAgent.isMobileDevice on a phone user agent",
+          );
+          expectEqual(derived.platform, "android", "the derived platform");
+          expectEqual(derived.isLandscape, false, "isLandscape in portrait");
+          expectEqual(derived.canFitSidebar, false, "canFitSidebar on a phone");
+        },
+        { evidence: { page, selectors: [".excalidraw"] } },
+      );
+
+      await runner.check(
+        "mobile.layout",
+        "the mobile menu replaces the desktop layout",
+        async () => {
+          const layout = await page.evaluate(() => ({
+            bottomBar: !!document.querySelector(".App-bottom-bar"),
+            toolbar: !!document.querySelector(".mobile-toolbar"),
+            topBar: !!document.querySelector(".App-top-bar"),
+            desktopWrapper: !!document.querySelector(".layer-ui__wrapper"),
+            desktopToolbar: !!document.querySelector(".App-toolbar-container"),
+            mobileClass: document
+              .querySelector(".excalidraw")
+              .classList.contains("excalidraw--mobile"),
+            mobileToolbarClass: document
+              .querySelector(".excalidraw")
+              .classList.contains("excalidraw--mobile-toolbar"),
+          }));
+          expect(layout.bottomBar, ".App-bottom-bar did not render");
+          expect(layout.toolbar, ".mobile-toolbar did not render");
+          expect(layout.topBar, ".App-top-bar did not render");
+          expect(
+            !layout.desktopWrapper,
+            ".layer-ui__wrapper (the desktop layout) rendered on a phone",
+          );
+          expect(
+            !layout.desktopToolbar,
+            ".App-toolbar-container (the desktop toolbar) rendered on a phone",
+          );
+          expect(
+            layout.mobileClass && layout.mobileToolbarClass,
+            "the container is missing excalidraw--mobile / --mobile-toolbar",
+          );
+          const bar = await rectOf(page, ".App-bottom-bar");
+          expect(bar && bar.width > 0, "the bottom bar has no width");
+        },
+        {
+          evidence: {
+            page,
+            selectors: [".App-bottom-bar", ".mobile-toolbar", ".App-top-bar"],
+          },
+        },
+      );
+
+      await runner.check(
+        "mobile.tool-popover",
+        "a real tap opens the shape popover and picks a tool from it",
+        async () => {
+          await tapCenter(
+            page,
+            '.mobile-toolbar [data-testid="toolbar-rectangle"]',
+          );
+          await waitFor(
+            page,
+            () => !!document.querySelector(".tool-popover-content"),
+            { message: "tapping the shape trigger opened no tool popover" },
+          );
+          expectEqual(
+            (await appState(page)).activeTool,
+            "rectangle",
+            "the tool the trigger activates",
+          );
+          const popover = await occlusion(page, ".tool-popover-content");
+          expect(
+            popover.ownsPoint,
+            `the tool popover is occluded by ${popover.topmost}`,
+          );
+
+          await tapCenter(
+            page,
+            '.tool-popover-content [data-testid="toolbar-ellipse"]',
+          );
+          await waitFor(
+            page,
+            () => window.h.state.activeTool.type === "ellipse",
+            { message: "tapping the ellipse option did not activate it" },
+          );
+          // the trigger now displays (and re-activates) the picked option
+          await waitFor(
+            page,
+            () =>
+              document
+                .querySelector(
+                  '.mobile-toolbar [data-testid="toolbar-rectangle"]',
+                )
+                ?.getAttribute("aria-pressed") === "true",
+            {
+              message:
+                "the shape trigger did not follow the option picked from its popover",
+            },
+          );
+        },
+        {
+          evidence: {
+            page,
+            selectors: [
+              ".tool-popover-content",
+              '.mobile-toolbar [data-testid="toolbar-rectangle"]',
+            ],
+          },
+        },
+      );
+
+      await runner.check(
+        "mobile.styles-panel",
+        "the mobile styles panel renders with the compact color triggers",
+        async () => {
+          await waitFor(
+            page,
+            () => !!document.querySelector(".mobile-shape-actions"),
+            { message: "the mobile styles panel did not render for a tool" },
+          );
+          const panel = await page.evaluate(() => ({
+            compactTriggers: document.querySelectorAll(
+              ".mobile-shape-actions .color-picker__button.compact-sizing",
+            ).length,
+            topPicks: document.querySelectorAll(
+              ".mobile-shape-actions .color-picker__top-picks",
+            ).length,
+            undo: !!document.querySelector(
+              '.mobile-shape-actions [data-testid="button-undo"]',
+            ),
+            redo: !!document.querySelector(
+              '.mobile-shape-actions [data-testid="button-redo"]',
+            ),
+          }));
+          expect(
+            panel.compactTriggers > 0,
+            "no compact color triggers in the mobile styles panel",
+          );
+          expectEqual(
+            panel.topPicks,
+            0,
+            "top-pick strips rendered in the mobile styles panel",
+          );
+          expect(panel.undo && panel.redo, "the undo/redo column is missing");
+        },
+        { evidence: { page, selectors: [".mobile-shape-actions"] } },
+      );
+
+      await runner.check(
+        "mobile.rotation",
+        "rotating the device re-derives the form factor",
+        async () => {
+          await page.setViewport(PHONE_LANDSCAPE);
+          await waitFor(
+            page,
+            () => window.h.app.editorInterface.isLandscape === true,
+            { message: "rotating to landscape left isLandscape false" },
+          );
+          const landscape = await page.evaluate(() => ({
+            formFactor: window.h.app.editorInterface.formFactor,
+            mobileToolbar: !!document.querySelector(".mobile-toolbar"),
+          }));
+          // 851x393 is still inside the landscape mobile breakpoint
+          expectEqual(
+            landscape.formFactor,
+            "phone",
+            "the form factor in landscape",
+          );
+          expect(
+            landscape.mobileToolbar,
+            "the mobile toolbar disappeared in landscape",
+          );
+
+          await page.setViewport(TABLET);
+          await waitFor(
+            page,
+            () => window.h.app.editorInterface.formFactor === "tablet",
+            {
+              message:
+                "a tablet viewport did not derive the tablet form factor",
+            },
+          );
+          const tablet = await page.evaluate(() => ({
+            compactToolbar: !!document.querySelector(".App-toolbar--compact"),
+            desktopWrapper: !!document.querySelector(".layer-ui__wrapper"),
+            mobileToolbar: !!document.querySelector(".mobile-toolbar"),
+            groupedSelection: !!document.querySelector(
+              '.App-toolbar [data-testid="toolbar-selection"]',
+            ),
+          }));
+          expect(
+            tablet.desktopWrapper,
+            "the desktop layout did not come back on a tablet",
+          );
+          expect(
+            !tablet.mobileToolbar,
+            "the mobile toolbar survived the switch to a tablet",
+          );
+          expect(
+            tablet.compactToolbar,
+            "the tablet toolbar is missing App-toolbar--compact",
+          );
+          expect(
+            tablet.groupedSelection,
+            "the compact toolbar has no grouped selection trigger",
+          );
+
+          await waitFor(
+            page,
+            () => !!document.querySelector(".compact-shape-actions"),
+            {
+              message:
+                "the compact styles panel did not render for the active tool on a tablet",
+            },
+          );
+        },
+        {
+          evidence: {
+            page,
+            selectors: [".App-toolbar", ".compact-shape-actions"],
+          },
+        },
+      );
+
+      await page.setViewport(PHONE.viewport);
+    },
+    { emulate: PHONE },
+  );
 };

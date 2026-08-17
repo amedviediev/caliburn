@@ -123,8 +123,9 @@ export class CaliburnImageExportDialogComponent {
     value: scale,
     label: `${scale}×`,
   }));
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   // we need to take a snapshot so that the exported state can't be modified
   // while the dialog is open

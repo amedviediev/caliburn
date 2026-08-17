@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
   output,
@@ -81,8 +82,9 @@ export class CaliburnHelpDialogComponent {
   protected readonly shortcutsTitle = translated(() =>
     t("helpDialog.shortcuts"),
   );
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected readonly links = translated(() => [
     {

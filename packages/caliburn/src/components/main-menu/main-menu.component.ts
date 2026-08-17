@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
   output,
@@ -46,8 +47,9 @@ export class CaliburnMainMenuComponent {
   /** called when any menu item is selected (clicked on) */
   readonly select = output<Event>();
 
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected state() {
     this.editor.changeGeneration();

@@ -150,8 +150,9 @@ export class CaliburnCommandPaletteInnerComponent implements OnDestroy {
   );
   private readonly cdr = inject(ChangeDetectorRef);
 
-  protected readonly isPhone =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isPhone = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
   protected readonly placeholder = translated(() =>
     t("commandPalette.search.placeholder"),
   );

@@ -4,7 +4,7 @@
       name="theme"
       [value]="theme()"
       [choices]="themeChoices()"
-      [mobile]="isMobile"
+      [mobile]="isMobile()"
       (valueChange)="setTheme($event)"
       >{{ themeLabel() }}</caliburn-dropdown-menu-item-content-radio
     >

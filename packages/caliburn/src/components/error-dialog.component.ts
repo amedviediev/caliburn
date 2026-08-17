@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
   output,
@@ -38,8 +39,9 @@ export class CaliburnErrorDialogComponent {
 
   protected readonly title = translated(() => t("errorDialog.title"));
   protected readonly modalIsShown = signal(true);
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected handleClose() {
     this.modalIsShown.set(false);

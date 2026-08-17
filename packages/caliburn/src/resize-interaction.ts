@@ -69,9 +69,12 @@ export const maybeArmResizeOnPointerDown = (
     selectedElements.length === 1 &&
     !editor.state.selectedLinearElement?.isEditing &&
     !isElbowArrow(selectedElements[0]) &&
+    // HACK: upstream disables transform handles for linear elements on mobile
+    // until a better way of showing them is found
     !(
       isLinearElement(selectedElements[0]) &&
-      selectedElements[0].points.length === 2
+      (editor.editorInterface.userAgent.isMobileDevice ||
+        selectedElements[0].points.length === 2)
     )
   ) {
     const elementWithTransformHandleType = getElementWithTransformHandleType(

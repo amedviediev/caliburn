@@ -751,12 +751,7 @@ describe("ui={{ enabled: ... }}", () => {
     expect(queryContainer(".scroll-back-to-content")).toBe(null);
   });
 
-  // caliburn gate — mobile chrome is unported (README "Known gaps"):
-  // `editorInterface.formFactor` is the hardcoded `"desktop"` literal
-  // (editor.component.ts) and `UIOptions.getFormFactor` is never consulted,
-  // so the `waitFor(formFactor)` below can never resolve — same surface the
-  // `drawShape.test.tsx` compact-toolbar gate names
-  it.skip("supports the scroll-back-to-content control on mobile", async () => {
+  it("supports the scroll-back-to-content control on mobile", async () => {
     await render(
       <Excalidraw
         ui={{ enabled: { scrollBackToContent: true } }}

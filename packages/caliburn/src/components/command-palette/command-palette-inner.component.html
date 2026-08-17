@@ -2,7 +2,7 @@
   class="command-palette-dialog"
   [size]="720"
   [closeOnClickOutside]="true"
-  [fullscreen]="isPhone"
+  [fullscreen]="isPhone()"
   (closeRequest)="closeCommandPalette()"
 >
   <caliburn-text-field
@@ -12,7 +12,7 @@
     (valueChange)="handleSearchChange($event)"
   />
 
-  @if (!isPhone) {
+  @if (!isPhone()) {
     <div class="shortcuts-wrapper">
       <caliburn-command-shortcut-hint shortcut="↑↓">{{
         selectLabel()
@@ -113,7 +113,7 @@
         >{{ command.label }}</span
       >
     </div>
-    @if (!isPhone && command.shortcut) {
+    @if (!isPhone() && command.shortcut) {
       <caliburn-command-shortcut-hint [shortcut]="command.shortcut" />
     }
   </div>

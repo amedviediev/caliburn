@@ -1,7 +1,7 @@
 <caliburn-dialog
   class="HelpDialog"
   [title]="title()"
-  [fullscreen]="isMobile"
+  [fullscreen]="isMobile()"
   (closeRequest)="close.emit()"
 >
   <div class="HelpDialog__header">

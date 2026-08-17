@@ -411,6 +411,7 @@
     <button
       type="button"
       class="compact-action-button"
+      [style.background]="promotedActionBackground()"
       [attr.title]="text"
       [attr.aria-label]="text"
       (click)="execute(action, null)"
@@ -466,6 +467,7 @@
           type="button"
           class="compact-action-button"
           data-testid="button-undo"
+          [style.background]="mobileActionBackground()"
           [attr.aria-label]="compactLabels().undo"
           [attr.title]="compactLabels().undo"
           [disabled]="isUndoStackEmpty()"
@@ -479,6 +481,7 @@
           type="button"
           class="compact-action-button"
           data-testid="button-redo"
+          [style.background]="mobileActionBackground()"
           [attr.aria-label]="compactLabels().redo"
           [attr.title]="compactLabels().redo"
           [disabled]="isRedoStackEmpty()"

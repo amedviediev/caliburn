@@ -193,13 +193,53 @@ const pageHelpers = () => {
   };
 };
 
-export const openPage = async (browser, url) => {
+/**
+ * A phone: the viewport, device pixel ratio, touch support and user agent of
+ * a Pixel-class handset. Applied before the first navigation so the editor
+ * measures a phone-sized container on its very first frame, exactly as it
+ * would on the device.
+ */
+export const PHONE = {
+  viewport: {
+    width: 393,
+    height: 851,
+    deviceScaleFactor: 2.75,
+    isMobile: true,
+    hasTouch: true,
+    isLandscape: false,
+  },
+  userAgent:
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
+};
+
+/** the same handset turned on its side */
+export const PHONE_LANDSCAPE = {
+  ...PHONE.viewport,
+  width: PHONE.viewport.height,
+  height: PHONE.viewport.width,
+  isLandscape: true,
+};
+
+/** a tablet — the form factor that drives the compact (not mobile) chrome */
+export const TABLET = {
+  width: 820,
+  height: 1100,
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+  isLandscape: false,
+};
+
+export const openPage = async (browser, url, { emulate } = {}) => {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   page.setDefaultTimeout(15_000);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(String(error)));
   await page.evaluateOnNewDocument(pageHelpers);
+  if (emulate) {
+    await page.emulate(emulate);
+  }
   await page.goto(url, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".excalidraw", { timeout: 60_000 });
   await page.waitForFunction(() => !!window.h?.state, { timeout: 30_000 });
@@ -346,6 +386,15 @@ export const clickCenter = async (page, selector) => {
     throw new Error(`clickCenter: ${selector} not found`);
   }
   await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
+};
+
+/** tap the real pixels at an element's centre with a finger, not a mouse */
+export const tapCenter = async (page, selector) => {
+  const r = await rectOf(page, selector);
+  if (!r) {
+    throw new Error(`tapCenter: ${selector} not found`);
+  }
+  await page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2);
 };
 
 export const dragCanvas = async (page, from, to, { steps = 12 } = {}) => {

@@ -252,8 +252,9 @@ export class CaliburnMenuToggleThemeComponent {
 
   protected readonly shortcut = getShortcutFromShortcutName("toggleTheme");
   protected readonly themeLabel = translated(() => t("labels.theme"));
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected readonly themeChoices: Signal<
     RadioGroupChoice<Theme | "system">[]
@@ -450,8 +451,9 @@ export class CaliburnMenuPreferencesComponent {
   protected readonly boxSelectionLabel = translated(() =>
     t("labels.boxSelectionMode"),
   );
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected readonly boxSelectionChoices: Signal<
     RadioGroupChoice<"contain" | "overlap">[]

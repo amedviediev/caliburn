@@ -2,7 +2,7 @@
   @if (!isLibraryEmpty()) {
     <caliburn-text-field
       class="library-menu-items-container__search"
-      [class.hideCancelButton]="!isPhone"
+      [class.hideCancelButton]="!isPhone()"
       type="search"
       [placeholder]="searchPlaceholder()"
       [value]="searchInputValue()"

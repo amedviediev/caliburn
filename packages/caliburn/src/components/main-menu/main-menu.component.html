@@ -3,7 +3,7 @@
     caliburn-dropdown-menu-trigger
     class="main-menu-trigger"
     testId="main-menu-trigger"
-    [mobile]="isMobile"
+    [mobile]="isMobile()"
     (toggle)="onToggle()"
   >
     <ng-icon name="hamburgerMenuIcon" />
@@ -11,7 +11,7 @@
   <caliburn-dropdown-menu-content
     class="main-menu"
     align="start"
-    [mobile]="isMobile"
+    [mobile]="isMobile()"
     (closeOutside)="closeMenu()"
     (itemSelected)="onItemSelected($event)"
   >

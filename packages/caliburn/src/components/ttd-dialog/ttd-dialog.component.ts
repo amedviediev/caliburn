@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
 } from "@angular/core";
@@ -50,8 +51,9 @@ export class CaliburnTTDDialogComponent {
   );
 
   protected readonly title = translated(() => t("mermaid.title"));
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected handleClose() {
     this.editor.batchCommits(() => this.editor.setState({ openDialog: null }));

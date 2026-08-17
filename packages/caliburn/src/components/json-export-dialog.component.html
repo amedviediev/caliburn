@@ -1,7 +1,7 @@
 @if (visible()) {
   <caliburn-dialog
     [title]="title()"
-    [fullscreen]="isMobile"
+    [fullscreen]="isMobile()"
     (closeRequest)="handleClose()"
   >
     <div class="ExportDialog ExportDialog--json">

@@ -36,9 +36,8 @@ export const createPortalContainer = (className: string): HTMLDivElement => {
     div.className = "";
     div.classList.add("excalidraw", ...className.split(/\s+/).filter(Boolean));
     // both reads are signal-backed, so the effect re-runs on any
-    // `editorInterface` update (a resize changing `canFitSidebar`, today —
-    // `formFactor` is a fixed "desktop" literal, not yet measured) as well as
-    // on a theme change
+    // `editorInterface` update (a resize changing `formFactor` or
+    // `canFitSidebar`) as well as on a theme change
     div.classList.toggle(
       "excalidraw--mobile",
       editor?.editorInterface.formFactor === "phone",

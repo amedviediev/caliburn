@@ -64,14 +64,15 @@ export class CaliburnLibraryUnitComponent {
 
   protected readonly isHovered = signal(false);
   protected readonly svg = signal<SVGSVGElement | undefined>(undefined);
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
 
   protected readonly showCheckbox = computed(
     () =>
       !!this.id() &&
       !!this.elements() &&
-      (this.isHovered() || this.isMobile || this.selected()),
+      (this.isHovered() || this.isMobile() || this.selected()),
   );
 
   private readonly dragger =
