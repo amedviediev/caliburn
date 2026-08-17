@@ -25,6 +25,7 @@ import {
   hitElementItself,
   isCursorInFrame,
   isElbowArrow,
+  isElementInGroup,
   isEmbeddableElement,
   isFrameLikeElement,
   isIframeLikeElement,
@@ -503,26 +504,48 @@ export const handleSelectionPointerDown = (
       }));
       // the fall-through below creates the selection element so a
       // cmd/ctrl-drag can marquee-select within the hit element
-    } else if (
-      !editor.state.selectedElementIds[hitElement.id] &&
-      !someHitElementIsSelected &&
-      !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
-    ) {
-      pointerDownState.hit.wasAddedToSelection = true;
-      editor.setState((prevState) => ({
-        ...selectGroupsForSelectedElements(
-          {
-            editingGroupId: prevState.editingGroupId,
-            selectedElementIds: {
-              ...prevState.selectedElementIds,
-              [hitElement.id]: true,
+    } else if (!editor.state.selectedElementIds[hitElement.id]) {
+      // deselect if item is selected
+      // if shift is not clicked, this will always return true
+      // otherwise, it will trigger selection based on current
+      // state of the box
+
+      // if we are currently editing a group, exiting editing mode and deselect the group.
+      if (
+        editor.state.editingGroupId &&
+        !isElementInGroup(hitElement, editor.state.editingGroupId)
+      ) {
+        editor.setState({
+          selectedElementIds: makeNextSelectedElementIds({}, editor.state),
+          selectedGroupIds: {},
+          editingGroupId: null,
+          activeEmbeddable: null,
+        });
+      }
+
+      // Add hit element to selection. At this point if we're not holding
+      // SHIFT the previously selected element(s) were deselected above
+      // (make sure you use setState updater to use latest state)
+      if (
+        !someHitElementIsSelected &&
+        !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
+      ) {
+        pointerDownState.hit.wasAddedToSelection = true;
+        editor.setState((prevState) => ({
+          ...selectGroupsForSelectedElements(
+            {
+              editingGroupId: prevState.editingGroupId,
+              selectedElementIds: {
+                ...prevState.selectedElementIds,
+                [hitElement.id]: true,
+              },
             },
-          },
-          editor.scene.getNonDeletedElements(),
-          prevState,
-          editor as any,
-        ),
-      }));
+            editor.scene.getNonDeletedElements(),
+            prevState,
+            editor as any,
+          ),
+        }));
+      }
     }
   }
 

@@ -1,0 +1,6 @@
+<ng-template #hostEmbed let-element let-appState="appState">
+  <div class="host-embed" [attr.data-element-id]="element.id">
+    host content for {{ element.link }} at zoom {{ appState.zoom.value }}
+  </div>
+</ng-template>
+<caliburn-editor [renderEmbeddable]="renderEmbeddable" />

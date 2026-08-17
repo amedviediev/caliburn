@@ -138,6 +138,7 @@ import type {
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
+  ExcalidrawEmbeddableElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawFrameLikeElement,
   ExcalidrawIframeElement,
@@ -425,6 +426,7 @@ import type { ElementRef, TemplateRef } from "@angular/core";
 import type { CommandPaletteItem } from "./components/command-palette/types";
 import type { CaliburnViewportStatusFrame } from "./components/viewport-status-frame/viewport-status-frame";
 import type { CursorHintView } from "./components/cursor-hints";
+import type { CaliburnEmbeddableContext } from "./components/embeddable.component";
 import type { EyeDropperProperties } from "./components/eye-dropper";
 import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
 import type { PointerDownState } from "./selection-interaction";
@@ -683,6 +685,22 @@ export class CaliburnEditorComponent
     | ((link: string) => boolean | undefined)
     | undefined
   >(undefined);
+  /**
+   * upstream's `renderEmbeddable` render prop — replaces the default
+   * `<iframe>` for an embeddable element with the host's own content.
+   * Upstream's is `(element, appState) => JSX.Element | null`; Angular
+   * renders a template rather than a returned node, so the function returns
+   * the `TemplateRef` to render (instantiated with `{ $implicit: element,
+   * appState }`). `null` keeps upstream's contract exactly: that element
+   * falls back to the default iframe, per element.
+   */
+  readonly renderEmbeddable = input<
+    | ((
+        element: NonDeleted<ExcalidrawEmbeddableElement>,
+        appState: AppState,
+      ) => TemplateRef<CaliburnEmbeddableContext> | null)
+    | null
+  >(null);
   /** upstream's `<CommandPalette customCommandPaletteItems>` (the palette is
    * a host-rendered child upstream; caliburn's LayerUI renders it) */
   readonly customCommandPaletteItems = input<CommandPaletteItem[]>([]);

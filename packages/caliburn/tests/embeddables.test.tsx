@@ -14,12 +14,14 @@ import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
+import { CaliburnEmbeddableHostComponent } from "./helpers/embeddable-host.component";
 import { Keyboard, Pointer } from "./helpers/ui";
 import {
   act,
   fireEvent,
   mockBoundingClientRect,
   render,
+  renderHost,
   restoreOriginalGetBoundingClientRect,
   waitFor,
 } from "./test-utils";
@@ -466,5 +468,125 @@ describe("embeddable render layer", () => {
     Keyboard.keyPress("Escape");
     await waitFor(() => expect(h.state.activeEmbeddable).toBe(null));
     expect(innerNode()!.style.pointerEvents).toBe(POINTER_EVENTS.disabled);
+  });
+
+  it("mounts the iframe on the same interaction that validates the link", async () => {
+    const embeddable = {
+      ...API.createElement({
+        type: "embeddable",
+        x: 100,
+        y: 100,
+        width: 400,
+        height: 300,
+      }),
+    } as unknown as NonDeleted<ExcalidrawEmbeddableElement>;
+    API.setElements([embeddable]);
+    await waitFor(() =>
+      expect(h.app.embedsValidationStatus.get(embeddable.id)).toBe(false),
+    );
+
+    API.setSelectedElements([API.getElement(embeddable)]);
+    act(() => {
+      h.app.setState({ showHyperlinkPopup: "editor" });
+    });
+    const input = await waitFor(() => {
+      const node = document.querySelector<HTMLInputElement>(
+        ".excalidraw-hyperlinkContainer-input",
+      );
+      expect(node).not.toBe(null);
+      return node!;
+    });
+
+    // caliburn's scene listener commits and renders synchronously inside
+    // `mutateElement`, so the verdict has to be in place before it — that
+    // render is the one that mounts the iframe
+    const statusAtMutate: (boolean | undefined)[] = [];
+    const mutateElement = h.app.scene.mutateElement.bind(h.app.scene);
+    const spy = vi.spyOn(h.app.scene, "mutateElement").mockImplementation(((
+      ...args: Parameters<typeof mutateElement>
+    ) => {
+      statusAtMutate.push(h.app.embedsValidationStatus.get(embeddable.id));
+      return mutateElement(...args);
+    }) as typeof mutateElement);
+
+    try {
+      fireEvent.input(input, { target: { value: YOUTUBE_LINK } });
+      fireEvent.keyDown(input, { key: "Enter" });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(statusAtMutate).toEqual([true]);
+    await waitFor(() => expect(iframeNode()).not.toBe(null));
+    expect(iframeNode()!.getAttribute("src")).toBe(
+      "https://www.youtube.com/embed/gkGMXY0wekg?enablejsapi=1",
+    );
+  });
+});
+
+describe("host-rendered embeds (renderEmbeddable)", () => {
+  afterEach(() => {
+    restoreOriginalGetBoundingClientRect();
+  });
+
+  it("renders the host's template per element and falls back to the iframe for the rest", async () => {
+    const hostRendered = {
+      ...API.createElement({
+        type: "embeddable",
+        x: 100,
+        y: 100,
+        width: 400,
+        height: 300,
+      }),
+      link: YOUTUBE_LINK,
+    } as unknown as NonDeleted<ExcalidrawEmbeddableElement>;
+    const defaultRendered = {
+      ...API.createElement({
+        type: "embeddable",
+        x: 700,
+        y: 100,
+        width: 400,
+        height: 300,
+      }),
+      link: VIMEO_LINK,
+    } as unknown as NonDeleted<ExcalidrawEmbeddableElement>;
+
+    mockBoundingClientRect({ width: 1920, height: 1080 });
+    await renderHost(CaliburnEmbeddableHostComponent, {
+      hostRenderedIds: [hostRendered.id],
+    });
+    await waitFor(() => expect(h.state.width).toBe(1920));
+
+    API.setElements([hostRendered, defaultRendered]);
+    await waitFor(() => expect(containerNodes()).toHaveLength(2));
+
+    const hostContent = await waitFor(() => {
+      const node = document.querySelector<HTMLDivElement>(".host-embed");
+      expect(node).not.toBe(null);
+      return node!;
+    });
+    expect(hostContent.getAttribute("data-element-id")).toBe(hostRendered.id);
+    // the template gets upstream's `(element, appState)` arguments
+    expect(hostContent.textContent).toContain(YOUTUBE_LINK);
+    expect(hostContent.textContent).toContain("at zoom 1");
+
+    // the host's embed replaced the default iframe for that element only
+    expect(hostContent.closest(".excalidraw__embeddable-container")).not.toBe(
+      null,
+    );
+    expect(
+      hostContent
+        .closest(".excalidraw__embeddable-container")!
+        .querySelector("iframe"),
+    ).toBe(null);
+
+    expect(iframeNodes()).toHaveLength(1);
+    expect(iframeNode()!.getAttribute("src")).toBe(
+      "https://player.vimeo.com/video/1084537?api=1",
+    );
+
+    // upstream's ref only ever sits on the default iframe
+    expect(h.app.iFrameRefs.has(hostRendered.id)).toBe(false);
+    expect(h.app.iFrameRefs.get(defaultRendered.id)).toBe(iframeNode());
   });
 });

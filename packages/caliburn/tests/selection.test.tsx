@@ -1433,4 +1433,41 @@ describe("deselecting", () => {
     expect(h.state.editingGroupId).toBeNull();
     expect(h.state.selectedGroupIds).toEqual({});
   });
+
+  // upstream `App.tsx`'s "if we are currently editing a group, exiting
+  // editing mode and deselect the group" branch — reached on a hit element
+  // that isn't already selected, so shift (which suppresses the
+  // `clearSelection` above it) is exactly the case only this branch covers
+  it("shift-clicking outside the group being edited exits group editing", () => {
+    const rectA = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      groupIds: ["g"],
+    });
+    const rectB = API.createElement({
+      type: "rectangle",
+      x: 150,
+      y: 0,
+      groupIds: ["g"],
+    });
+    const outside = API.createElement({ type: "rectangle", x: 500, y: 0 });
+
+    API.setElements([rectA, rectB, outside]);
+
+    mouse.select(rectA);
+    assertSelectedElements(rectA, rectB);
+
+    mouse.doubleClickOn(rectA);
+    expect(h.state.editingGroupId).toBe("g");
+    assertSelectedElements(rectA);
+
+    Keyboard.withModifierKeys({ shift: true }, () => {
+      mouse.clickOn(outside);
+    });
+
+    expect(h.state.editingGroupId).toBeNull();
+    expect(h.state.selectedGroupIds).toEqual({});
+    assertSelectedElements(outside);
+  });
 });

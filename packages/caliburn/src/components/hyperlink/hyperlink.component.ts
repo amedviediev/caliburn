@@ -336,8 +336,8 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
         this.editor.setState({ activeEmbeddable: null });
       }
       if (!link) {
-        this.editor.scene.mutateElement(element, { link: null });
         this.updateEmbedValidationStatus(element, false);
+        this.editor.scene.mutateElement(element, { link: null });
         return;
       }
 
@@ -348,8 +348,8 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
           });
         }
         element.link && embeddableLinkCache.set(element.id, element.link);
-        this.editor.scene.mutateElement(element, { link });
         this.updateEmbedValidationStatus(element, false);
+        this.editor.scene.mutateElement(element, { link });
       } else {
         const { width, height } = element;
         const embedLink = getEmbedLink(link);
@@ -366,6 +366,7 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
           : 1;
         const hasLinkChanged =
           embeddableLinkCache.get(element.id) !== element.link;
+        this.updateEmbedValidationStatus(element, true);
         this.editor.scene.mutateElement(element, {
           ...(hasLinkChanged
             ? {
@@ -385,7 +386,6 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
             : {}),
           link,
         });
-        this.updateEmbedValidationStatus(element, true);
         if (embeddableLinkCache.has(element.id)) {
           embeddableLinkCache.delete(element.id);
         }
@@ -395,7 +395,16 @@ export class CaliburnHyperlinkComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** upstream `App.updateEmbedValidationStatus` */
+  /**
+   * upstream `App.updateEmbedValidationStatus`.
+   *
+   * Upstream calls this *after* the `mutateElement` beside it; React batches
+   * both into one render, so the order is not observable there. Caliburn's
+   * scene listener commits and runs change detection synchronously inside
+   * `mutateElement`, so the status has to be written first — otherwise that
+   * render draws the embed layer from the stale verdict and the iframe only
+   * appears on whatever commit happens next.
+   */
   private updateEmbedValidationStatus(
     element: ExcalidrawEmbeddableElement,
     status: boolean,

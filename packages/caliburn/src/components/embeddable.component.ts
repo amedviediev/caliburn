@@ -8,6 +8,8 @@ import {
   input,
   viewChild,
 } from "@angular/core";
+import { NgTemplateOutlet } from "@angular/common";
+
 import clsx from "clsx";
 
 import { clamp } from "@excalidraw/math";
@@ -26,18 +28,21 @@ import {
   getCornerRadius,
   getEmbedLink,
   getRenderOpacity,
+  isEmbeddableElement,
   isIframeElement,
 } from "@excalidraw/element";
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import type {
+  ExcalidrawEmbeddableElement,
   ExcalidrawIframeLikeElement,
   IframeData,
   MagicGenerationData,
   NonDeleted,
   Ordered,
 } from "@excalidraw/element/types";
+import type { AppState } from "@excalidraw/excalidraw/types";
 
 import { translated } from "../i18n";
 
@@ -46,6 +51,15 @@ import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../edit
 import type { ElementRef } from "@angular/core";
 
 import type { CaliburnEditorComponent } from "../editor.component";
+
+/**
+ * What upstream's `renderEmbeddable(element, appState)` arguments become for
+ * the template the host returns.
+ */
+export type CaliburnEmbeddableContext = {
+  $implicit: NonDeleted<ExcalidrawEmbeddableElement>;
+  appState: AppState;
+};
 
 /** upstream `App.tsx`'s module-level cap on the video-embed viewport scale */
 const MAX_EMBEDDABLE_VIEWPORT_SCALE = 4;
@@ -81,6 +95,7 @@ const applyIframeAttribute = (
 @Component({
   selector: "div[caliburn-embeddable]",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgTemplateOutlet],
   host: {
     "[class]": "containerClass()",
     "[style.transform]": "containerTransform()",
@@ -114,7 +129,9 @@ export class CaliburnEmbeddableComponent {
    * embed alone doesn't reload it.
    *
    * This is also where the `<iframe>` is handed to `App.iFrameRefs`, standing
-   * in for upstream's React `ref` callback.
+   * in for upstream's React `ref` callback — so an embed the host renders
+   * itself (`renderEmbeddable`) caches nothing and is written to nothing,
+   * exactly as upstream's ref, which only ever sits on the default iframe.
    */
   constructor() {
     effect(() => {
@@ -139,6 +156,26 @@ export class CaliburnEmbeddableComponent {
     this.host.changeGeneration();
     return this.host.state;
   }
+
+  /**
+   * upstream `renderEmbeddables`' `this.props.renderEmbeddable?.(el,
+   * this.state) ?? <iframe …>`: only an embeddable element is offered to the
+   * host, and a `null` return falls this element back to the default iframe.
+   */
+  protected readonly hostTemplate = computed(() => {
+    const state = this.state();
+    const element = this.element();
+    return isEmbeddableElement(element)
+      ? this.host.renderEmbeddable()?.(element, state) ?? null
+      : null;
+  });
+
+  protected readonly hostTemplateContext = computed<CaliburnEmbeddableContext>(
+    () => ({
+      $implicit: this.element() as NonDeleted<ExcalidrawEmbeddableElement>,
+      appState: this.state(),
+    }),
+  );
 
   protected readonly isActive = computed(() => {
     const state = this.state();

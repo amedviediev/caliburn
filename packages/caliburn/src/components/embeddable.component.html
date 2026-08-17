@@ -15,15 +15,21 @@
       [style.height]="contentSize()"
       [style.transform]="contentTransform()"
     >
-      <iframe
-        #iframe
-        class="excalidraw__embeddable"
-        scrolling="no"
-        referrerpolicy="no-referrer-when-downgrade"
-        title="Excalidraw Embedded Content"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-      ></iframe>
+      @if (hostTemplate(); as hostContent) {
+        <ng-container
+          *ngTemplateOutlet="hostContent; context: hostTemplateContext()"
+        />
+      } @else {
+        <iframe
+          #iframe
+          class="excalidraw__embeddable"
+          scrolling="no"
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Excalidraw Embedded Content"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      }
     </div>
   </div>
 </div>
