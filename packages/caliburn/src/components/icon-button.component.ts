@@ -68,7 +68,7 @@ export class CaliburnIconButtonComponent {
   readonly icon = input<string>();
   readonly labelText = input<string>();
   readonly ariaLabel = input.required<string>();
-  readonly ariaKeyshortcuts = input<string>();
+  readonly ariaKeyshortcuts = input<string | null>();
   readonly testId = input<string>();
   readonly title = input<string>();
   readonly size = input<IconButtonSize>("medium");

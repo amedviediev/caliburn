@@ -294,6 +294,15 @@ export class CaliburnLayerUIComponent {
     this.editor.batchCommits(() => this.editor.setState({ openDialog: null }));
   }
 
+  /** upstream's `Toast` renders a `ReactNode`, so `AppState["toast"].message`
+   * is typed as one; caliburn's toast renders text, and every message that
+   * reaches it — `setToast`'s callers here and the hosts going through it —
+   * is a string */
+  protected toastMessage() {
+    const message = this.state().toast?.message;
+    return typeof message === "string" ? message : "";
+  }
+
   protected clearToast() {
     this.editor.batchCommits(() => this.editor.setState({ toast: null }));
   }

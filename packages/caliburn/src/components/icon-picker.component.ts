@@ -3,12 +3,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
+  forwardRef,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from "@angular/core";
 
 import { EVENT, KEYS, isArrowKey } from "@excalidraw/common";
@@ -17,10 +21,14 @@ import { getLanguage, t } from "@excalidraw/excalidraw/i18n";
 
 import { NgIcon } from "@ng-icons/core";
 
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
+
 import { translated } from "../i18n";
 
+import { flipAtBoundary, shiftIntoBoundary } from "./popover-collision";
 import { CaliburnStatsCollapsibleComponent } from "./stats/collapsible.component";
 
+import type { CaliburnEditorComponent } from "../editor.component";
 import type { OnDestroy, OnInit } from "@angular/core";
 
 /** an option's `icon` is the ng-icon registry name of upstream's JSX icon */
@@ -86,9 +94,12 @@ const getNavigationRows = (sections: readonly IconPickerSection[]) =>
  * `.picker` popup the arrowhead pickers open. Radix's `Popover` (portal,
  * placement, dismissal) is replaced by a `position: fixed` popup measured off
  * the trigger plus explicit outside-pointerdown dismissal, the substitution
- * `properties-popover.component.ts` makes too. Option values are `unknown`
- * where upstream's component is generic: its one caliburn call site is the
- * arrowhead pair, and Angular templates gain nothing from the type variable.
+ * `properties-popover.component.ts` makes too; Radix's
+ * `collisionBoundary={container}` becomes the shared flip/shift in
+ * `popover-collision.ts`, run against the popup's own box once it renders.
+ * Option values are `unknown` where upstream's component is generic: its one
+ * caliburn call site is the arrowhead pair, and Angular templates gain
+ * nothing from the type variable.
  */
 @Component({
   selector: "caliburn-icon-picker",
@@ -98,6 +109,10 @@ const getNavigationRows = (sections: readonly IconPickerSection[]) =>
 })
 export class CaliburnIconPickerComponent implements OnInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  private readonly editor = inject<CaliburnEditorComponent>(
+    forwardRef(() => CaliburnEditorComponentToken),
+  );
 
   readonly label = input.required<string>();
   readonly value = input.required<unknown>();
@@ -126,14 +141,59 @@ export class CaliburnIconPickerComponent implements OnInit, OnDestroy {
   );
 
   private readonly triggerRect = signal<DOMRect | null>(null);
+  private readonly picker = viewChild<ElementRef<HTMLElement>>("picker");
+  private readonly pickerRect = signal<DOMRect | null>(null);
+  private readonly boundaryRect = signal<DOMRect | null>(null);
 
-  protected readonly top = computed(
-    () => (this.triggerRect()?.bottom ?? 0) + SIDE_OFFSET,
-  );
+  protected readonly top = computed(() => {
+    const rect = this.triggerRect();
+    const boundary = this.boundaryRect();
+    const preferred = (rect?.bottom ?? 0) + SIDE_OFFSET;
+    if (!rect || !boundary) {
+      return preferred;
+    }
+    const height = this.pickerRect()?.height ?? 0;
+    return flipAtBoundary(preferred, rect.top - SIDE_OFFSET - height, height, {
+      start: boundary.top,
+      end: boundary.bottom,
+    });
+  });
 
-  protected readonly left = computed(
-    () => (this.triggerRect()?.left ?? 0) + ALIGN_OFFSET,
-  );
+  protected readonly left = computed(() => {
+    const rect = this.triggerRect();
+    const boundary = this.boundaryRect();
+    const preferred = (rect?.left ?? 0) + ALIGN_OFFSET;
+    if (!rect || !boundary) {
+      return preferred;
+    }
+    return shiftIntoBoundary(preferred, this.pickerRect()?.width ?? 0, {
+      start: boundary.left,
+      end: boundary.right,
+    });
+  });
+
+  /** the popup's own box is what the flip needs, so place it at the preferred
+   * spot first and re-place it once it has rendered — and again whenever the
+   * hidden sections change its height */
+  private readonly placeOnOpen = effect(() => {
+    if (!this.isActive()) {
+      this.pickerRect.set(null);
+      this.boundaryRect.set(null);
+      return;
+    }
+    this.showMore();
+    afterNextRender(() => this.measure(), { injector: this.injector });
+  });
+
+  private measure() {
+    const picker = this.picker()?.nativeElement;
+    const container = this.editor.containerRef()?.nativeElement;
+    if (!picker || !container) {
+      return;
+    }
+    this.pickerRect.set(picker.getBoundingClientRect());
+    this.boundaryRect.set(container.getBoundingClientRect());
+  }
 
   /** upstream reveals the hidden sections whenever the current value lives in
    * one of them */

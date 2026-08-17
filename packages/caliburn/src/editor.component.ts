@@ -133,6 +133,7 @@ import type {
   NonDeletedExcalidrawElement,
   Ordered,
   OrderedExcalidrawElement,
+  PointerType,
   Theme,
 } from "@excalidraw/element/types";
 import type { OnStateChange } from "@excalidraw/excalidraw/components/AppStateObserver";
@@ -1357,8 +1358,9 @@ export class CaliburnEditorComponent
     // (`props.interaction`, `props.viewModeEnabled`, `props.activeTool`) —
     // the equivalent of upstream's `componentDidUpdate`, whose handlers run
     // in this same order (`App.tsx`). The props upstream merely re-resolves
-    // per render (`UIOptions`, `gridModeEnabled`, `name`) are refreshed first,
-    // so the chrome `handlePropsChange` re-renders reads the current values.
+    // per render (`UIOptions`, `gridModeEnabled`, `name`, `libraryReturnUrl`)
+    // are refreshed first, so the chrome `handlePropsChange` re-renders reads
+    // the current values.
     effect(() => {
       const interaction = this.interaction();
       const viewModeEnabled = this.viewModeEnabled();
@@ -1367,6 +1369,7 @@ export class CaliburnEditorComponent
       this.UIOptions();
       this.gridModeEnabled();
       this.name();
+      this.libraryReturnUrl();
       untracked(() => {
         if (this.unmounted || !this.removeSceneUpdateListener) {
           // pre-mount: `ngOnInit` seeds the initial state from the props
@@ -1523,7 +1526,6 @@ export class CaliburnEditorComponent
         DEFAULT_IMAGE_OPTIONS.maxFileSizeBytes,
     };
 
-    this.props.libraryReturnUrl = this.libraryReturnUrl();
     this.props.onLibraryChange = this.onLibraryChange() ?? undefined;
 
     const theme = this.theme();
@@ -2738,6 +2740,14 @@ export class CaliburnEditorComponent
         locked: !this.state.activeTool.locked,
       },
     });
+  }
+
+  /** the head of upstream's per-tool-button `onSelect` (`Tools.tsx`), shared
+   * by the two toolbars that port that one handler between them */
+  detectPenOnToolSelect(pointerType: PointerType | null) {
+    if (!this.state.penDetected && pointerType === "pen") {
+      this.togglePenMode(true);
+    }
   }
 
   togglePenMode(force: boolean | null) {
@@ -4081,15 +4091,17 @@ export class CaliburnEditorComponent
   /**
    * Re-resolves the host props upstream resolves per render: `index.tsx`
    * re-normalizes `UIOptions`, and `App.tsx` reads `props.gridModeEnabled`
-   * (`isGridModeEnabled`, `actionToggleGridMode`'s predicate) and
-   * `props.name` (`getName`) live off the props it was handed. Only the props
-   * are refreshed — upstream's `componentDidUpdate` syncs `zenModeEnabled`
-   * and `theme` back into the state, and nothing else.
+   * (`isGridModeEnabled`, `actionToggleGridMode`'s predicate), `props.name`
+   * (`getName`) and `props.libraryReturnUrl` (`LibraryMenu`) live off the
+   * props it was handed. Only the props are refreshed — upstream's
+   * `componentDidUpdate` syncs `zenModeEnabled` and `theme` back into the
+   * state, and nothing else.
    */
   private syncHostProps() {
     this.normalizeUIOptions();
     this.props.gridModeEnabled = this.gridModeEnabled();
     this.props.name = this.name();
+    this.props.libraryReturnUrl = this.libraryReturnUrl();
   }
 
   private prevInteraction: boolean | InteractionConfig | null | undefined;
@@ -4481,7 +4493,11 @@ export class CaliburnEditorComponent
     this.appStateObserver.flush(prevState);
     this.updateEmbeddables();
     // assigned rather than `setState`d, which would re-enter this commit; the
-    // flag is not observed by the store, so the delta is unaffected either way
+    // flag is not observed by the store, so the delta is unaffected either
+    // way. Landing after the flush above, it reaches `onStateChange`
+    // listeners only on the next commit, where upstream's post-flush
+    // `setState` reaches them on the render it schedules immediately —
+    // delayed here, not lost
     if (
       this.sceneInitialized &&
       !this.state.showWelcomeScreen &&

@@ -107,7 +107,11 @@ export class CaliburnLibraryMenuComponent implements OnDestroy {
   });
 
   protected readonly id = this.editor.id;
-  protected readonly libraryReturnUrl = this.editor.props.libraryReturnUrl;
+
+  protected libraryReturnUrl() {
+    this.editor.changeGeneration();
+    return this.editor.props.libraryReturnUrl;
+  }
 
   private readonly detachKeyDown = addEventListener(
     document,

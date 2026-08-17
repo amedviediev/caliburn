@@ -183,7 +183,7 @@
     <div class="floating-status-stack">
       @if (state().toast; as toast) {
         <caliburn-toast
-          [message]="toast.message"
+          [message]="toastMessage()"
           [closable]="!!toast.closable"
           [duration]="toast.duration ?? defaultToastDuration"
           (close)="clearToast()"

@@ -49,11 +49,13 @@ const APPROX_HEIGHT = 52;
  * by the compact (tablet) and mobile toolbars: the trigger activates the
  * group's remembered option and opens a popover holding the whole group.
  *
- * Radix's `Popover` (placement, dismissal) is replaced by a `position: fixed`
- * div measured off the trigger plus explicit outside-pointerdown / Escape
- * dismissal, the same substitution `properties-popover.component.ts` and
- * `dropdown-menu-content.component.ts` make. As upstream, the content is not
- * portalled: it renders next to its trigger.
+ * Radix's `Popover` placement is replaced by a `position: fixed` div measured
+ * off the trigger, the same substitution `properties-popover.component.ts` and
+ * `dropdown-menu-content.component.ts` make. Radix's dismissal is *not*
+ * substituted: upstream's `<Popover.Root open>` is controlled and passes no
+ * `onOpenChange`, so the only two closes are the ones below — the canvas
+ * pointer-down subscription and the active tool leaving the group. As
+ * upstream, the content is not portalled: it renders next to its trigger.
  */
 @Component({
   selector: "caliburn-tool-popover",

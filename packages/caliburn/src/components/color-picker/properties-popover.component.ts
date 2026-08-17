@@ -2,11 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
+  effect,
   forwardRef,
   inject,
   input,
   output,
+  signal,
 } from "@angular/core";
 
 import { EVENT, KEYS } from "@excalidraw/common";
@@ -14,6 +18,7 @@ import { EVENT, KEYS } from "@excalidraw/common";
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
 
 import { CaliburnIslandComponent } from "../island.component";
+import { flipAtBoundary, shiftIntoBoundary } from "../popover-collision";
 
 import type { CaliburnEditorComponent } from "../../editor.component";
 import type { OnDestroy, OnInit } from "@angular/core";
@@ -29,8 +34,11 @@ const ALIGN_OFFSET = -16;
  * picker's popup body sits in. Radix's `Popover.Content` (portal, placement,
  * dismissal) is replaced by a `position: fixed` div measured off the trigger
  * plus explicit outside-pointerdown / Escape dismissal, the same substitution
- * `dropdown-menu-content.component.ts` makes. Radix's decorative
- * `Popover.Arrow` has no placement math to hang off and is omitted.
+ * `dropdown-menu-content.component.ts` makes; Radix's
+ * `collisionBoundary={container}` becomes the shared flip/shift in
+ * `popover-collision.ts`, run against the popover's own box once it renders.
+ * Radix's decorative `Popover.Arrow` has no placement math to hang off and is
+ * omitted.
  *
  * Attribute-selector component: the host IS the popover element, so
  * `[data-prevent-outside-click]` sits where the dropdown menu looks for it
@@ -53,6 +61,7 @@ const ALIGN_OFFSET = -16;
 })
 export class CaliburnPropertiesPopoverComponent implements OnInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   private readonly editor = inject<CaliburnEditorComponent>(
     forwardRef(() => CaliburnEditorComponentToken),
@@ -71,14 +80,32 @@ export class CaliburnPropertiesPopoverComponent implements OnInit, OnDestroy {
     );
   });
 
+  private readonly popoverRect = signal<DOMRect | null>(null);
+  private readonly boundaryRect = signal<DOMRect | null>(null);
+
   protected readonly top = computed(() => {
     const rect = this.triggerRect();
     if (!rect) {
       return 0;
     }
-    return this.isMobilePortrait()
+    const mobilePortrait = this.isMobilePortrait();
+    const preferred = mobilePortrait
       ? rect.bottom + SIDE_OFFSET
       : rect.top + ALIGN_OFFSET;
+    const boundary = this.boundaryRect();
+    if (!boundary) {
+      return preferred;
+    }
+    const height = this.popoverRect()?.height ?? 0;
+    const bounds = { start: boundary.top, end: boundary.bottom };
+    return mobilePortrait
+      ? flipAtBoundary(
+          preferred,
+          rect.top - SIDE_OFFSET - height,
+          height,
+          bounds,
+        )
+      : shiftIntoBoundary(preferred, height, bounds);
   });
 
   protected readonly left = computed(() => {
@@ -86,10 +113,43 @@ export class CaliburnPropertiesPopoverComponent implements OnInit, OnDestroy {
     if (!rect) {
       return 0;
     }
-    return this.isMobilePortrait()
+    const mobilePortrait = this.isMobilePortrait();
+    const preferred = mobilePortrait
       ? rect.left + rect.width / 2
       : rect.right + SIDE_OFFSET;
+    const boundary = this.boundaryRect();
+    if (!boundary) {
+      return preferred;
+    }
+    const width = this.popoverRect()?.width ?? 0;
+    const bounds = { start: boundary.left, end: boundary.right };
+    // the mobile-portrait placement is a centre, not an edge, so it is the
+    // shifted left edge that has to be turned back into one
+    return mobilePortrait
+      ? shiftIntoBoundary(preferred - width / 2, width, bounds) + width / 2
+      : flipAtBoundary(
+          preferred,
+          rect.left - SIDE_OFFSET - width,
+          width,
+          bounds,
+        );
   });
+
+  /** the popover's own box is what the flip needs, so place it at the
+   * preferred spot first and re-place it once it has rendered */
+  private readonly placeAfterRender = effect(() => {
+    this.triggerRect();
+    afterNextRender(() => this.measure(), { injector: this.injector });
+  });
+
+  private measure() {
+    const container = this.editor.containerRef()?.nativeElement;
+    if (!container) {
+      return;
+    }
+    this.popoverRect.set(this.host.nativeElement.getBoundingClientRect());
+    this.boundaryRect.set(container.getBoundingClientRect());
+  }
 
   protected readonly transform = computed(() =>
     this.isMobilePortrait() ? "translateX(-50%)" : null,

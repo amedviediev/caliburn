@@ -414,9 +414,7 @@ export class CaliburnMobileToolbarComponent
     type: ToolbarToolType,
     { pointerType }: { pointerType: PointerType | null },
   ) {
-    if (!this.editor.state.penDetected && pointerType === "pen") {
-      this.editor.togglePenMode(true);
-    }
+    this.editor.detectPenOnToolSelect(pointerType);
 
     if (this.editor.state.activeTool.type !== type) {
       trackEvent("toolbar", type, "ui");

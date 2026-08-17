@@ -393,6 +393,12 @@ const imageGeometry = (page) =>
   });
 
 /** the scene's first element's box — the geometry `elements()` leaves out */
+const elementBox = (page) =>
+  page.evaluate(() => {
+    const el = (window.h?.elements ?? []).filter((e) => !e.isDeleted)[0];
+    return el ? { x: el.x, y: el.y, width: el.width, height: el.height } : null;
+  });
+
 /** every non-deleted element's position — `__e2e.elements()` carries only
  * id and type */
 const elementPositions = (page) =>
@@ -401,12 +407,6 @@ const elementPositions = (page) =>
       .filter((el) => !el.isDeleted)
       .map((el) => ({ x: el.x, y: el.y })),
   );
-
-const elementBox = (page) =>
-  page.evaluate(() => {
-    const el = (window.h?.elements ?? []).filter((e) => !e.isDeleted)[0];
-    return el ? { x: el.x, y: el.y, width: el.width, height: el.height } : null;
-  });
 
 /** a toolbar button's icon — the `<svg>` a drag crossing the toolbar passes over */
 const TOOLBAR_ICON = '[data-testid="toolbar-ellipse"] svg';
@@ -3258,7 +3258,13 @@ export const runSuite = async (browser, url, runner) => {
             { message: "rotating to landscape left isLandscape false" },
           );
 
-          // the panel's extra actions need a selection
+          // the panel's extra actions need a selection, and the drag that
+          // makes one needs a shape tool of its own rather than whatever the
+          // preceding check left active
+          await tapCenter(
+            page,
+            '.mobile-toolbar [data-testid="toolbar-rectangle"]',
+          );
           await dragCanvas(page, [260, 130], [420, 240]);
           await waitFor(page, () => window.h.elements.length === 1, {
             message: "dragging on the canvas created no element",
