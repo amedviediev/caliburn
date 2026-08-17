@@ -1,9 +1,11 @@
 import {
   KEYS,
+  TOOL_TYPE,
   arrayToMap,
   isShallowEqual,
   randomInteger,
   tupleToCoors,
+  updateActiveTool,
   updateStable,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
@@ -391,4 +393,44 @@ export const cleanupAfterDragOnPointerUp = (
 
   SnapCache.setReferenceSnapPoints(null);
   SnapCache.setVisibleGaps(null);
+};
+
+/**
+ * The tail of upstream's `onPointerUpFromPointerDownHandler` (`App.tsx`):
+ * once every earlier branch has had its turn, a tool that isn't locked
+ * reverts to the preferred selection tool. Caliburn's new-element branches
+ * carry their own copies (`finalizeNewElementOnPointerUp`,
+ * `finalizeLinearOnPointerUp`, the text and image paths); this is the copy
+ * for the branch that ends the gesture with no `newElement` in hand — a
+ * multi-point arrow finalized by its last click leaves `newElement` null
+ * behind, and without this the arrow tool would stay armed.
+ */
+export const revertActiveToolOnPointerUp = (
+  editor: CaliburnEditorComponent,
+) => {
+  const { activeTool } = editor.state;
+
+  if (
+    !editor.isToolLocked() &&
+    activeTool.type !== "freedraw" &&
+    // bucket fill stays active for back-to-back fills regardless of the
+    // tool lock (paint-bucket UX)
+    activeTool.type !== TOOL_TYPE.bucketfill &&
+    (activeTool.type !== "lasso" ||
+      // if lasso is turned on but from selection => reset to selection
+      (activeTool.type === "lasso" && activeTool.fromSelection))
+  ) {
+    editor.setState({
+      newElement: null,
+      suggestedBinding: null,
+      activeTool: updateActiveTool(editor.state, {
+        type: editor.state.preferredSelectionTool.type,
+      }),
+    });
+  } else {
+    editor.setState({
+      newElement: null,
+      suggestedBinding: null,
+    });
+  }
 };

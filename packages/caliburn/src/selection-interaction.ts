@@ -952,6 +952,38 @@ export const handleSelectionPointerUp = (
 };
 
 /**
+ * Upstream's "handles selection when element(s) weren't drag or added to
+ * selection on pointer down phase" (`App.tsx`): a click that lands on a
+ * linear element and leaves it as the only selection opens its editor
+ * handle. It is what gives a plain click on a line or an arrow its
+ * `selectedLinearElement`, since the pointer-down selection marks the hit
+ * `wasAddedToSelection` and the block below skips it.
+ */
+export const maybeSelectLinearElementOnPointerUp = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+) => {
+  const hitElement = pointerDownState.hit.element;
+
+  if (
+    editor.state.selectedLinearElement?.elementId !== hitElement?.id &&
+    isLinearElement(hitElement)
+  ) {
+    const selectedElements = editor.scene.getSelectedElements(editor.state);
+    // set selectedLinearElement when no other element selected except
+    // the one we've hit
+    if (selectedElements.length === 1) {
+      editor.setState({
+        selectedLinearElement: new LinearElementEditor(
+          hitElement,
+          editor.scene.getNonDeletedElementsMap(),
+        ),
+      });
+    }
+  }
+};
+
+/**
  * Upstream's deselect-on-pointer-up: a click that landed on a bounding box
  * without landing on anything drops the selection. It runs after the crop
  * exit, and returns from the pointer-up handler, so the caller must skip the

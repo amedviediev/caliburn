@@ -344,15 +344,113 @@ export const maybeDragLinearPoint = (
   event: PointerEvent,
 ): boolean => {
   const linearElementEditor = editor.state.selectedLinearElement;
-  if (
-    !linearElementEditor ||
-    linearElementEditor.initialState.lastClickedPoint === -1
-  ) {
+  if (!linearElementEditor) {
     return false;
   }
 
   const pointerCoords = pointerDownState.lastCoords;
   const elementsMap = editor.scene.getNonDeletedElementsMap();
+
+  // upstream runs this one ahead of the eraser/laser/sketch branches, as its
+  // own `if` on the move handler; none of those tools can be active while an
+  // elbow arrow's segment is under the pointer, so it rides along here with
+  // the rest of the linear-drag family
+  if (
+    linearElementEditor.elbowed &&
+    linearElementEditor.initialState.segmentMidpoint.index
+  ) {
+    const [gridX, gridY] = getGridPoint(
+      pointerCoords.x,
+      pointerCoords.y,
+      event[KEYS.CTRL_OR_CMD] ? null : getEffectiveGridSize(editor),
+    );
+
+    let index = linearElementEditor.initialState.segmentMidpoint.index;
+    if (index < 0) {
+      const nextCoords = LinearElementEditor.getSegmentMidpointHitCoords(
+        {
+          ...linearElementEditor,
+          segmentMidPointHoveredCoords: null,
+        },
+        { x: gridX, y: gridY },
+        editor.state,
+        elementsMap,
+      );
+      index = nextCoords
+        ? LinearElementEditor.getSegmentMidPointIndex(
+            linearElementEditor,
+            editor.state,
+            nextCoords,
+            elementsMap,
+          )
+        : -1;
+    }
+
+    const ret = LinearElementEditor.moveFixedSegment(
+      linearElementEditor,
+      index,
+      gridX,
+      gridY,
+      editor.scene,
+    );
+
+    editor.setState({
+      selectedLinearElement: {
+        ...linearElementEditor,
+        isDragging: true,
+        segmentMidPointHoveredCoords: ret.segmentMidPointHoveredCoords,
+        initialState: ret.initialState,
+      },
+    });
+    return true;
+  }
+
+  // dragging a segment midpoint splits the segment: the point is added on
+  // the first move past the threshold, and the drag then carries it
+  if (
+    LinearElementEditor.shouldAddMidpoint(
+      linearElementEditor,
+      pointerCoords,
+      editor.state,
+      elementsMap,
+    )
+  ) {
+    const ret = LinearElementEditor.addMidpoint(
+      linearElementEditor,
+      pointerCoords,
+      editor as any,
+      !event[KEYS.CTRL_OR_CMD],
+      editor.scene,
+    );
+    if (!ret) {
+      return true;
+    }
+
+    if (editor.state.selectedLinearElement) {
+      editor.setState({
+        selectedLinearElement: {
+          ...editor.state.selectedLinearElement,
+          initialState: ret.pointerDownState,
+          selectedPointsIndices: ret.selectedPointsIndices,
+          segmentMidPointHoveredCoords: null,
+          isDragging: true,
+        },
+      });
+    }
+
+    return true;
+  } else if (
+    linearElementEditor.initialState.segmentMidpoint.value !== null &&
+    !linearElementEditor.initialState.segmentMidpoint.added
+  ) {
+    // the midpoint was grabbed but the drag hasn't cleared the threshold yet
+    return true;
+  }
+
+  if (linearElementEditor.initialState.lastClickedPoint === -1) {
+    return false;
+  }
+
   const element = LinearElementEditor.getElement(
     linearElementEditor.elementId,
     elementsMap,

@@ -331,7 +331,10 @@ import {
   maybeDragLinearPoint,
   maybeSuggestBindingOnHover,
 } from "./linear-interaction";
-import { cleanupAfterDragOnPointerUp } from "./drag-interaction";
+import {
+  cleanupAfterDragOnPointerUp,
+  revertActiveToolOnPointerUp,
+} from "./drag-interaction";
 import { handleEraser, maybeEraseOnPointerUp } from "./eraser-interaction";
 import {
   maybeUpdateFrameToHighlightOnPointerMove,
@@ -385,6 +388,7 @@ import {
   initialPointerDownState,
   isHittingCommonBoundingBoxOfSelectedElements,
   maybeDeselectOnPointerUp,
+  maybeSelectLinearElementOnPointerUp,
   updateActiveLockedIdOnPointerUp,
 } from "./selection-interaction";
 
@@ -3681,6 +3685,7 @@ export class CaliburnEditorComponent
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
         handleSelectionPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
+        maybeSelectLinearElementOnPointerUp(this, this.pointerDownState);
         // upstream's "click outside the cropping region to exit" — ahead of
         // the deselect below, which returns from upstream's handler, and
         // must read isCropping before the cleanup at the end resets it
@@ -3698,7 +3703,11 @@ export class CaliburnEditorComponent
         }
         // a click that deselected ends upstream's pointer-up handler right
         // there — only the teardown it had already run stays
-        if (!maybeDeselectOnPointerUp(this, this.pointerDownState)) {
+        const deselected = maybeDeselectOnPointerUp(
+          this,
+          this.pointerDownState,
+        );
+        if (!deselected) {
           if (
             maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
           ) {
@@ -3708,6 +3717,15 @@ export class CaliburnEditorComponent
           }
         }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
+        // upstream's tail — the tool revert every branch above carries its
+        // own copy of. A deselect ends upstream's handler before it, and a
+        // synthesized teardown (the missing-pointer-up replay, which runs
+        // this with the gesture's pointer DOWN event) must not spend the
+        // user's tool on a release that never happened, the same rule the
+        // armed bucket fill above follows.
+        if (!deselected && isGenuinePointerUp) {
+          revertActiveToolOnPointerUp(this);
+        }
       }
       this.clearHighlightsOnPointerUp();
       this.pointerDownState = null;
