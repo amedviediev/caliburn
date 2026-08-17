@@ -30,6 +30,7 @@ import { CaliburnFixedSideContainerComponent } from "./fixed-side-container.comp
 import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
 import { CaliburnMobileToolbarComponent } from "./mobile-toolbar.component";
+import { CaliburnPenModeButtonComponent } from "./pen-mode-button.component";
 import { CaliburnSidebarTriggerComponent } from "./sidebar/sidebar-trigger.component";
 import { CaliburnViewportStatusBadgeComponent } from "./viewport-status-frame/viewport-status-badge.component";
 import { CaliburnWelcomeScreenCenterComponent } from "./welcome-screen/center.component";
@@ -48,11 +49,8 @@ import type { CaliburnEditorComponent } from "../editor.component";
  * holding the mobile styles panel and the compact toolbar, and a top bar
  * holding the main menu and the sidebar trigger.
  *
- * Upstream also renders the pen-mode button in the top-right column; caliburn
- * has no `togglePenMode` port, so — exactly as in the desktop toolbar — that
- * button is omitted rather than stubbed. The sidebars, which upstream renders
- * from inside both branches, are rendered once by `layer-ui.component.html`
- * outside the branch instead.
+ * The sidebars, which upstream renders from inside both branches, are
+ * rendered once by `layer-ui.component.html` outside the branch instead.
  */
 @Component({
   selector: "caliburn-mobile-menu",
@@ -65,6 +63,7 @@ import type { CaliburnEditorComponent } from "../editor.component";
     CaliburnFixedSideContainerComponent,
     CaliburnIslandComponent,
     CaliburnMobileToolbarComponent,
+    CaliburnPenModeButtonComponent,
     CaliburnSidebarTriggerComponent,
     CaliburnViewportStatusBadgeComponent,
     CaliburnWelcomeScreenCenterComponent,

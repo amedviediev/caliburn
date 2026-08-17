@@ -12,7 +12,7 @@
     [ariaKeyshortcuts]="hand.shortcut"
     [keyBindingLabel]="hand.keyBindingLabel"
     [testId]="hand.testId"
-    (select)="onToolSelect(hand.type)"
+    (select)="onToolSelect(hand.type, $event)"
   ></button>
 
   <caliburn-selection-tool-popover />
@@ -30,7 +30,7 @@
     [title]="eraser.title"
     [ariaLabel]="eraser.ariaLabel"
     [testId]="eraser.testId"
-    (select)="onToolSelect(eraser.type)"
+    (select)="onToolSelect(eraser.type, $event)"
   ></button>
 
   <caliburn-tool-popover
@@ -61,7 +61,7 @@
       [title]="text.title"
       [ariaLabel]="text.ariaLabel"
       [testId]="text.testId"
-      (select)="onToolSelect(text.type)"
+      (select)="onToolSelect(text.type, $event)"
     ></button>
   }
 
@@ -77,7 +77,7 @@
       [title]="image.title"
       [ariaLabel]="image.ariaLabel"
       [testId]="image.testId"
-      (select)="onToolSelect(image.type)"
+      (select)="onToolSelect(image.type, $event)"
     ></button>
   }
 
@@ -93,7 +93,7 @@
       [title]="frame.title"
       [ariaLabel]="frame.ariaLabel"
       [testId]="frame.testId"
-      (select)="onToolSelect(frame.type)"
+      (select)="onToolSelect(frame.type, $event)"
     ></button>
   }
 

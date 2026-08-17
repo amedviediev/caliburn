@@ -40,6 +40,7 @@ import { CaliburnFreedrawToolPopoverComponent } from "./freedraw-tool-popover.co
 import { CaliburnHintViewerComponent } from "./hint-viewer.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 import { CaliburnIslandComponent } from "./island.component";
+import { CaliburnPenModeButtonComponent } from "./pen-mode-button.component";
 import { CaliburnSelectionToolPopoverComponent } from "./selection-tool-popover.component";
 import { CaliburnStackRowComponent } from "./stack.component";
 import { TOOL_ICONS } from "./tools";
@@ -61,10 +62,8 @@ type ToolButtonView = {
 
 /**
  * Angular port of upstream `Toolbar.tsx` — the main (desktop) toolbar
- * island. Ported for the desktop/full styles panel only: the compact
- * (tablet) tool popovers, the collab laser button and the pen-mode button
- * (which needs `togglePenMode`, not yet ported) are omitted rather than
- * stubbed. Of the dropdown's "Generate" section only the un-gated
+ * island. The collab laser button is omitted rather than stubbed. Of the
+ * dropdown's "Generate" section only the un-gated
  * mermaid-to-excalidraw entry is ported: the other two are AI surfaces
  * upstream gates on `app.props.aiEnabled` — the `TTDDialogTriggerTunnel.Out`
  * slot a Plus host fills, and `magicframe`, which additionally needs
@@ -89,6 +88,7 @@ type ToolButtonView = {
     CaliburnHintViewerComponent,
     CaliburnIconButtonComponent,
     CaliburnIslandComponent,
+    CaliburnPenModeButtonComponent,
     CaliburnSelectionToolPopoverComponent,
     CaliburnStackRowComponent,
   ],
@@ -135,6 +135,10 @@ export class CaliburnToolbarComponent {
 
   protected forcedTool() {
     return this.editor.activeTool();
+  }
+
+  protected penDetected() {
+    return this.state().penDetected;
   }
 
   private isToolButtonDisabled(type: string) {
@@ -337,6 +341,10 @@ export class CaliburnToolbarComponent {
     type: ToolbarToolType,
     { pointerType }: { pointerType: PointerType | null },
   ) {
+    if (!this.editor.state.penDetected && pointerType === "pen") {
+      this.editor.togglePenMode(true);
+    }
+
     if (type === "selection") {
       if (this.editor.state.activeTool.type === "selection") {
         if (pointerType !== null) {

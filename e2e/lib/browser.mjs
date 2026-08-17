@@ -397,6 +397,38 @@ export const tapCenter = async (page, selector) => {
   await page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2);
 };
 
+/**
+ * Press and release a stylus at real pixels. Neither `page.mouse` nor
+ * `page.touchscreen` can make Chrome report `pointerType: "pen"`; the raw CDP
+ * `Input.dispatchMouseEvent` takes a `pointerType`, and does.
+ */
+export const penTapAt = async (page, x, y) => {
+  const cdp = await page.createCDPSession();
+  try {
+    await cdp.send("Input.dispatchMouseEvent", {
+      type: "mousePressed",
+      x,
+      y,
+      button: "left",
+      buttons: 1,
+      clickCount: 1,
+      pointerType: "pen",
+      force: 0.5,
+    });
+    await cdp.send("Input.dispatchMouseEvent", {
+      type: "mouseReleased",
+      x,
+      y,
+      button: "left",
+      buttons: 0,
+      clickCount: 1,
+      pointerType: "pen",
+    });
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
+};
+
 export const dragCanvas = async (page, from, to, { steps = 12 } = {}) => {
   await page.mouse.move(from[0], from[1]);
   await page.mouse.down();

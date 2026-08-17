@@ -84,16 +84,21 @@
       <div class="excalidraw-ui-top-right">
         @if (topRightUI(); as topRight) {
           <ng-container *ngTemplateOutlet="topRight" />
-        } @else if (showSidebarTrigger()) {
-          <button
-            caliburn-sidebar-trigger
-            triggerClass="default-sidebar-trigger"
-            icon="sidebarRightIcon"
-            [name]="defaultSidebarName"
-            [tab]="defaultSidebarTab"
-            [title]="libraryTitle()"
-            (toggle)="onSidebarToggle($event)"
-          ></button>
+        } @else if (!state().viewModeEnabled) {
+          @if (defaultUIEnabled() && state().penDetected) {
+            <button caliburn-pen-mode-button [isMobile]="true"></button>
+          }
+          @if (showSidebarTrigger()) {
+            <button
+              caliburn-sidebar-trigger
+              triggerClass="default-sidebar-trigger"
+              icon="sidebarRightIcon"
+              [name]="defaultSidebarName"
+              [tab]="defaultSidebarTab"
+              [title]="libraryTitle()"
+              (toggle)="onSidebarToggle($event)"
+            ></button>
+          }
         }
         @if (
           defaultUIEnabled() &&

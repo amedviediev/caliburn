@@ -13,6 +13,8 @@ import {
   deriveStylesPanelMode,
 } from "@excalidraw/common";
 
+import { showSelectedShapeActions } from "@excalidraw/element";
+
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
@@ -36,6 +38,7 @@ import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.componen
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
 import { CaliburnMobileMenuComponent } from "./mobile-menu.component";
 import { CaliburnOverwriteConfirmComponent } from "./overwrite-confirm/overwrite-confirm.component";
+import { CaliburnPenModeButtonComponent } from "./pen-mode-button.component";
 import { isSidebarDocked } from "./sidebar/common";
 import { CaliburnStatsComponent } from "./stats/stats.component";
 import { CaliburnDefaultSidebarComponent } from "./sidebar/default-sidebar.component";
@@ -108,6 +111,7 @@ let nextLayerUIId = 0;
     CaliburnJSONExportDialogComponent,
     CaliburnMobileMenuComponent,
     CaliburnOverwriteConfirmComponent,
+    CaliburnPenModeButtonComponent,
     CaliburnShapeActionsComponent,
     CaliburnSidebarTriggerComponent,
     CaliburnStackColComponent,
@@ -230,6 +234,16 @@ export class CaliburnLayerUIComponent {
   protected scrollBackToContentUIEnabled() {
     return this.editor.isUIControlEnabled("scrollBackToContent");
   }
+
+  /** upstream's `shouldRenderSelectedShapeActions` — the styles panel's own
+   * gate, which the floating compact pen-mode button rides on */
+  protected readonly shouldRenderSelectedShapeActions = computed(() => {
+    const state = this.state();
+    return (
+      this.editor.isDefaultUIEnabled() &&
+      showSelectedShapeActions(state, this.editor.scene.getNonDeletedElements())
+    );
+  });
 
   protected readonly shouldShowStats = computed(() => {
     const state = this.state();

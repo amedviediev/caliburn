@@ -2708,6 +2708,18 @@ export class CaliburnEditorComponent
     });
   }
 
+  togglePenMode(force: boolean | null) {
+    this.setState((prevState) => {
+      return {
+        penMode: force ?? !prevState.penMode,
+        penDetected: true,
+        currentItemStrokeVariability: !prevState.penDetected
+          ? "variable"
+          : prevState.currentItemStrokeVariability,
+      };
+    });
+  }
+
   clearSelection(hitElement?: ExcalidrawElement | null) {
     // upstream reads this off the pre-update state, which React only settles
     // once the handler returns
@@ -2927,6 +2939,18 @@ export class CaliburnEditorComponent
       this.setState({ openPopup: null });
     }
 
+    //fires only once, if pen is detected, penMode is enabled
+    //the user can disable this by toggling the penMode button
+    if (!this.state.penDetected && event.pointerType === "pen") {
+      this.setState(() => {
+        return {
+          penMode: true,
+          penDetected: true,
+          currentItemStrokeVariability: "variable",
+        };
+      });
+    }
+
     // upstream latches this the first time a pen or a finger touches the
     // canvas (`App.tsx`), before its own panning early return — the pointer
     // type is all it looks at
@@ -3020,6 +3044,24 @@ export class CaliburnEditorComponent
     }
 
     const activeToolType = this.state.activeTool.type;
+
+    // in pen mode a finger neither draws nor erases — only the tools that
+    // stay usable by touch do anything. Upstream places this between its
+    // selection handling and the per-tool dispatch; caliburn runs the
+    // selection handling from inside the dispatch's first arm, and the guard
+    // lets selection and lasso through anyway, so it sits just ahead of it.
+    const allowOnPointerDown =
+      !this.state.penMode ||
+      event.pointerType !== "touch" ||
+      activeToolType === "selection" ||
+      activeToolType === "lasso" ||
+      activeToolType === "text" ||
+      activeToolType === "image";
+
+    if (!allowOnPointerDown) {
+      return;
+    }
+
     if (activeToolType === "selection" || activeToolType === "lasso") {
       this.pointerDownState = handleSelectionPointerDown(this, event);
       if (!this.pointerDownState) {

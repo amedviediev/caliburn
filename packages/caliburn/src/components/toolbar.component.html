@@ -8,6 +8,11 @@
   <caliburn-hint-viewer />
   <h2 class="visually-hidden" [id]="headingId()">{{ labels().shapes }}</h2>
   <caliburn-stack-row [gap]="isCompactStylesPanel() ? 0.5 : 1">
+    <!-- in compact UI the pen mode button is rendered as a separate
+         floating button below the compact actions menu -->
+    @if (!isCompactStylesPanel() && penDetected()) {
+      <button caliburn-pen-mode-button></button>
+    }
     @if (forcedTool() === null) {
       <button
         caliburn-icon-button

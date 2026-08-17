@@ -105,6 +105,20 @@
             }
           </div>
         }
+        <!-- in compact UI the pen mode button lives outside the toolbar, as
+             a separate floating button below the compact actions menu
+             (same as we render it on mobile); shown alongside the compact
+             actions island, i.e. when a drawing tool or elements are
+             selected -->
+        @if (
+          defaultUIEnabled() &&
+          isCompactStylesPanel() &&
+          !state().viewModeEnabled &&
+          shouldRenderSelectedShapeActions() &&
+          state().penDetected
+        ) {
+          <button caliburn-pen-mode-button [isMobile]="true"></button>
+        }
       </caliburn-stack-col>
       @if (defaultUIEnabled() && !state().viewModeEnabled) {
         <section class="shapes-section" [attr.aria-labelledby]="headingId">

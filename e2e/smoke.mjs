@@ -23,6 +23,7 @@ import {
   elements,
   occlusion,
   openPage,
+  penTapAt,
   PHONE,
   PHONE_LANDSCAPE,
   pressWithMod,
@@ -2308,6 +2309,86 @@ export const runSuite = async (browser, url, runner) => {
         evidence: {
           page,
           selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+  });
+
+  // --------------------------------------------------------------- pen mode
+  await withPage("penmode", async (page) => {
+    runner.group("pen mode");
+
+    await runner.check(
+      "penmode.detected-by-a-real-stylus",
+      "a stylus press reveals the pen mode button, which then toggles pen mode",
+      async () => {
+        await resetEditor(page);
+
+        const before = await page.evaluate(() => ({
+          penDetected: window.h.state.penDetected,
+          button: !!document.querySelector(".ToolIcon__penMode"),
+        }));
+        expect(
+          !before.penDetected && !before.button,
+          "pen mode was already detected before the stylus touched the canvas",
+        );
+
+        await penTapAt(page, 700, 650);
+
+        await waitFor(
+          page,
+          () => !!document.querySelector(".ToolIcon__penMode"),
+          { message: "a stylus press did not reveal the pen mode button" },
+        );
+        const detected = await page.evaluate(() => ({
+          penDetected: window.h.state.penDetected,
+          penMode: window.h.state.penMode,
+          variability: window.h.state.currentItemStrokeVariability,
+        }));
+        expectEqual(detected.penDetected, true, "penDetected after a stylus");
+        expectEqual(detected.penMode, true, "penMode after a stylus");
+        expectEqual(
+          detected.variability,
+          "variable",
+          "the stroke variability pen detection switches to",
+        );
+
+        const button = await occlusion(page, ".ToolIcon__penMode");
+        expect(
+          button.ownsPoint,
+          `the pen mode button is occluded by ${button.topmost}`,
+        );
+
+        await clickCenter(page, ".ToolIcon__penMode");
+        await waitFor(
+          page,
+          () =>
+            document
+              .querySelector(".ToolIcon__penMode")
+              ?.getAttribute("aria-pressed") === "false",
+          { message: "clicking the pen mode button did not turn pen mode off" },
+        );
+        expectEqual(
+          await page.evaluate(() => window.h.state.penMode),
+          false,
+          "penMode after clicking the button",
+        );
+        // turning it off must not hide the button
+        expectEqual(
+          await page.evaluate(() => window.h.state.penDetected),
+          true,
+          "penDetected after clicking the button",
+        );
+
+        await clickCenter(page, ".ToolIcon__penMode");
+        await waitFor(page, () => window.h.state.penMode === true, {
+          message: "clicking the pen mode button again did not turn it back on",
+        });
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".ToolIcon__penMode", ".App-toolbar"],
         },
       },
     );

@@ -26,6 +26,8 @@ import { NgIcon } from "@ng-icons/core";
 
 import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
 
+import type { PointerType } from "@excalidraw/element/types";
+
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
 import { translated } from "../i18n";
@@ -408,7 +410,14 @@ export class CaliburnMobileToolbarComponent
     this.editor.setActiveTool({ type });
   }
 
-  protected onToolSelect(type: ToolbarToolType) {
+  protected onToolSelect(
+    type: ToolbarToolType,
+    { pointerType }: { pointerType: PointerType | null },
+  ) {
+    if (!this.editor.state.penDetected && pointerType === "pen") {
+      this.editor.togglePenMode(true);
+    }
+
     if (this.editor.state.activeTool.type !== type) {
       trackEvent("toolbar", type, "ui");
       this.editor.setActiveTool({ type });
