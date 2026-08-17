@@ -1,6 +1,8 @@
 import { CURSOR_TYPE, KEYS } from "@excalidraw/common";
 import { newElementWith } from "@excalidraw/element";
 
+import * as StaticScene from "@excalidraw/excalidraw/renderer/staticScene";
+
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../src/index";
@@ -17,6 +19,12 @@ import {
 } from "./test-utils";
 
 const mouse = new Pointer("mouse");
+
+const renderStaticScene = vi.spyOn(StaticScene, "renderStaticScene");
+
+/** the pending-erasure set the last static render was handed */
+const renderedPendingErasure = () =>
+  renderStaticScene.mock.calls.at(-1)![0].renderConfig.elementsPendingErasure;
 
 /**
  * The scene is seeded through `initialData` rather than `API.setElements` so
@@ -111,6 +119,10 @@ describe("eraser tool", () => {
     eraseAlong([10, 50], [310, 50], { release: false });
 
     expect([...h.app.elementsPendingErasure].sort()).toEqual(
+      [left.id, middle.id].sort(),
+    );
+    // and the renderer is handed them, so the marked shapes are drawn faded
+    expect([...renderedPendingErasure()!].sort()).toEqual(
       [left.id, middle.id].sort(),
     );
 
@@ -288,7 +300,7 @@ describe("eraser tool", () => {
     expect(h.state.activeTool.type).toBe("selection");
   });
 
-  it("keeps a host-controlled eraser when elements get selected", async () => {
+  it("keeps a host-controlled eraser when elements get selected, clearing the selection instead", async () => {
     const { left, elements } = row();
     mockBoundingClientRect({});
     await render(
@@ -296,9 +308,20 @@ describe("eraser tool", () => {
     );
     mouse.reset();
 
-    API.setAppState({ selectedElementIds: { [left.id]: true } });
+    API.setAppState({
+      selectedElementIds: { [left.id]: true },
+      selectedGroupIds: { [left.id]: true },
+      editingGroupId: left.id,
+    });
 
+    // upstream settles on the forced tool with nothing selected — it gets
+    // there through `handleForcedToolChange` -> `setActiveTool`, whose
+    // non-selection branch clears the selection
     expect(h.state.activeTool.type).toBe("eraser");
+    expect(h.state.selectedElementIds).toEqual({});
+    expect(h.state.selectedGroupIds).toEqual({});
+    expect(h.state.editingGroupId).toBe(null);
+    expect(h.state.multiElement).toBe(null);
   });
 
   it("takes no hover affordance from an embeddable, which the laser does", async () => {

@@ -2422,17 +2422,29 @@ export class CaliburnEditorComponent
     this.commit();
     if (
       Object.keys(this.state.selectedElementIds).length &&
-      isEraserActive(this.state) &&
-      // must not switch tools while the active tool is host-controlled, the
-      // rule the pen's eraser button follows too: `applyStateInvariants`
-      // would put the forced eraser straight back, and this `setState` runs
-      // synchronously and re-entrantly, so the two would recurse unbounded
-      // (upstream defers to React's next render instead)
-      !this.activeTool()
+      isEraserActive(this.state)
     ) {
-      this.setState({
-        activeTool: updateActiveTool(this.state, { type: "selection" }),
-      });
+      if (this.activeTool()) {
+        // A host-controlled eraser cannot be switched away from. Upstream
+        // arrives at this state through `handleForcedToolChange` →
+        // `setActiveTool`, whose non-selection branch clears the selection,
+        // so it settles on the eraser with nothing selected. Caliburn's
+        // `applyStateInvariants` restores a forced tool by direct assignment
+        // and so skips that reset — and this `setState` is synchronous and
+        // re-entrant, so switching to the selection tool here would recurse
+        // without bound. Clearing exactly what `setActiveTool` clears reaches
+        // upstream's end state and terminates on the next evaluation.
+        this.setState((prevState) => ({
+          selectedElementIds: makeNextSelectedElementIds({}, prevState),
+          selectedGroupIds: makeNextSelectedElementIds({}, prevState),
+          editingGroupId: null,
+          multiElement: null,
+        }));
+      } else {
+        this.setState({
+          activeTool: updateActiveTool(this.state, { type: "selection" }),
+        });
+      }
     }
     if (
       this.state.activeTool.type === "eraser" &&
@@ -3493,6 +3505,12 @@ export class CaliburnEditorComponent
         // the deselect below, which returns from upstream's handler, and
         // must read isCropping before the cleanup at the end resets it
         maybeFinishImageCroppingOnPointerUp(this, this.pointerDownState);
+        // upstream runs this — the erase and its `else if
+        // (elementsPendingErasure.size)` restore — before the new-element
+        // finalize paths; caliburn's are the sibling branches above, so the
+        // restore is out of their reach. Unreachable in practice: an eraser
+        // gesture never produces a `newElement`, and the reachable restore
+        // (a tool switch mid-gesture) still lands here.
         if (maybeEraseOnPointerUp(this)) {
           this.clearHighlightsOnPointerUp();
           this.pointerDownState = null;
