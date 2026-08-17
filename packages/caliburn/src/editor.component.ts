@@ -504,6 +504,11 @@ type SetStateArg =
  * (Scene, Store, History) and the upstream AppState shape; the editor
  * behavior itself arrives slice by slice, replacing pieces of this stub.
  */
+
+// React's nested-update cap; a listener that rewrites its own key every flush
+// would otherwise spin instead of failing the way upstream does
+const MAX_OBSERVER_FLUSH_DEPTH = 50;
+
 @Component({
   selector: "caliburn-editor",
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -4535,8 +4540,12 @@ export class CaliburnEditorComponent
       return;
     }
     this.flushingObservers = true;
+    let depth = 0;
     try {
       do {
+        if (++depth > MAX_OBSERVER_FLUSH_DEPTH) {
+          throw new Error("Maximum update depth exceeded");
+        }
         this.observerFlushPending = false;
         const prevState = this.observedState;
         this.observedState = this.state;
