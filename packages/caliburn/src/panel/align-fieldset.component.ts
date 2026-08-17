@@ -6,10 +6,7 @@ import {
   input,
 } from "@angular/core";
 
-import { getNonDeletedElements } from "@excalidraw/element";
-
 import { t } from "@excalidraw/excalidraw/i18n";
-import { isSomeElementSelected } from "@excalidraw/excalidraw/scene";
 import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
 
 import type { Action } from "@excalidraw/excalidraw/actions/types";
@@ -21,6 +18,7 @@ import {
   actionAlignRight,
   actionAlignTop,
   actionAlignVerticallyCentered,
+  alignActionVisible,
   alignActionsPredicate,
 } from "../actions/actionAlign";
 import {
@@ -170,8 +168,8 @@ export class CaliburnAlignFieldsetComponent {
   protected visible() {
     const editor = this.host;
     editor.changeGeneration();
-    return isSomeElementSelected(
-      getNonDeletedElements(editor.scene.getElementsIncludingDeleted()),
+    return alignActionVisible(
+      editor.scene.getElementsIncludingDeleted(),
       editor.state,
     );
   }
