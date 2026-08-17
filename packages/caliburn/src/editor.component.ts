@@ -31,12 +31,16 @@ import {
   POINTER_BUTTON,
   POINTER_EVENTS,
   ZOOM_STEP,
+  createUserAgentDescriptor,
   debounce,
+  deriveStylesPanelMode,
+  getFormFactor,
   getStrokeWidthByKey,
   isBrave,
   isInputLike,
   isSelectionLikeTool,
   isWritableElement,
+  loadDesktopUIModePreference,
   supportsResizeObserver,
   updateActiveTool,
   updateObject,
@@ -754,18 +758,19 @@ export class CaliburnEditorComponent
   hasRenderableElements = false;
 
   /**
-   * Upstream's `editorInterfaceContextInitialValue` (`App.tsx`), narrowed to
-   * the fields caliburn derives: only `canFitSidebar` is measured so far
-   * (`refreshEditorInterface`), the rest stay at the desktop-only literals
-   * the port has always used. Signal-backed rather than a plain field so a
-   * `computed()` that reads `editor.editorInterface.canFitSidebar` — every
-   * consumer does — re-runs when a resize changes it; upstream gets that for
-   * free by re-rendering off `updateObject`'s new identity.
+   * Upstream's `editorInterfaceContextInitialValue` (`App.tsx`), value for
+   * value — `refreshEditorInterface` measures the container and replaces
+   * every field but `isTouchScreen`. Signal-backed rather than a plain field
+   * so a `computed()` that reads `editor.editorInterface.*` — every consumer
+   * does — re-runs when a resize changes it; upstream gets that for free by
+   * re-rendering off `updateObject`'s new identity.
    */
   private readonly editorInterfaceSignal = signal<EditorInterface>({
     formFactor: "desktop",
     desktopUIMode: "full",
-    userAgent: { isMobileDevice: false, platform: "other" },
+    userAgent: createUserAgentDescriptor(
+      typeof navigator !== "undefined" ? navigator.userAgent : "",
+    ),
     isTouchScreen: false,
     canFitSidebar: false,
     isLandscape: true,
@@ -775,13 +780,22 @@ export class CaliburnEditorComponent
     return this.editorInterfaceSignal();
   }
 
+  /**
+   * Upstream's private `App.stylesPanelMode` field (`App.tsx`), seeded from
+   * the same initial editor interface. It exists only so
+   * `reconcileStylesPanelMode` can spot a *transition* — every consumer reads
+   * `deriveStylesPanelMode(editorInterface)` instead, as upstream's
+   * `useStylesPanelMode()` does.
+   */
+  private stylesPanelMode = deriveStylesPanelMode(this.editorInterfaceSignal());
+
   private resizeObserver: ResizeObserver | null = null;
 
   unmounted = false;
 
   readonly viewport = new AppViewport(this as any, {
     getContainer: () => this.containerRef()?.nativeElement ?? null,
-    getStylesPanelMode: () => "full",
+    getStylesPanelMode: () => this.stylesPanelMode,
     isGestureActive,
   });
 
@@ -1454,6 +1468,16 @@ export class CaliburnEditorComponent
         get: () => this.store,
       },
     });
+
+    // upstream's constructor call (`App.tsx`), which runs before the container
+    // is in the DOM and therefore always returns early. Kept as its own call
+    // site because the ordering upstream relies on hangs off it: the scene is
+    // initialized (`initializeScene`, which seeds `preferredSelectionTool`
+    // from the form factor) against the unmeasured, desktop interface, and the
+    // first real measurement arrives from the container `ResizeObserver` —
+    // whose initial callback a browser fires right after `observe()` and jsdom
+    // never fires at all.
+    this.refreshEditorInterface();
   }
 
   ngOnInit() {
@@ -1547,6 +1571,10 @@ export class CaliburnEditorComponent
   private onWindowResize = () => {
     this.refreshEditorInterface();
     this.updateDOMRect();
+    // upstream's `onResize` is `withBatchedUpdates`, so React has re-rendered
+    // by the time the handler returns — a resize that changes the form factor
+    // has swapped the whole chrome over before anything can read the DOM
+    this.cdr.detectChanges();
   };
 
   private onWindowFocus = () => {
@@ -1574,7 +1602,6 @@ export class CaliburnEditorComponent
       this.drawShape.trail.start(svgLayer);
     }
     this.cursor.reset();
-    this.refreshEditorInterface();
     this.updateDOMRect();
     this.observeContainerResize();
     this.initializeScene();
@@ -4184,37 +4211,92 @@ export class CaliburnEditorComponent
   }
 
   /**
-   * Angular port of upstream `App.tsx`'s `refreshEditorInterface`, restricted
-   * to the one field caliburn derives: `canFitSidebar`. Upstream measures the
-   * editor container and compares its width against
-   * `UIOptions.dockedSidebarBreakpoint ?? MQ_RIGHT_SIDEBAR_MIN_WIDTH`, and —
-   * as here — returns early while the container is unmounted, leaving the
-   * initial `false`.
+   * Upstream's `App.getFormFactor` — the host's `UIOptions.getFormFactor`
+   * wins over the measured breakpoints when it is supplied.
+   */
+  private getFormFactor(editorWidth: number, editorHeight: number) {
+    return (
+      this.props.UIOptions.getFormFactor?.(editorWidth, editorHeight) ??
+      getFormFactor(editorWidth, editorHeight)
+    );
+  }
+
+  /**
+   * Angular port of upstream `App.tsx`'s `refreshEditorInterface`: it measures
+   * the editor container and derives every field of the editor interface but
+   * `isTouchScreen` from that rect, the stored desktop-UI-mode preference and
+   * the user agent, then reconciles the styles-panel mode. As upstream, it
+   * returns early while the container is unmounted, leaving the initial
+   * (desktop) values.
    *
-   * That early return is also the jsdom fallback: upstream's callers are the
-   * container `ResizeObserver` (guarded by `supportsResizeObserver`, which is
-   * false under jsdom) and the window `resize` handler, neither of which fires
-   * there — so a test that needs a sized editor calls this itself, through
-   * `withExcalidrawDimensions`, exactly as upstream's tests do. `updateObject`
-   * returns the same object when nothing changed, so an unchanged measurement
-   * writes no new signal value and schedules no change detection.
+   * That early return is also the jsdom fallback: the callers that measure are
+   * the container `ResizeObserver` (guarded by `supportsResizeObserver`, which
+   * is false under jsdom) and the window `resize` handler, neither of which
+   * fires there — so a test that needs a sized editor calls this itself,
+   * through `withExcalidrawDimensions`, exactly as upstream's tests do.
+   * `updateObject` returns the same object when nothing changed, so an
+   * unchanged measurement writes no new signal value and schedules no change
+   * detection.
    */
   refreshEditorInterface() {
     const container = this.containerRef()?.nativeElement;
     if (!container) {
       return;
     }
-    const { width: editorWidth } = container.getBoundingClientRect();
+    const { width: editorWidth, height: editorHeight } =
+      container.getBoundingClientRect();
+
+    const storedDesktopUIMode = loadDesktopUIModePreference();
+    const userAgentDescriptor = createUserAgentDescriptor(
+      typeof navigator !== "undefined" ? navigator.userAgent : "",
+    );
+    const editorInterface = this.editorInterfaceSignal();
+    // allow host app to control formFactor and desktopUIMode via props
     const sidebarBreakpoint =
       this.props.UIOptions.dockedSidebarBreakpoint != null
         ? this.props.UIOptions.dockedSidebarBreakpoint
         : MQ_RIGHT_SIDEBAR_MIN_WIDTH;
 
-    this.editorInterfaceSignal.set(
-      updateObject(this.editorInterfaceSignal(), {
-        canFitSidebar: editorWidth > sidebarBreakpoint,
-      }),
-    );
+    const nextEditorInterface = updateObject(editorInterface, {
+      desktopUIMode: storedDesktopUIMode ?? editorInterface.desktopUIMode,
+      formFactor: this.getFormFactor(editorWidth, editorHeight),
+      userAgent: userAgentDescriptor,
+      canFitSidebar: editorWidth > sidebarBreakpoint,
+      isLandscape: editorWidth > editorHeight,
+    });
+
+    this.editorInterfaceSignal.set(nextEditorInterface);
+    this.reconcileStylesPanelMode(nextEditorInterface);
+  }
+
+  /**
+   * Upstream's `App.reconcileStylesPanelMode`: the panel's footprint differs
+   * between modes, so the viewport's measured styles-panel offset is dropped
+   * on every transition, and entering "full" resets the preferred selection
+   * tool — the compact and mobile toolbars are the only surfaces that can make
+   * lasso the preferred one, and the full toolbar offers no way back.
+   */
+  private reconcileStylesPanelMode(nextEditorInterface: EditorInterface) {
+    const nextStylesPanelMode = deriveStylesPanelMode(nextEditorInterface);
+    if (nextStylesPanelMode === this.stylesPanelMode) {
+      return;
+    }
+
+    const prevStylesPanelMode = this.stylesPanelMode;
+    this.stylesPanelMode = nextStylesPanelMode;
+
+    // the panel footprint differs between modes (compact vs full), so a
+    // measurement taken in the previous mode no longer applies
+    this.viewport.invalidateUIOffset("stylesPanel");
+
+    if (prevStylesPanelMode !== "full" && nextStylesPanelMode === "full") {
+      this.setState({
+        preferredSelectionTool: {
+          type: "selection",
+          initialized: true,
+        },
+      });
+    }
   }
 
   refresh() {}
