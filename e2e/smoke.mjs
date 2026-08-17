@@ -3388,7 +3388,6 @@ export const runSuite = async (browser, url, runner) => {
               ".excalidraw__embeddable-container__inner",
             );
             return {
-              parent: container.parentElement.tagName.toLowerCase(),
               inEditor: !!container.closest(".excalidraw"),
               display: getComputedStyle(container).display,
               position: getComputedStyle(container).position,

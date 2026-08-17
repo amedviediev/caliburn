@@ -4282,6 +4282,8 @@ export class CaliburnEditorComponent
     return selectedElements.length === 1 ? selectedElements : [];
   }
 
+  protected readonly copySourceLabel = translated(() => t("labels.copySource"));
+
   /**
    * The single selected `iframe` element upstream renders its
    * `ElementCanvasButtons` column for — the copy-source and fullscreen pair.
@@ -4292,8 +4294,6 @@ export class CaliburnEditorComponent
    * "convert to code" trigger, gated behind `aiEnabled`); that one is not
    * part of the port.
    */
-  protected readonly copySourceLabel = translated(() => t("labels.copySource"));
-
   iframeCanvasButtonsElement(): NonDeleted<ExcalidrawIframeElement> | null {
     this.changeGeneration();
     if (!this.isDefaultUIEnabled() || areElementCanvasButtonsHidden(this)) {
