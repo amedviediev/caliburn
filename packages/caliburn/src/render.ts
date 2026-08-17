@@ -253,7 +253,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
     renderConfig: {
       ...remoteCollaborators,
       selectionColor,
-      renderScrollbars: false,
+      renderScrollbars: editor.renderScrollbars() === true,
       // NOTE read live so we don't rerender on cursor move
       lastViewportPosition: editor.viewport.lastPosition,
     },

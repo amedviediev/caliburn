@@ -212,7 +212,7 @@ const maybeCacheReferenceSnapPoints = (
 export const maybeDragNewElement = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
-  event: PointerEvent,
+  event: PointerEvent | KeyboardEvent,
   informMutation = true,
 ): void => {
   const newElement = editor.state.newElement;

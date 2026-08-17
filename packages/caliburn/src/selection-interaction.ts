@@ -49,10 +49,14 @@ import type {
 } from "@excalidraw/element/types";
 
 import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
-import { originInGridFromEvent } from "./create-interaction";
+import {
+  maybeDragNewElement,
+  originInGridFromEvent,
+} from "./create-interaction";
 import { finishImageCropping, maybeHandleCrop } from "./crop-interaction";
 import { maybeDragSelectedElements } from "./drag-interaction";
 import { getElementLinkAtPosition } from "./link-interaction";
+import { getScrollBarsAtPointer } from "./scrollbar-interaction";
 import { isEditingTextContent } from "./text-interaction";
 import {
   initialResizeState,
@@ -77,6 +81,8 @@ export interface PointerDownState {
     hasHitCommonBoundingBoxOfSelectedElements: boolean;
   };
   boxSelection: { hasOccurred: boolean };
+  /** the canvas scrollbars the press landed on, if any */
+  scrollbars: ReturnType<typeof getScrollBarsAtPointer>;
   resize: ResizePointerDownState;
   drag: {
     hasOccurred: boolean;
@@ -141,6 +147,7 @@ export const initialPointerDownState = (
         ),
     },
     boxSelection: { hasOccurred: false },
+    scrollbars: getScrollBarsAtPointer(editor, event),
     resize: initialResizeState(editor),
     drag: {
       hasOccurred: false,
@@ -685,10 +692,17 @@ export const handleSelectionPointerMove = (
   }
 };
 
-const maybeDragNewGenericElement = (
+/**
+ * upstream `App.maybeDragNewGenericElement`: the box-selection rectangle
+ * first, then — when there is none to drag — the element being created,
+ * which caliburn keeps in `create-interaction.ts` because the pointer-move
+ * path enters that half directly.
+ */
+export const maybeDragNewGenericElement = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
-  event: PointerEvent,
+  event: PointerEvent | KeyboardEvent,
+  informMutation = true,
 ) => {
   const selectionElement = editor.state.selectionElement;
   const pointerCoords = pointerDownState.lastCoords;
@@ -712,7 +726,10 @@ const maybeDragNewGenericElement = (
       zoom: editor.state.zoom.value,
       informMutation: false,
     });
+    return;
   }
+
+  maybeDragNewElement(editor, pointerDownState, event, informMutation);
 };
 
 const updateBoxSelection = (

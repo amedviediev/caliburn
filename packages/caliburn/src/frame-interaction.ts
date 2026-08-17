@@ -47,6 +47,7 @@ export const updateFrameToHighlight = (
 export const maybeUpdateFrameToHighlightOnPointerMove = (
   editor: CaliburnEditorComponent,
   sceneCoords: { x: number; y: number },
+  isOverScrollBar: boolean,
 ) => {
   // currently this function is being called even during pointerdown so we
   // need to make sure we don't re-set the state when dragging and similar
@@ -64,7 +65,7 @@ export const maybeUpdateFrameToHighlightOnPointerMove = (
 
   updateFrameToHighlight(
     editor,
-    isEligibleFrameChildType(editor.state.activeTool.type)
+    !isOverScrollBar && isEligibleFrameChildType(editor.state.activeTool.type)
       ? getTopLayerFrameAtSceneCoords(editor, sceneCoords)
       : null,
   );

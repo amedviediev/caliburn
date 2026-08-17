@@ -151,7 +151,7 @@ export const maybeArmResizeOnPointerDown = (
 export const maybeHandleResize = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
-  event: PointerEvent,
+  event: PointerEvent | KeyboardEvent,
 ): boolean => {
   const selectedElements = editor.scene.getSelectedElements(editor.state);
   const selectedFrames = selectedElements.filter(isFrameLikeElement);

@@ -8,14 +8,18 @@ type PointerSession = {
   downEvent: PointerEvent;
   onMove: (event: PointerEvent) => void;
   onUp: (event: PointerEvent) => void;
+  onKeyDown: (event: KeyboardEvent) => void;
+  onKeyUp: (event: KeyboardEvent) => void;
 };
 
 /**
  * The window-level listeners upstream installs for the duration of one
  * pointer gesture (`App.tsx`'s `onPointerMoveFromPointerDownHandler` /
- * `onPointerUpFromPointerDownHandler`), so a drag released over the UI — or
- * outside the browser viewport — still completes. Module-level, like the pan
- * session's own state in `pan-gesture.ts`: one gesture is live at a time.
+ * `onPointerUpFromPointerDownHandler` and the keyboard pair beside them), so
+ * a drag released over the UI — or outside the browser viewport — still
+ * completes, and a modifier pressed mid-drag takes effect without a move.
+ * Module-level, like the pan session's own state in `pan-gesture.ts`: one
+ * gesture is live at a time.
  */
 let session: PointerSession | null = null;
 
@@ -51,9 +55,18 @@ export const startPointerSession = (
     editor.handlePointerUpFromPointerDown(event);
   };
 
-  session = { editor, downEvent, onMove, onUp };
+  const onKeyDown = (event: KeyboardEvent) => {
+    editor.handleKeyDownFromPointerDown(event);
+  };
+  const onKeyUp = (event: KeyboardEvent) => {
+    editor.handleKeyUpFromPointerDown(event);
+  };
+
+  session = { editor, downEvent, onMove, onUp, onKeyDown, onKeyUp };
   window.addEventListener(EVENT.POINTER_MOVE, onMove);
   window.addEventListener(EVENT.POINTER_UP, onUp);
+  window.addEventListener(EVENT.KEYDOWN, onKeyDown);
+  window.addEventListener(EVENT.KEYUP, onKeyUp);
 };
 
 export const endPointerSession = () => {
@@ -62,6 +75,8 @@ export const endPointerSession = () => {
   }
   window.removeEventListener(EVENT.POINTER_MOVE, session.onMove);
   window.removeEventListener(EVENT.POINTER_UP, session.onUp);
+  window.removeEventListener(EVENT.KEYDOWN, session.onKeyDown);
+  window.removeEventListener(EVENT.KEYUP, session.onKeyUp);
   session = null;
 };
 

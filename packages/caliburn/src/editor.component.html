@@ -30,6 +30,8 @@
   tabindex="0"
   (drop)="handleAppOnDrop($event)"
   (dragover)="handleAppOnDragOver($event)"
+  (pointerenter)="toggleOverscrollBehavior($event)"
+  (pointerleave)="toggleOverscrollBehavior($event)"
 >
   <caliburn-layer-ui><ng-content /></caliburn-layer-ui>
   <canvas #staticCanvas class="excalidraw__canvas static"></canvas>

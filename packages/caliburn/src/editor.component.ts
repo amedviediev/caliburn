@@ -52,6 +52,7 @@ import {
   Scene,
   ShapeCache,
   Store,
+  StoreDelta,
   embeddableURLValidator,
   getActiveTextElement,
   getCommonBounds,
@@ -70,6 +71,7 @@ import {
   isFrameLikeElement,
   isIframeElement,
   isImageElement,
+  isInitializedImageElement,
   isLinearElement,
   isMeasureTextSupported,
   isTextElement,
@@ -178,6 +180,9 @@ import type {
   UserToFollow,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
+import type { RenderInteractiveSceneCallback } from "@excalidraw/excalidraw/scene/types";
+import type { ApplyToOptions } from "@excalidraw/element";
+import type { SceneElementsMap } from "@excalidraw/element/types";
 import type {
   Action,
   ActionResult,
@@ -398,6 +403,15 @@ import {
   startPointerSession,
 } from "./pointer-session";
 import {
+  endScrollBarSession,
+  getScrollBarsAtPointer,
+  handleDraggingScrollBar,
+  handlePointerMoveOverScrollbars,
+  isDraggingScrollBar,
+  resetScrollBarDrag,
+  setCurrentScrollBars,
+} from "./scrollbar-interaction";
+import {
   deselectElements,
   handleCanvasDoubleClick,
   handleEnterToEditKeyDown,
@@ -415,9 +429,11 @@ import {
   initialPointerDownState,
   isHittingCommonBoundingBoxOfSelectedElements,
   maybeDeselectOnPointerUp,
+  maybeDragNewGenericElement,
   maybeSelectLinearElementOnPointerUp,
   updateActiveLockedIdOnPointerUp,
 } from "./selection-interaction";
+import { maybeHandleResize } from "./resize-interaction";
 
 import type { RoughCanvas } from "roughjs/bin/canvas";
 
@@ -465,6 +481,7 @@ export interface CaliburnImperativeAPI {
   /** upstream `App.id` — the token a library install is attributed to */
   id: string;
   updateScene: CaliburnEditorComponent["updateScene"];
+  applyDeltas: CaliburnEditorComponent["applyDeltas"];
   resetScene: CaliburnEditorComponent["resetScene"];
   mutateElement: CaliburnEditorComponent["mutateElement"];
   updateLibrary: CaliburnEditorComponent["library"]["updateLibrary"];
@@ -584,6 +601,9 @@ export class CaliburnEditorComponent
   readonly theme = input<Theme | undefined>(undefined);
   readonly zenModeEnabled = input<boolean | undefined>(undefined);
   readonly gridModeEnabled = input<boolean | undefined>(undefined);
+  /** whether the interactive canvas paints its scroll bars (off by default,
+   * as upstream's `props.renderScrollbars` is) */
+  readonly renderScrollbars = input<boolean | undefined>(undefined);
   /** the scene name, seeded into `appState.name` (host-controlled) */
   readonly name = input<string | undefined>(undefined);
   /** extra class names for the editor's root `.excalidraw` element */
@@ -792,7 +812,13 @@ export class CaliburnEditorComponent
 
   private scheduleImageRefresh = createScheduleImageRefresh(this);
 
-  renderInteractiveSceneCallback = () => {
+  renderInteractiveSceneCallback = ({
+    scrollBars,
+  }: RenderInteractiveSceneCallback) => {
+    if (scrollBars) {
+      setCurrentScrollBars(scrollBars);
+    }
+
     this.scheduleImageRefresh();
   };
 
@@ -1731,6 +1757,7 @@ export class CaliburnEditorComponent
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
     window.addEventListener("resize", this.onWindowResize);
     window.addEventListener("focus", this.onWindowFocus);
+    window.addEventListener("unload", this.onWindowUnload);
     window.addEventListener("blur", this.onWindowBlur);
     window.addEventListener("message", onWindowMessage);
 
@@ -1770,11 +1797,37 @@ export class CaliburnEditorComponent
 
   /**
    * Upstream's `onBlur`: the space bar's keyup lands wherever the focus went,
-   * so a window that loses focus mid-hold must forget it was held.
+   * so a window that loses focus mid-hold must forget it was held — and the
+   * same goes for the ctrl that suspends binding.
    */
   private onWindowBlur = () => {
     setHoldingSpace(false);
+    this.setState({
+      isBindingEnabled: this.state.bindingPreference === "enabled",
+    });
   };
+
+  /** upstream's `onUnload`, which is `onBlur` again: a page being torn down
+   * never delivers the keyup that would release a held modifier, and the
+   * bfcache can restore the editor with it still latched */
+  private onWindowUnload = () => {
+    this.onWindowBlur();
+  };
+
+  /**
+   * upstream `App.toggleOverscrollBehavior`, bound to the container's
+   * pointerenter/pointerleave: while the pointer is inside the editor,
+   * disable overscroll behavior to prevent panning from triggering
+   * history back/forward on MacOS Chrome. Upstream binds the pair only while
+   * interactive, which the gate here stands in for.
+   */
+  toggleOverscrollBehavior(event: PointerEvent) {
+    if (!this.isInteractionEnabled()) {
+      return;
+    }
+    document.documentElement.style.overscrollBehaviorX =
+      event.type === "pointerenter" ? "none" : "auto";
+  }
 
   /**
    * generally invoked only if fullscreen was invoked programmatically
@@ -1896,6 +1949,7 @@ export class CaliburnEditorComponent
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
     window.removeEventListener("resize", this.onWindowResize);
     window.removeEventListener("focus", this.onWindowFocus);
+    window.removeEventListener("unload", this.onWindowUnload);
     window.removeEventListener("blur", this.onWindowBlur);
     window.removeEventListener("message", onWindowMessage);
     this.resizeObserver?.disconnect();
@@ -1984,10 +2038,27 @@ export class CaliburnEditorComponent
       captureUpdate: CaptureUpdateAction.NEVER,
     });
 
+    // clear the shape and image cache so that any images in initialData
+    // can be loaded fresh
+    this.clearImageShapeCache();
+
     // manually loading the font faces seems faster even in browsers that do
     // fire the loadingdone event
     this.fonts.loadSceneFonts().then((fontFaces) => {
       this.fonts.onLoaded(fontFaces);
+    });
+  }
+
+  /** upstream `App.clearImageShapeCache` — drops the cached bitmap and the
+   * cached shape of every drawn image the supplied files cover, so the next
+   * render picks the new file data up */
+  private clearImageShapeCache(filesMap?: BinaryFiles) {
+    const files = filesMap ?? this.files;
+    this.scene.getNonDeletedElements().forEach((element) => {
+      if (isInitializedImageElement(element) && files[element.fileId]) {
+        this.imageCache.delete(element.fileId);
+        ShapeCache.delete(element);
+      }
     });
   }
 
@@ -3003,6 +3074,27 @@ export class CaliburnEditorComponent
     });
   };
 
+  applyDeltas = (
+    deltas: StoreDelta[],
+    options?: ApplyToOptions,
+  ): [SceneElementsMap, AppState, boolean] => {
+    // squash all deltas together, starting with a fresh new delta instance
+    const aggregatedDelta = StoreDelta.squash(...deltas);
+
+    // create new instance of elements map & appState, so we don't accidentaly mutate existing ones
+    const nextAppState = { ...this.state };
+    const nextElements = new Map(
+      this.scene.getElementsMapIncludingDeleted(),
+    ) as SceneElementsMap;
+
+    return StoreDelta.applyTo(
+      aggregatedDelta,
+      nextElements,
+      nextAppState,
+      options,
+    );
+  };
+
   mutateElement = <TElement extends Mutable<ExcalidrawElement>>(
     element: TElement,
     updates: ElementUpdate<TElement>,
@@ -3407,8 +3499,9 @@ export class CaliburnEditorComponent
       return;
     }
 
-    // upstream's `handleDraggingScrollBar` goes here, between the auto-resize
-    // handle and the selection clear — the scrollbars are not ported yet
+    if (handleDraggingScrollBar(this, event)) {
+      return;
+    }
 
     this.armClearSelectionIfNotUsingSelection();
 
@@ -3557,9 +3650,47 @@ export class CaliburnEditorComponent
     this.batchCommits(() => this.onPointerMoveFromPointerDown(event));
   }
 
+  /**
+   * The in-flight gesture's own keyboard handling — upstream's
+   * `onKeyDownFromPointerDownHandler` / `onKeyUpFromPointerDownHandler`
+   * (`App.tsx`), installed on window beside the gesture's move & up handlers
+   * (`pointer-session.ts`). Pressing or releasing alt/shift re-runs the
+   * resize and the new-element drag against the pointer's last coords, so
+   * the aspect lock (and resize-from-centre) takes effect on the key alone,
+   * without waiting for a move.
+   */
+  handleKeyDownFromPointerDown(event: KeyboardEvent) {
+    this.batchCommits(() => this.onKeyFromPointerDown(event));
+  }
+
+  handleKeyUpFromPointerDown(event: KeyboardEvent) {
+    // Prevents focus from escaping excalidraw tab
+    if (event.key === KEYS.ALT) {
+      event.preventDefault();
+    }
+    this.batchCommits(() => this.onKeyFromPointerDown(event));
+  }
+
+  private onKeyFromPointerDown(event: KeyboardEvent) {
+    const pointerDownState = this.pointerDownState;
+    if (!pointerDownState) {
+      return;
+    }
+    if (maybeHandleResize(this, pointerDownState, event)) {
+      return;
+    }
+    maybeDragNewGenericElement(this, pointerDownState, event);
+  }
+
   private onPointerMoveFromPointerDown(event: PointerEvent) {
     const pointerDownState = this.pointerDownState;
     if (!pointerDownState || !(event.target instanceof HTMLElement)) {
+      return;
+    }
+    // ahead of the scene-coords write below, which upstream's own handler
+    // does not reach before this point: the scrollbar drag keeps its running
+    // position in `lastCoords` as CLIENT coords
+    if (handlePointerMoveOverScrollbars(this, event, pointerDownState)) {
       return;
     }
     pointerDownState.lastCoords = viewportCoordsToSceneCoords(
@@ -3640,7 +3771,12 @@ export class CaliburnEditorComponent
 
     // a viewport gesture owns the pointer: no hover affordance may run,
     // least of all one that would take the pan cursor back
-    if (isHoldingSpace() || isGestureActive() || isHandToolActive(this.state)) {
+    if (
+      isHoldingSpace() ||
+      isGestureActive() ||
+      isDraggingScrollBar() ||
+      isHandToolActive(this.state)
+    ) {
       return;
     }
 
@@ -3649,11 +3785,17 @@ export class CaliburnEditorComponent
       return;
     }
 
+    const isOverScrollBar = getScrollBarsAtPointer(this, event).isOverEither;
+
     handleMultiElementPointerMove(this, event);
     maybeSuggestBindingOnHover(this, event);
-    maybeUpdateFrameToHighlightOnPointerMove(this, scenePointer);
+    maybeUpdateFrameToHighlightOnPointerMove(
+      this,
+      scenePointer,
+      isOverScrollBar,
+    );
     this.arrowText.updateHoveredAnchor(scenePointer);
-    this.maybeUpdateHoverCursor(scenePointer, event);
+    this.maybeUpdateHoverCursor(scenePointer, event, isOverScrollBar);
   }
 
   /**
@@ -3853,14 +3995,14 @@ export class CaliburnEditorComponent
   private maybeUpdateHoverCursor(
     scenePointer: { x: number; y: number },
     event: PointerEvent,
+    isOverScrollBar: boolean,
   ) {
     // upstream's pointer-move gate (App.tsx:7908-7920) admits only these tools
     // to the hover affordances, while caliburn gates its own branches further
     // down (the laser short-circuit, `isSelectionLikeTool`) — so this block
     // carries upstream's tool list itself, and everything upstream runs behind
     // that gate (the auto-resize handle, then the transform handles) lives
-    // inside it. Its `!isOverScrollBar` conditions are dropped throughout:
-    // caliburn renders no canvas scrollbars.
+    // inside it.
     if (
       isSelectionLikeTool(this.state.activeTool.type) ||
       this.state.activeTool.type === "text" ||
@@ -3878,6 +4020,7 @@ export class CaliburnEditorComponent
 
       if (
         selectedElements.length === 1 &&
+        !isOverScrollBar &&
         !this.state.selectedLinearElement?.isEditing
       ) {
         // for linear elements, we'd like to prioritize point dragging over edge resizing
@@ -3929,6 +4072,7 @@ export class CaliburnEditorComponent
         }
       } else if (
         selectedElements.length > 1 &&
+        !isOverScrollBar &&
         this.state.openDialog?.name !== "elementLinkSelector"
       ) {
         const transformHandleType = getTransformHandleTypeFromCoords(
@@ -4278,6 +4422,7 @@ export class CaliburnEditorComponent
    */
   private maybeCleanupAfterMissingPointerUp = (event: PointerEvent | null) => {
     endPanSession();
+    endScrollBarSession();
     replayPointerSessionUp(event);
     this.missingPointerEventCleanupEmitter.trigger(event).clear();
   };
@@ -4399,14 +4544,18 @@ export class CaliburnEditorComponent
       isDestroyed: false,
       id: this.id,
       updateScene: this.updateScene,
+      applyDeltas: this.applyDeltas,
       resetScene: this.resetScene,
       mutateElement: this.mutateElement,
       updateLibrary: this.library.updateLibrary,
       toggleSidebar: this.toggleSidebar,
       addFiles: (files: BinaryFileData[]) => {
-        this.addMissingFiles(files);
-        addNewImagesToImageCache(this);
+        const { addedFiles } = this.addMissingFiles(files);
+
+        this.clearImageShapeCache(addedFiles);
         this.scene.triggerUpdate();
+
+        addNewImagesToImageCache(this);
       },
       getSceneElementsIncludingDeleted: () =>
         this.getSceneElementsIncludingDeleted(),
@@ -4889,6 +5038,7 @@ export class CaliburnEditorComponent
     this.maybeCleanupAfterMissingPointerUp(null);
 
     resetGesture();
+    resetScrollBarDrag();
     // the replay above ends any gesture that had a session; dropping the
     // state covers the rest, so no in-flight drag can resume once
     // interaction returns
@@ -5053,7 +5203,31 @@ export class CaliburnEditorComponent
     }
   }
 
-  refresh() {}
+  /**
+   * upstream `App.refresh` — re-measures where the container sits in the
+   * viewport. A host that MOVES the editor without resizing it (a sibling
+   * collapsing above it, the page scrolling under a fixed layout) changes
+   * nothing the `ResizeObserver` reports, so the offsets the pointer coords
+   * are derived from go stale until this is called.
+   */
+  refresh() {
+    this.setState({ ...this.getCanvasOffsets() });
+  }
+
+  private getCanvasOffsets(): Pick<AppState, "offsetTop" | "offsetLeft"> {
+    const container = this.containerRef()?.nativeElement;
+    if (container) {
+      const { left, top } = container.getBoundingClientRect();
+      return {
+        offsetLeft: left,
+        offsetTop: top,
+      };
+    }
+    return {
+      offsetLeft: 0,
+      offsetTop: 0,
+    };
+  }
 
   private batchDepth = 0;
   private commitPending = false;
