@@ -932,9 +932,18 @@ const shouldHandleBrowserCanvasDoubleClick = (
   );
 };
 
+/**
+ * A real double click, or the tap-twice gesture's synthetic stand-in — which
+ * carries only the fields the handler reads, and a `"touch"` type.
+ */
+export type CanvasDoubleClickEvent = Pick<
+  MouseEvent,
+  "type" | "clientX" | "clientY" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey"
+>;
+
 export const handleCanvasDoubleClick = (
   editor: CaliburnEditorComponent,
-  event: MouseEvent,
+  event: CanvasDoubleClickEvent,
 ) => {
   if (
     !editor.isInteractionEnabled() ||

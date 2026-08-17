@@ -45,6 +45,7 @@
     (pointermove)="handleCanvasPointerMove($event)"
     (pointerup)="handleCanvasPointerUp($event)"
     (pointercancel)="removePointer($event)"
+    (touchmove)="touchInput.handleTouchMove()"
     (click)="handleCanvasClick($event)"
     (dblclick)="handleCanvasDoubleClick($event)"
     (contextmenu)="handleCanvasContextMenu($event)"

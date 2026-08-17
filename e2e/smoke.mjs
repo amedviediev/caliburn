@@ -3559,6 +3559,92 @@ export const runSuite = async (browser, url, runner) => {
       );
 
       await runner.check(
+        "mobile.double-tap-text",
+        "tapping twice with one finger opens the text editor",
+        async () => {
+          await resetEditor(page);
+          await page.touchscreen.tap(196, 420);
+          await page.touchscreen.tap(196, 420);
+          await waitFor(
+            page,
+            () =>
+              !!document.querySelector(
+                ".excalidraw-textEditorContainer textarea",
+              ),
+            { message: "tapping twice opened no text editor" },
+          );
+          await page.keyboard.press("Escape");
+          await resetEditor(page);
+        },
+        {
+          evidence: {
+            page,
+            selectors: [".excalidraw-textEditorContainer", ".excalidraw"],
+          },
+        },
+      );
+
+      await runner.check(
+        "mobile.long-press-context-menu",
+        "holding a finger still on the canvas opens the context menu",
+        async () => {
+          await resetEditor(page);
+          await page.touchscreen.touchStart(196, 420);
+          try {
+            await waitFor(
+              page,
+              () => !!document.querySelector(".context-menu"),
+              { message: "a long press opened no context menu" },
+            );
+          } finally {
+            await page.touchscreen.touchEnd();
+          }
+          await page.keyboard.press("Escape");
+          await resetEditor(page);
+        },
+        {
+          evidence: { page, selectors: [".context-menu", ".excalidraw"] },
+        },
+      );
+
+      await runner.check(
+        "mobile.two-finger-deselect",
+        "a second finger on the canvas drops the selection",
+        async () => {
+          await resetEditor(page);
+          // draw a rectangle with a finger — creating it leaves it selected
+          await page.evaluate(() =>
+            window.h.app.setActiveTool({ type: "rectangle" }),
+          );
+          const drawing = await page.touchscreen.touchStart(120, 500);
+          await drawing.move(260, 620);
+          await drawing.end();
+          await waitFor(
+            page,
+            () => Object.keys(window.h.state.selectedElementIds).length === 1,
+            { message: "drawing a rectangle by touch selected nothing" },
+          );
+
+          const first = await page.touchscreen.touchStart(120, 300);
+          const second = await page.touchscreen.touchStart(280, 300);
+          try {
+            await waitFor(
+              page,
+              () => Object.keys(window.h.state.selectedElementIds).length === 0,
+              { message: "a second finger left the selection in place" },
+            );
+          } finally {
+            await second.end();
+            await first.end();
+          }
+          await resetEditor(page);
+        },
+        {
+          evidence: { page, selectors: [".excalidraw"] },
+        },
+      );
+
+      await runner.check(
         "mobile.rotation",
         "rotating the device re-derives the form factor",
         async () => {

@@ -832,11 +832,32 @@ export const finalizeLinearOnPointerUp = (
     newElement &&
     !multiElement
   ) {
-    // Movement out of commit area will create the point
-    editor.setState({
-      multiElement: newElement,
-      newElement,
-    });
+    if (editor.editorInterface.isTouchScreen) {
+      const FIXED_DELTA_X = Math.min(
+        (editor.state.width * 0.7) / editor.state.zoom.value,
+        100,
+      );
+
+      editor.scene.mutateElement(
+        newElement,
+        {
+          x: newElement.x - FIXED_DELTA_X / 2,
+          points: [
+            pointFrom<LocalPoint>(0, 0),
+            pointFrom<LocalPoint>(FIXED_DELTA_X, 0),
+          ],
+        },
+        { informMutation: false, isDragging: false },
+      );
+
+      editor.actionManager.executeAction(actionFinalize);
+    } else {
+      // Movement out of commit area will create the point
+      editor.setState({
+        multiElement: newElement,
+        newElement,
+      });
+    }
   } else if (pointerDownState.drag.hasOccurred && !multiElement) {
     editor.store.scheduleCapture();
 

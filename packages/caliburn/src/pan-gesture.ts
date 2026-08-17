@@ -201,6 +201,8 @@ export const removePointer = (
   editor: CaliburnEditorComponent,
   event: PointerEvent,
 ) => {
+  editor.touchInput.onPointerRemoved();
+
   if (event.type === "pointercancel") {
     // the browser took the pointer over (scroll, palm rejection) — no
     // pointerup will follow, so the armed bucket fill must not commit

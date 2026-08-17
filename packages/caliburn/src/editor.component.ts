@@ -136,6 +136,7 @@ import type {
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
+  ExcalidrawFreeDrawElement,
   ExcalidrawFrameLikeElement,
   FileId,
   NonDeleted,
@@ -180,6 +181,7 @@ import { CaliburnArrowText } from "./arrow-text";
 import { CaliburnBucketFill } from "./bucket-fill";
 import { CaliburnDrawShape } from "./draw-shape";
 import { CaliburnFlowchart } from "./flowchart";
+import { CaliburnTouchInput } from "./touch-input";
 import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
   actionBindText,
@@ -383,6 +385,7 @@ import {
   startPointerSession,
 } from "./pointer-session";
 import {
+  deselectElements,
   handleCanvasDoubleClick,
   handleEnterToEditKeyDown,
   handleTextElementOnPointerUp,
@@ -413,6 +416,7 @@ import type { CursorHintView } from "./components/cursor-hints";
 import type { EyeDropperProperties } from "./components/eye-dropper";
 import type { OverwriteConfirmState } from "./components/overwrite-confirm/overwrite-confirm-state";
 import type { PointerDownState } from "./selection-interaction";
+import type { CanvasDoubleClickEvent } from "./text-interaction";
 
 import type { AfterViewInit, OnDestroy, OnInit } from "@angular/core";
 
@@ -1044,7 +1048,15 @@ export class CaliburnEditorComponent
 
   readonly bucketFill = new CaliburnBucketFill(this);
 
+  readonly touchInput = new CaliburnTouchInput(this);
+
   readonly arrowText = new CaliburnArrowText(this);
+
+  /** how many `setState` calls have written `selectedElementIds` */
+  private selectionWriteCount = 0;
+
+  /** the `selectionWriteCount` a pending selection clear was armed at */
+  private selectionClearArmedAt: number | null = null;
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
 
@@ -1727,6 +1739,10 @@ export class CaliburnEditorComponent
     if (staticCanvas) {
       this.rc = rough.canvas(staticCanvas);
     }
+    const interactiveCanvas = this.interactiveCanvasRef()?.nativeElement;
+    if (interactiveCanvas) {
+      this.touchInput.start(interactiveCanvas);
+    }
     const svgLayer = this.svgLayerRef()?.nativeElement;
     if (svgLayer) {
       this.lassoTrail.start(svgLayer);
@@ -1803,6 +1819,7 @@ export class CaliburnEditorComponent
     this.laserTrails.stop();
     this.drawShape.stop();
     this.eraserTrail.stop();
+    this.touchInput.stop();
     resetGesture();
     endPointerSession();
     document.removeEventListener("keydown", this.onKeyDown);
@@ -2586,6 +2603,9 @@ export class CaliburnEditorComponent
     const prevState = this.state;
     const partial = typeof state === "function" ? state(this.state) : state;
     if (partial) {
+      if ("selectedElementIds" in partial) {
+        this.selectionWriteCount++;
+      }
       this.state = { ...this.state, ...partial };
     }
     this.applyStateInvariants();
@@ -2986,7 +3006,7 @@ export class CaliburnEditorComponent
     ];
   }
 
-  handleCanvasDoubleClick(event: MouseEvent) {
+  handleCanvasDoubleClick(event: CanvasDoubleClickEvent) {
     this.batchCommits(() => handleCanvasDoubleClick(this, event));
   }
 
@@ -3030,6 +3050,7 @@ export class CaliburnEditorComponent
         this.isInteractionEnabled() ||
         this.isToolSupported(this.state.activeTool.type);
       this.handleCanvasPointerDownImpl(event);
+      this.applyArmedSelectionClear();
       if (canRestoreIsBindingEnabled) {
         this.restoreIsBindingEnabledToPreference(event);
       }
@@ -3085,6 +3106,13 @@ export class CaliburnEditorComponent
       target.setPointerCapture(event.pointerId);
     }
 
+    // the second-finger block below reads the stroke this press interrupts.
+    // Upstream reads it off `this.state` there, and still sees it: its
+    // `setState` is asynchronous, so the pointer-up the cleanup below replays
+    // has not cleared `newElement` yet. Caliburn's is synchronous, so the
+    // stroke is read here, before the replay ends it.
+    const newElementOnPointerDown = this.state.newElement;
+
     this.maybeCleanupAfterMissingPointerUp(event);
 
     this.lastPointerDownEvent = event;
@@ -3128,6 +3156,51 @@ export class CaliburnEditorComponent
       this.setState({ openPopup: null });
     }
 
+    updateGestureOnPointerDown(this, event);
+
+    // if dragging element is freedraw and another pointerdown event occurs
+    // a second finger is on the screen
+    // discard the freedraw element if it is very short because it is likely
+    // just a spike, otherwise finalize the freedraw element when the second
+    // finger is lifted
+    if (
+      event.pointerType === "touch" &&
+      newElementOnPointerDown &&
+      newElementOnPointerDown.type === "freedraw"
+    ) {
+      const element = newElementOnPointerDown as ExcalidrawFreeDrawElement;
+      this.updateScene({
+        ...(element.points.length < 10
+          ? {
+              elements: this.scene
+                .getElementsIncludingDeleted()
+                .filter((el) => el.id !== element.id),
+            }
+          : {}),
+        appState: {
+          newElement: null,
+          editingTextElement: null,
+          suggestedBinding: null,
+          selectedElementIds: makeNextSelectedElementIds(
+            Object.keys(this.state.selectedElementIds)
+              .filter((key) => key !== element.id)
+              .reduce((obj: { [id: string]: true }, key) => {
+                obj[key] = this.state.selectedElementIds[key];
+                return obj;
+              }, {}),
+            this.state,
+          ),
+        },
+        captureUpdate:
+          this.state.openDialog?.name === "elementLinkSelector"
+            ? CaptureUpdateAction.EVENTUALLY
+            : CaptureUpdateAction.NEVER,
+      });
+      return;
+    }
+
+    this.touchInput.maybeOpenContextMenuAfterPointerDownOnTouchDevices(event);
+
     //fires only once, if pen is detected, penMode is enabled
     //the user can disable this by toggling the penMode button
     if (!this.state.penDetected && event.pointerType === "pen") {
@@ -3155,8 +3228,6 @@ export class CaliburnEditorComponent
     if (this.handleCanvasPanUsingWheelOrSpaceDrag(event)) {
       return;
     }
-
-    updateGestureOnPointerDown(this, event);
 
     // upstream registers the pointer with the gesture before this, so
     // `pointersMap` already carries it when the broadcast reads it
@@ -3256,6 +3327,11 @@ export class CaliburnEditorComponent
     ) {
       return;
     }
+
+    // upstream's `handleDraggingScrollBar` goes here, between the auto-resize
+    // handle and the selection clear — the scrollbars are not ported yet
+
+    this.armClearSelectionIfNotUsingSelection();
 
     const activeToolType = this.state.activeTool.type;
 
@@ -3619,6 +3695,32 @@ export class CaliburnEditorComponent
     );
     this.cursor.reset();
     return true;
+  };
+
+  /**
+   * Upstream's `clearSelectionIfNotUsingSelection`, split in two around the
+   * tool dispatch it precedes. Upstream queues the clear as a plain
+   * `setState`, so nothing in the same pointer-down reads it back — the
+   * dispatch still sees the pre-clear selection, which is how `actionFinalize`
+   * carries a multi-point element's own selection through it — and a
+   * selection the dispatch writes lands after the clear and wins. Caliburn's
+   * `setState` is synchronous, so clearing at upstream's call site would be
+   * read back by the dispatch; arming it there and applying it once the
+   * dispatch has returned, only when the dispatch wrote no selection of its
+   * own, is both halves of React's queue.
+   */
+  private armClearSelectionIfNotUsingSelection = (): void => {
+    this.selectionClearArmedAt = isSelectionLikeTool(this.state.activeTool.type)
+      ? null
+      : this.selectionWriteCount;
+  };
+
+  private applyArmedSelectionClear = (): void => {
+    const armedAt = this.selectionClearArmedAt;
+    this.selectionClearArmedAt = null;
+    if (armedAt !== null && armedAt === this.selectionWriteCount) {
+      deselectElements(this);
+    }
   };
 
   private maybeUpdateHoverCursor(
@@ -4597,6 +4699,7 @@ export class CaliburnEditorComponent
     // state covers the rest, so no in-flight drag can resume once
     // interaction returns
     this.pointerDownState = null;
+    this.touchInput.terminate();
     resetPlainPasteTracking();
 
     this.flowchart.clear();

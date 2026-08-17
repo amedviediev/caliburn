@@ -191,10 +191,12 @@ export const handleCanvasContextMenu = (
   editor.bucketFill.cancel();
 
   if (
-    "pointerType" in event &&
-    (event as PointerEvent).pointerType === "pen" &&
-    // always allow if user uses a pen secondary button
-    event.button !== POINTER_BUTTON.SECONDARY &&
+    (("pointerType" in event &&
+      (event as PointerEvent).pointerType === "touch") ||
+      ("pointerType" in event &&
+        (event as PointerEvent).pointerType === "pen" &&
+        // always allow if user uses a pen secondary button
+        event.button !== POINTER_BUTTON.SECONDARY)) &&
     editor.state.activeTool.type !== editor.state.preferredSelectionTool.type
   ) {
     return;
