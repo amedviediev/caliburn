@@ -1,0 +1,19 @@
+<fieldset>
+  <legend>{{ legend() }}</legend>
+  <div class="iconSelectList buttonList">
+    <caliburn-icon-picker
+      label="arrowhead_start"
+      [value]="startValue()"
+      [visibleSections]="startOptions().visibleSections"
+      [hiddenSections]="startOptions().hiddenSections"
+      (valueChange)="select('start', $event)"
+    />
+    <caliburn-icon-picker
+      label="arrowhead_end"
+      [value]="endValue()"
+      [visibleSections]="endOptions().visibleSections"
+      [hiddenSections]="endOptions().hiddenSections"
+      (valueChange)="select('end', $event)"
+    />
+  </div>
+</fieldset>

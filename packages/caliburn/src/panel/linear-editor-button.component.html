@@ -1,0 +1,10 @@
+@if (label(); as label) {
+  <button
+    caliburn-icon-button
+    mode="button"
+    icon="lineEditorIcon"
+    [title]="label"
+    [ariaLabel]="label"
+    (click)="execute()"
+  ></button>
+}

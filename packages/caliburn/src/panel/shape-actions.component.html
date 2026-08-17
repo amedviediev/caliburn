@@ -199,8 +199,11 @@
         <ng-icon [name]="option.icon" />
       </label>
       }
+      <caliburn-toggle-polygon-button />
     </div>
   </fieldset>
+  } @if (predicates().arrowType) {
+  <caliburn-arrow-type-fieldset />
   } @if (predicates().text) {
   <fieldset>
     <legend>{{ labels().fontFamily }}</legend>
@@ -279,6 +282,8 @@
       }
     </div>
   </fieldset>
+  } @if (predicates().arrowheads) {
+  <caliburn-arrowhead-fieldset />
   } @if (predicates().opacity) {
   <fieldset>
     <legend>{{ labels().opacity }}</legend>
@@ -309,6 +314,8 @@
       }
     </div>
   </fieldset>
+  } @if (predicates().align) {
+  <caliburn-align-fieldset [showDistribute]="predicates().distribute" />
   } @if (predicates().showExtraActions) {
   <fieldset>
     <legend>{{ labels().actions }}</legend>
@@ -324,6 +331,12 @@
           <ng-icon [name]="actionIcon(option.action)" />
         </div>
       </button>
+      } @if (predicates().link) {
+      <caliburn-hyperlink-button />
+      } @if (predicates().cropEditor) {
+      <caliburn-crop-editor-button />
+      } @if (predicates().lineEditor) {
+      <caliburn-linear-editor-button />
       }
     </div>
   </fieldset>

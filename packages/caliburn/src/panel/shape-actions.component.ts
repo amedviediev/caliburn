@@ -74,6 +74,14 @@ import { CaliburnColorPickerComponent } from "../components/color-picker/color-p
 
 import { translated } from "../i18n";
 
+import { CaliburnAlignFieldsetComponent } from "./align-fieldset.component";
+import { CaliburnArrowTypeFieldsetComponent } from "./arrow-type-fieldset.component";
+import { CaliburnArrowheadFieldsetComponent } from "./arrowhead-fieldset.component";
+import { CaliburnCropEditorButtonComponent } from "./crop-editor-button.component";
+import { CaliburnHyperlinkButtonComponent } from "./hyperlink-button.component";
+import { CaliburnLinearEditorButtonComponent } from "./linear-editor-button.component";
+import { CaliburnTogglePolygonButtonComponent } from "./toggle-polygon-button.component";
+
 import type { CaliburnEditorComponent } from "../editor.component";
 
 import type { Signal } from "@angular/core";
@@ -94,7 +102,17 @@ interface RadioOption {
  */
 @Component({
   selector: "caliburn-shape-actions",
-  imports: [CaliburnColorPickerComponent, NgIcon],
+  imports: [
+    CaliburnAlignFieldsetComponent,
+    CaliburnArrowTypeFieldsetComponent,
+    CaliburnArrowheadFieldsetComponent,
+    CaliburnColorPickerComponent,
+    CaliburnCropEditorButtonComponent,
+    CaliburnHyperlinkButtonComponent,
+    CaliburnLinearEditorButtonComponent,
+    CaliburnTogglePolygonButtonComponent,
+    NgIcon,
+  ],
   templateUrl: "./shape-actions.component.html",
 })
 export class CaliburnShapeActionsComponent {
@@ -361,7 +379,7 @@ export class CaliburnShapeActionsComponent {
   readonly textAlignAction = actionChangeTextAlign;
   readonly verticalAlignAction = actionChangeVerticalAlign;
 
-  private targetElements() {
+  protected targetElements() {
     const editor = this.editor();
     return getTargetElements(
       editor.scene.getNonDeletedElementsMap(),

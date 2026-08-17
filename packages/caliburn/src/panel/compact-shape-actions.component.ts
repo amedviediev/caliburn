@@ -14,17 +14,18 @@ import {
   MOBILE_ACTION_BUTTON_BG,
   supportsResizeObserver,
 } from "@excalidraw/common";
+import { isArrowElement } from "@excalidraw/element";
 
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import { NgIcon } from "@ng-icons/core";
 
-import type { Action } from "@excalidraw/excalidraw/actions/types";
-
 import type { AppState } from "@excalidraw/excalidraw/types";
 
 import { actionDeleteSelected } from "../actions/actionDeleteSelected";
 import { actionDuplicateSelection } from "../actions/actionDuplicateSelection";
+import { actionGroup, actionUngroup } from "../actions/actionGroup";
+import { getFormValue } from "../actions/actionProperties";
 
 import { CaliburnColorPickerComponent } from "../components/color-picker/color-picker.component";
 import { CaliburnPropertiesPopoverComponent } from "../components/color-picker/properties-popover.component";
@@ -32,13 +33,23 @@ import { CaliburnIslandComponent } from "../components/island.component";
 
 import { translated } from "../i18n";
 
+import { CaliburnAlignFieldsetComponent } from "./align-fieldset.component";
+import { CaliburnArrowTypeFieldsetComponent } from "./arrow-type-fieldset.component";
+import { CaliburnArrowheadFieldsetComponent } from "./arrowhead-fieldset.component";
+import { CaliburnCropEditorButtonComponent } from "./crop-editor-button.component";
+import { CaliburnHyperlinkButtonComponent } from "./hyperlink-button.component";
+import { CaliburnLinearEditorButtonComponent } from "./linear-editor-button.component";
 import { CaliburnShapeActionsComponent } from "./shape-actions.component";
+import { CaliburnTogglePolygonButtonComponent } from "./toggle-polygon-button.component";
 
 import type { OnDestroy } from "@angular/core";
 
 type CompactPopup = Extract<
   AppState["openPopup"],
-  "compactStrokeStyles" | "compactTextProperties" | "compactOtherProperties"
+  | "compactStrokeStyles"
+  | "compactArrowProperties"
+  | "compactTextProperties"
+  | "compactOtherProperties"
 >;
 
 /** upstream's per-item width and gap in `MobileShapeActions` */
@@ -60,19 +71,25 @@ const ADDITIONAL_WIDTH = WIDTH + GAP;
  *
  * It extends the full panel component, which already carries every control's
  * value, option table and dispatcher — the same relationship upstream's three
- * layouts have to the shared `renderAction` registry. The controls it renders
- * are therefore exactly the ones caliburn's full panel ports: the arrow
- * properties group (`changeArrowProperties`), the align/distribute fieldset
- * and the crop/link/line-editor entries have no caliburn action behind them
- * and are absent here as they are there.
+ * layouts have to the shared `renderAction` registry. The groups both layouts
+ * share (the arrow popover's `changeArrowProperties` pair, the align /
+ * distribute fieldset, the crop / link / line-editor entries) are their own
+ * components, one per upstream `PanelComponent`.
  */
 @Component({
   selector: "caliburn-compact-shape-actions",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CaliburnAlignFieldsetComponent,
+    CaliburnArrowTypeFieldsetComponent,
+    CaliburnArrowheadFieldsetComponent,
     CaliburnColorPickerComponent,
+    CaliburnCropEditorButtonComponent,
+    CaliburnHyperlinkButtonComponent,
     CaliburnIslandComponent,
+    CaliburnLinearEditorButtonComponent,
     CaliburnPropertiesPopoverComponent,
+    CaliburnTogglePolygonButtonComponent,
     NgIcon,
     NgTemplateOutlet,
   ],
@@ -92,6 +109,7 @@ export class CaliburnCompactShapeActionsComponent
   protected readonly compactLabels = translated(() => ({
     duplicateSelection: t("labels.duplicateSelection"),
     delete: t("labels.delete"),
+    arrowtypes: t("labels.arrowtypes"),
     undo: t("buttons.undo"),
     redo: t("buttons.redo"),
   }));
@@ -183,20 +201,45 @@ export class CaliburnCompactShapeActionsComponent
     );
   }
 
-  /** upstream's popover keeps the full "other actions" fieldset but drops the
-   * duplicate/delete entries it has already promoted outside it */
-  protected isCompactExtraAction(
-    option: { action: Action },
-    showDuplicate: boolean,
-    showDelete: boolean,
-  ) {
-    if (option.action === actionDuplicateSelection) {
-      return showDuplicate;
+  /** upstream's compact "other actions" fieldset opens with group/ungroup,
+   * then the per-element entries, and only then the duplicate/delete pair it
+   * may already have promoted outside the popover */
+  protected readonly compactActionOptions = translated(() => [
+    { action: actionGroup, text: t("labels.group") },
+    { action: actionUngroup, text: t("labels.ungroup") },
+  ]);
+
+  /** upstream's compact arrow-properties trigger shows the current arrow
+   * type's own icon */
+  protected arrowTypeIcon() {
+    const editor = this.editor();
+    editor.changeGeneration();
+
+    const arrowType = getFormValue<"sharp" | "round" | "elbow" | null>(
+      this.targetElements(),
+      editor,
+      (element) => {
+        if (isArrowElement(element)) {
+          return element.elbowed
+            ? "elbow"
+            : element.roundness
+            ? "round"
+            : "sharp";
+        }
+        return null;
+      },
+      (element) => isArrowElement(element),
+      (hasSelection) =>
+        hasSelection ? null : editor.state.currentItemArrowType,
+    );
+
+    if (arrowType === "elbow") {
+      return "elbowArrowIcon";
     }
-    if (option.action === actionDeleteSelected) {
-      return showDelete;
+    if (arrowType === "round") {
+      return "roundArrowIcon";
     }
-    return true;
+    return "sharpArrowIcon";
   }
 
   /**

@@ -197,6 +197,7 @@
                       <ng-icon [name]="option.icon" />
                     </label>
                   }
+                  <caliburn-toggle-polygon-button />
                 </div>
               </fieldset>
             }
@@ -218,6 +219,43 @@
           </div>
         </div>
       }
+    </div>
+  }
+</ng-template>
+
+<ng-template #combinedArrowProperties>
+  @if (predicates().arrowType) {
+    <div class="compact-action-item">
+      <button
+        type="button"
+        class="compact-action-button properties-trigger"
+        [class.active]="isPopupOpen('compactArrowProperties')"
+        [attr.title]="compactLabels().arrowtypes"
+        (click)="togglePopup('compactArrowProperties', $event)"
+      >
+        <ng-icon [name]="arrowTypeIcon()" />
+      </button>
+      @if (isPopupOpen('compactArrowProperties')) {
+        <div
+          caliburn-properties-popover
+          class="properties-content"
+          [triggerRect]="triggerRect('compactArrowProperties')"
+          (close)="closePopup()"
+        >
+          <div class="selected-shape-actions" style="max-width: 13rem">
+            <caliburn-arrowhead-fieldset />
+            <caliburn-arrow-type-fieldset />
+          </div>
+        </div>
+      }
+    </div>
+  }
+</ng-template>
+
+<ng-template #linearEditor>
+  @if (predicates().lineEditor) {
+    <div class="compact-action-item">
+      <caliburn-linear-editor-button />
     </div>
   }
 </ng-template>
@@ -330,6 +368,19 @@
   </div>
 </ng-template>
 
+<ng-template #extraActionButton let-option>
+  <button
+    type="button"
+    [attr.title]="option.text"
+    [attr.aria-label]="option.text"
+    (click)="execute(option.action, null)"
+  >
+    <div class="ToolIcon__icon" aria-hidden="true" aria-disabled="false">
+      <ng-icon [name]="actionIcon(option.action)" />
+    </div>
+  </button>
+</ng-template>
+
 <ng-template #extraActions let-showDuplicate="showDuplicate" let-showDelete="showDelete">
   @if (predicates().showExtraActions) {
     <div class="compact-action-item">
@@ -374,28 +425,47 @@
                 </div>
               </fieldset>
             }
+            @if (predicates().align) {
+              <caliburn-align-fieldset
+                [showDistribute]="predicates().distribute"
+              />
+            }
             <fieldset>
               <legend>{{ labels().actions }}</legend>
               <div class="buttonList">
-                @for (option of extraActionOptions(); track option.text) {
-                  @if (
-                    isCompactExtraAction(option, showDuplicate, showDelete)
-                  ) {
-                    <button
-                      type="button"
-                      [attr.title]="option.text"
-                      [attr.aria-label]="option.text"
-                      (click)="execute(option.action, null)"
-                    >
-                      <div
-                        class="ToolIcon__icon"
-                        aria-hidden="true"
-                        aria-disabled="false"
-                      >
-                        <ng-icon [name]="actionIcon(option.action)" />
-                      </div>
-                    </button>
-                  }
+                @for (option of compactActionOptions(); track option.text) {
+                  <ng-container
+                    [ngTemplateOutlet]="extraActionButton"
+                    [ngTemplateOutletContext]="{ $implicit: option }"
+                  />
+                }
+                @if (predicates().linkSingleOnly) {
+                  <caliburn-hyperlink-button />
+                }
+                @if (predicates().cropEditor) {
+                  <caliburn-crop-editor-button />
+                }
+                @if (showDuplicate) {
+                  <ng-container
+                    [ngTemplateOutlet]="extraActionButton"
+                    [ngTemplateOutletContext]="{
+                      $implicit: {
+                        action: duplicateAction,
+                        text: compactLabels().duplicateSelection
+                      }
+                    }"
+                  />
+                }
+                @if (showDelete) {
+                  <ng-container
+                    [ngTemplateOutlet]="extraActionButton"
+                    [ngTemplateOutletContext]="{
+                      $implicit: {
+                        action: deleteAction,
+                        text: compactLabels().delete
+                      }
+                    }"
+                  />
                 }
               </div>
             </fieldset>
@@ -449,6 +519,8 @@
         <ng-container [ngTemplateOutlet]="backgroundColor" />
       }
       <ng-container [ngTemplateOutlet]="combinedShapeProperties" />
+      <ng-container [ngTemplateOutlet]="combinedArrowProperties" />
+      <ng-container [ngTemplateOutlet]="linearEditor" />
       @if (predicates().text) {
         <ng-container [ngTemplateOutlet]="fontFamily" />
         <ng-container [ngTemplateOutlet]="textProperties" />
@@ -528,6 +600,8 @@
       <ng-container [ngTemplateOutlet]="freedrawModeButton" />
     }
     <ng-container [ngTemplateOutlet]="combinedShapeProperties" />
+    <ng-container [ngTemplateOutlet]="combinedArrowProperties" />
+    <ng-container [ngTemplateOutlet]="linearEditor" />
     @if (predicates().text) {
       <ng-container [ngTemplateOutlet]="fontFamily" />
       <ng-container [ngTemplateOutlet]="textProperties" />

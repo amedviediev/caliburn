@@ -9,7 +9,8 @@ import { NgIcon } from "@ng-icons/core";
 /**
  * Angular port of upstream `Stats/Collapsible.tsx`. The label is projected
  * into the header (`[collapsibleLabel]`), the body through the default slot;
- * upstream's `className` prop has no caliburn call site and is not ported.
+ * `className` lands on the header row, as upstream's does (the icon picker's
+ * `picker-collapsible`).
  */
 @Component({
   selector: "caliburn-stats-collapsible",
@@ -23,6 +24,7 @@ export class CaliburnStatsCollapsibleComponent {
   // Collapsible is unmounted
   readonly open = input.required<boolean>();
   readonly showCollapsedIcon = input(true);
+  readonly className = input<string>();
 
   readonly openTrigger = output<void>();
 }

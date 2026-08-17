@@ -1,0 +1,17 @@
+<fieldset>
+  <legend>{{ legend() }}</legend>
+  <div class="buttonList">
+    @for (option of options(); track option.text) {
+      <label [class.active]="value() === option.value" [attr.title]="option.text">
+        <input
+          type="radio"
+          name="arrowtypes"
+          [attr.data-testid]="option.testId"
+          [checked]="value() === option.value"
+          (change)="select(option.value)"
+        />
+        <ng-icon [name]="option.icon" />
+      </label>
+    }
+  </div>
+</fieldset>

@@ -1,0 +1,59 @@
+<fieldset>
+  <legend>{{ legend() }}</legend>
+  <div class="buttonList">
+    @for (option of horizontalOptions(); track option.text) {
+      <button
+        caliburn-icon-button
+        mode="button"
+        [icon]="option.icon"
+        [title]="option.title"
+        [ariaLabel]="option.text"
+        [hidden]="alignHidden()"
+        [visible]="visible()"
+        (click)="execute(option.action)"
+      ></button>
+    }
+    @if (showDistribute()) {
+      <button
+        caliburn-icon-button
+        mode="button"
+        [icon]="distributeHorizontallyOption().icon"
+        [title]="distributeHorizontallyOption().title"
+        [ariaLabel]="distributeHorizontallyOption().text"
+        [hidden]="distributeHidden()"
+        [visible]="visible()"
+        (click)="execute(distributeHorizontallyOption().action)"
+      ></button>
+    }
+    <!-- breaks the row ˇˇ -->
+    <div style="flex-basis: 100%; height: 0"></div>
+    <div
+      style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: -0.5rem"
+    >
+      @for (option of verticalOptions(); track option.text) {
+        <button
+          caliburn-icon-button
+          mode="button"
+          [icon]="option.icon"
+          [title]="option.title"
+          [ariaLabel]="option.text"
+          [hidden]="alignHidden()"
+          [visible]="visible()"
+          (click)="execute(option.action)"
+        ></button>
+      }
+      @if (showDistribute()) {
+        <button
+          caliburn-icon-button
+          mode="button"
+          [icon]="distributeVerticallyOption().icon"
+          [title]="distributeVerticallyOption().title"
+          [ariaLabel]="distributeVerticallyOption().text"
+          [hidden]="distributeHidden()"
+          [visible]="visible()"
+          (click)="execute(distributeVerticallyOption().action)"
+        ></button>
+      }
+    </div>
+  </div>
+</fieldset>

@@ -1,11 +1,17 @@
-import { invariant } from "@excalidraw/common";
+import { arrayToMap, invariant } from "@excalidraw/common";
 import {
   CaptureUpdateAction,
   isElbowArrow,
+  isLineElement,
   isLinearElement,
+  newElementWith,
+  toggleLinePolygonState,
 } from "@excalidraw/element";
 
-import type { ExcalidrawLinearElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawLineElement,
+  ExcalidrawLinearElement,
+} from "@excalidraw/element/types";
 
 import { DEFAULT_CATEGORIES } from "../components/command-palette/categories";
 
@@ -61,6 +67,71 @@ export const actionToggleLinearEditor = register({
         ...appState,
         selectedLinearElement,
       },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+});
+
+export const actionTogglePolygon = register({
+  name: "togglePolygon",
+  category: DEFAULT_CATEGORIES.elements,
+  keywords: ["loop"],
+  label: (elements, appState, app) => {
+    const selectedElements = app.scene.getSelectedElements({
+      selectedElementIds: appState.selectedElementIds,
+    });
+
+    const allPolygons = !selectedElements.some(
+      (element) => !isLineElement(element) || !element.polygon,
+    );
+
+    return allPolygons
+      ? "labels.polygon.breakPolygon"
+      : "labels.polygon.convertToPolygon";
+  },
+  trackEvent: {
+    category: "element",
+  },
+  predicate: (elements, appState, _, app) => {
+    const selectedElements = app.scene.getSelectedElements({
+      selectedElementIds: appState.selectedElementIds,
+    });
+
+    return (
+      selectedElements.length > 0 &&
+      selectedElements.every(
+        (element) => isLineElement(element) && element.points.length >= 4,
+      )
+    );
+  },
+  perform(elements, appState, _, app) {
+    const selectedElements = app.scene.getSelectedElements(appState);
+
+    if (selectedElements.some((element) => !isLineElement(element))) {
+      return false;
+    }
+
+    const targetElements = selectedElements as ExcalidrawLineElement[];
+
+    // if one element not a polygon, convert all to polygon
+    const nextPolygonState = targetElements.some((element) => !element.polygon);
+
+    const targetElementsMap = arrayToMap(targetElements);
+
+    return {
+      elements: elements.map((element) => {
+        if (!targetElementsMap.has(element.id) || !isLineElement(element)) {
+          return element;
+        }
+
+        return newElementWith(element, {
+          backgroundColor: nextPolygonState
+            ? element.backgroundColor
+            : "transparent",
+          ...toggleLinePolygonState(element, nextPolygonState),
+        });
+      }),
+      appState,
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     };
   },

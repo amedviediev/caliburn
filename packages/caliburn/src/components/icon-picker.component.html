@@ -1,0 +1,88 @@
+<div>
+  <button
+    type="button"
+    [attr.aria-label]="label()"
+    [class.active]="isActive()"
+    (click)="toggle($event)"
+  >
+    @if (selectedOption(); as option) {
+      <ng-icon [name]="option.icon" />
+    }
+  </button>
+  @if (isActive()) {
+    <div
+      class="picker"
+      role="dialog"
+      aria-modal="true"
+      style="position: fixed; z-index: var(--zIndex-ui-styles-popup)"
+      [attr.aria-label]="label()"
+      [style.top.px]="top()"
+      [style.left.px]="left()"
+      (keydown)="onKeyDown($event)"
+    >
+      <div class="picker-sections">
+        @for (section of visibleSections(); track $index) {
+          <ng-container
+            [ngTemplateOutlet]="sectionTemplate"
+            [ngTemplateOutletContext]="{ $implicit: section }"
+          />
+        }
+        @if (hiddenSections().length > 0) {
+          <caliburn-stats-collapsible
+            className="picker-collapsible"
+            [open]="showMore()"
+            (openTrigger)="toggleMoreOptions()"
+          >
+            <div collapsibleLabel>{{ moreOptionsLabel() }}</div>
+            <div class="picker-sections">
+              @for (section of hiddenSections(); track $index) {
+                <ng-container
+                  [ngTemplateOutlet]="sectionTemplate"
+                  [ngTemplateOutletContext]="{ $implicit: section }"
+                />
+              }
+            </div>
+          </caliburn-stats-collapsible>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<ng-template #sectionTemplate let-section>
+  @if (isSectionLabelled(section)) {
+    <div class="picker-section">
+      <div class="picker-section-label">{{ section.name }}</div>
+      <ng-container
+        [ngTemplateOutlet]="optionsTemplate"
+        [ngTemplateOutletContext]="{ $implicit: section.options }"
+      />
+    </div>
+  } @else {
+    <ng-container
+      [ngTemplateOutlet]="optionsTemplate"
+      [ngTemplateOutletContext]="{ $implicit: section.options }"
+    />
+  }
+</ng-template>
+
+<ng-template #optionsTemplate let-options>
+  <div class="picker-content">
+    @for (option of options; track option.text) {
+      <button
+        type="button"
+        class="picker-option"
+        [class.active]="value() === option.value"
+        [attr.title]="optionTitle(option)"
+        [attr.aria-label]="option.text || 'none'"
+        [attr.aria-keyshortcuts]="option.keyBinding"
+        (click)="select(option.value)"
+      >
+        <ng-icon [name]="option.icon" />
+        @if (option.keyBinding) {
+          <span class="picker-keybinding">{{ option.keyBinding }}</span>
+        }
+      </button>
+    }
+  </div>
+</ng-template>

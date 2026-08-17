@@ -43,6 +43,22 @@ export const getActionIconName = (
       return "sendBackwardIcon";
     case "sendToBack":
       return "sendToBackIcon";
+    case "alignTop":
+      return "alignTopIcon";
+    case "alignBottom":
+      return "alignBottomIcon";
+    case "alignLeft":
+      return "alignLeftIcon";
+    case "alignRight":
+      return "alignRightIcon";
+    case "alignVerticallyCentered":
+      return "centerVerticallyIcon";
+    case "alignHorizontallyCentered":
+      return "centerHorizontallyIcon";
+    case "cropEditor":
+      return "cropIcon";
+    case "togglePolygon":
+      return "polygonIcon";
     case "flipHorizontal":
       return "flipHorizontal";
     case "flipVertical":

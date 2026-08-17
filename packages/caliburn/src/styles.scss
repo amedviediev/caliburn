@@ -25,6 +25,7 @@
 @use "../../excalidraw/components/MobileToolbar.scss";
 @use "../../excalidraw/components/ToolPopover.scss";
 @use "../../excalidraw/components/ColorPicker/ColorPicker.scss";
+@use "../../excalidraw/components/IconPicker.scss";
 @use "../../excalidraw/components/main-menu/DefaultItems.scss";
 @use "../../excalidraw/components/ConfirmDialog.scss";
 @use "../../excalidraw/components/OverwriteConfirm/OverwriteConfirm.scss";
@@ -115,6 +116,14 @@ caliburn-text-field {
 // which Angular applies to the custom element as well as routing it to the
 // aliased `class` input that puts it on the real `.dropdown-menu`/`.Modal`
 // root — `display: contents` keeps the duplicate inert.
+caliburn-align-fieldset,
+caliburn-arrow-type-fieldset,
+caliburn-arrowhead-fieldset,
+caliburn-crop-editor-button,
+caliburn-hyperlink-button,
+caliburn-icon-picker,
+caliburn-linear-editor-button,
+caliburn-toggle-polygon-button,
 caliburn-cursor-hint,
 caliburn-element-link-dialog,
 caliburn-eye-dropper,

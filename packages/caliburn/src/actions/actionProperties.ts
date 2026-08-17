@@ -1,4 +1,7 @@
+import { pointFrom } from "@excalidraw/math";
+
 import {
+  ARROW_TYPE,
   FONT_FAMILY,
   ROUNDNESS,
   STROKE_WIDTH_KEYS,
@@ -12,23 +15,31 @@ import {
 } from "@excalidraw/common";
 import {
   CaptureUpdateAction,
+  LinearElementEditor,
+  bindBindingElement,
+  calculateFixedPointForElbowArrowBinding,
   canBecomePolygon,
   getBoundTextElement,
   getNonDeletedElements,
   hasStrokeColor,
+  isArrowElement,
   isElbowArrow,
   isLineElement,
+  isLinearElement,
   isSomeElementSelected,
   isTextElement,
   isUsingAdaptiveRadius,
   newElementWith,
   redrawTextBoundingBox,
   toggleLinePolygonState,
+  updateElbowArrowPoints,
 } from "@excalidraw/element";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
+
+import type { LocalPoint, Radians } from "@excalidraw/math";
 
 import type { StrokeWidthKey } from "@excalidraw/common";
 import type {
@@ -36,10 +47,14 @@ import type {
   ElementUpdate,
 } from "@excalidraw/element";
 import type {
+  Arrowhead,
   ElementsMap,
+  ExcalidrawBindableElement,
   ExcalidrawElement,
+  ExcalidrawLinearElement,
   ExcalidrawTextElement,
   FontFamilyValues,
+  NonDeleted,
   NonDeletedExcalidrawElement,
   StrokeVariability,
   TextAlign,
@@ -683,6 +698,258 @@ export const actionChangeRoundness = register<"sharp" | "round">({
         ...appState,
         currentItemRoundness: value,
       },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+});
+
+export const actionChangeArrowhead = register<{
+  position: "start" | "end";
+  type: Arrowhead;
+}>({
+  name: "changeArrowhead",
+  label: "Change arrowheads",
+  trackEvent: false,
+  perform: (elements, appState, value) => {
+    invariant(value, "actionChangeArrowhead: value must be defined");
+
+    return {
+      elements: changeProperty(elements, appState, (el) => {
+        if (isLinearElement(el)) {
+          const { position, type } = value;
+
+          if (position === "start") {
+            const element: ExcalidrawLinearElement = newElementWith(el, {
+              startArrowhead: type,
+            });
+            return element;
+          } else if (position === "end") {
+            const element: ExcalidrawLinearElement = newElementWith(el, {
+              endArrowhead: type,
+            });
+            return element;
+          }
+        }
+
+        return el;
+      }),
+      appState: {
+        ...appState,
+        [value.position === "start"
+          ? "currentItemStartArrowhead"
+          : "currentItemEndArrowhead"]: value.type,
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+});
+
+/**
+ * Upstream's container action for the compact styles panel's arrow popover:
+ * it performs nothing itself, and its `PanelComponent` renders the arrowhead
+ * and arrow-type groups. Caliburn's compact panel renders those two groups
+ * directly (there is no `renderAction`), so only the no-op `perform` is
+ * ported — the action stays registered so the registry keeps upstream's
+ * action names.
+ */
+export const actionChangeArrowProperties = register({
+  name: "changeArrowProperties",
+  label: "Change arrow properties",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    // This action doesn't perform any changes directly
+    // It's just a container for the arrow type and arrowhead actions
+    return false;
+  },
+});
+
+export const actionChangeArrowType = register<keyof typeof ARROW_TYPE>({
+  name: "changeArrowType",
+  label: "Change arrow types",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    const newElements = changeProperty(elements, appState, (el) => {
+      if (!isArrowElement(el)) {
+        return el;
+      }
+      const elementsMap = app.scene.getNonDeletedElementsMap();
+      const startPoint = LinearElementEditor.getPointAtIndexGlobalCoordinates(
+        el,
+        0,
+        elementsMap,
+      );
+      const endPoint = LinearElementEditor.getPointAtIndexGlobalCoordinates(
+        el,
+        -1,
+        elementsMap,
+      );
+      let newElement = newElementWith(el, {
+        x: value === ARROW_TYPE.elbow ? startPoint[0] : el.x,
+        y: value === ARROW_TYPE.elbow ? startPoint[1] : el.y,
+        roundness:
+          value === ARROW_TYPE.round
+            ? {
+                type: ROUNDNESS.PROPORTIONAL_RADIUS,
+              }
+            : null,
+        elbowed: value === ARROW_TYPE.elbow,
+        angle: value === ARROW_TYPE.elbow ? (0 as Radians) : el.angle,
+        points:
+          value === ARROW_TYPE.elbow || el.elbowed
+            ? [
+                LinearElementEditor.pointFromAbsoluteCoords(
+                  {
+                    ...el,
+                    x: startPoint[0],
+                    y: startPoint[1],
+                    angle: 0 as Radians,
+                  },
+                  startPoint,
+                  elementsMap,
+                ),
+                LinearElementEditor.pointFromAbsoluteCoords(
+                  {
+                    ...el,
+                    x: startPoint[0],
+                    y: startPoint[1],
+                    angle: 0 as Radians,
+                  },
+                  endPoint,
+                  elementsMap,
+                ),
+              ]
+            : el.points,
+      });
+
+      if (isElbowArrow(newElement)) {
+        newElement.fixedSegments = null;
+
+        const elementsMap = app.scene.getNonDeletedElementsMap();
+
+        app.dismissLinearEditor();
+
+        const startGlobalPoint =
+          LinearElementEditor.getPointAtIndexGlobalCoordinates(
+            newElement,
+            0,
+            elementsMap,
+          );
+        const endGlobalPoint =
+          LinearElementEditor.getPointAtIndexGlobalCoordinates(
+            newElement,
+            -1,
+            elementsMap,
+          );
+        const startElement =
+          newElement.startBinding &&
+          (elementsMap.get(
+            newElement.startBinding.elementId,
+          ) as ExcalidrawBindableElement);
+        const endElement =
+          newElement.endBinding &&
+          (elementsMap.get(
+            newElement.endBinding.elementId,
+          ) as ExcalidrawBindableElement);
+
+        const startBinding =
+          startElement && newElement.startBinding
+            ? {
+                // @ts-ignore TS cannot discern check above
+                ...newElement.startBinding!,
+                ...calculateFixedPointForElbowArrowBinding(
+                  newElement,
+                  startElement,
+                  "start",
+                  elementsMap,
+                  appState.isBindingEnabled,
+                ),
+              }
+            : null;
+        const endBinding =
+          endElement && newElement.endBinding
+            ? {
+                // @ts-ignore TS cannot discern check above
+                ...newElement.endBinding,
+                ...calculateFixedPointForElbowArrowBinding(
+                  newElement,
+                  endElement,
+                  "end",
+                  elementsMap,
+                  appState.isBindingEnabled,
+                ),
+              }
+            : null;
+
+        newElement = {
+          ...newElement,
+          startBinding,
+          endBinding,
+          ...updateElbowArrowPoints(newElement, elementsMap, {
+            points: [startGlobalPoint, endGlobalPoint].map(
+              (p): LocalPoint =>
+                pointFrom(p[0] - newElement.x, p[1] - newElement.y),
+            ),
+            startBinding,
+            endBinding,
+            fixedSegments: null,
+          }),
+        } as typeof newElement;
+      } else {
+        const elementsMap = app.scene.getNonDeletedElementsMap();
+        if (newElement.startBinding) {
+          const startElement = elementsMap.get(
+            newElement.startBinding.elementId,
+          ) as NonDeleted<ExcalidrawBindableElement>;
+          if (startElement) {
+            bindBindingElement(
+              newElement,
+              startElement,
+              appState.bindMode === "inside" ? "inside" : "orbit",
+              "start",
+              app.scene,
+            );
+          }
+        }
+        if (newElement.endBinding) {
+          const endElement = elementsMap.get(
+            newElement.endBinding.elementId,
+          ) as NonDeleted<ExcalidrawBindableElement>;
+          if (endElement) {
+            bindBindingElement(
+              newElement,
+              endElement,
+              appState.bindMode === "inside" ? "inside" : "orbit",
+              "end",
+              app.scene,
+            );
+          }
+        }
+      }
+
+      return newElement;
+    });
+
+    const newState = {
+      ...appState,
+      currentItemArrowType: value,
+    };
+
+    // Change the arrow type and update any other state settings for
+    // the arrow.
+    const selectedId = appState.selectedLinearElement?.elementId;
+    if (selectedId) {
+      const selected = newElements.find((el) => el.id === selectedId);
+      if (selected) {
+        newState.selectedLinearElement = new LinearElementEditor(
+          selected as NonDeleted<ExcalidrawLinearElement>,
+          arrayToMap(elements),
+        );
+      }
+    }
+
+    return {
+      elements: newElements,
+      appState: newState,
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     };
   },

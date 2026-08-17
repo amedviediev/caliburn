@@ -207,7 +207,10 @@ import {
   actionWrapSelectionInFrame,
   actionupdateFrameRendering,
 } from "./actions/actionFrame";
-import { actionToggleLinearEditor } from "./actions/actionLinearEditor";
+import {
+  actionToggleLinearEditor,
+  actionTogglePolygon,
+} from "./actions/actionLinearEditor";
 import { actionGoToCollaborator } from "./actions/actionNavigate";
 import { actionLink } from "./actions/actionLink";
 import { actionCopyStyles, actionPasteStyles } from "./actions/actionStyles";
@@ -245,6 +248,18 @@ import {
   maybeHandleElementLinkClick,
 } from "./link-interaction";
 import { renderEditor } from "./render";
+import {
+  actionAlignBottom,
+  actionAlignHorizontallyCentered,
+  actionAlignLeft,
+  actionAlignRight,
+  actionAlignTop,
+  actionAlignVerticallyCentered,
+} from "./actions/actionAlign";
+import {
+  distributeHorizontally,
+  distributeVertically,
+} from "./actions/actionDistribute";
 import { actionFlipHorizontal, actionFlipVertical } from "./actions/actionFlip";
 import { actionGroup, actionUngroup } from "./actions/actionGroup";
 import { createRedoAction, createUndoAction } from "./actions/actionHistory";
@@ -256,11 +271,15 @@ import {
   actionSendToBack,
 } from "./actions/actionZindex";
 import {
+  actionChangeArrowProperties,
+  actionChangeArrowType,
+  actionChangeArrowhead,
   actionChangeBackgroundColor,
   actionChangeBucketFillBackgroundColor,
   actionChangeFillStyle,
   actionChangeFontFamily,
   actionChangeFontSize,
+  actionChangeFreedrawMode,
   actionChangeOpacity,
   actionChangeRoundness,
   actionChangeSloppiness,
@@ -1383,12 +1402,21 @@ export class CaliburnEditorComponent
       actionBringForward,
       actionSendToBack,
       actionBringToFront,
+      actionAlignTop,
+      actionAlignBottom,
+      actionAlignLeft,
+      actionAlignRight,
+      actionAlignVerticallyCentered,
+      actionAlignHorizontallyCentered,
+      distributeHorizontally,
+      distributeVertically,
       actionBindText,
       actionUnbindText,
       actionWrapTextInContainer,
       actionTextAutoResize,
       actionToggleElementLock,
       actionToggleLinearEditor,
+      actionTogglePolygon,
       actionUnlockAllElements,
       actionDecreaseFontSize,
       actionIncreaseFontSize,
@@ -1398,6 +1426,7 @@ export class CaliburnEditorComponent
       actionChangeFillStyle,
       actionChangeStrokeWidth,
       actionChangeSloppiness,
+      actionChangeFreedrawMode,
       actionChangeStrokeStyle,
       actionChangeOpacity,
       actionChangeFontSize,
@@ -1405,6 +1434,9 @@ export class CaliburnEditorComponent
       actionChangeTextAlign,
       actionChangeVerticalAlign,
       actionChangeRoundness,
+      actionChangeArrowhead,
+      actionChangeArrowProperties,
+      actionChangeArrowType,
       actionCopy,
       actionCut,
       actionPaste,
@@ -2744,6 +2776,21 @@ export class CaliburnEditorComponent
       selectedLinearElement: null,
     });
   }
+
+  /** upstream `App.tsx`'s `dismissLinearEditor`, which `changeArrowType`
+   * calls when it turns an arrow elbowed */
+  dismissLinearEditor = () => {
+    setTimeout(() => {
+      if (this.state.selectedLinearElement?.isEditing) {
+        this.setState({
+          selectedLinearElement: {
+            ...this.state.selectedLinearElement,
+            isEditing: false,
+          },
+        });
+      }
+    });
+  };
 
   mutateElement = <TElement extends Mutable<ExcalidrawElement>>(
     element: TElement,

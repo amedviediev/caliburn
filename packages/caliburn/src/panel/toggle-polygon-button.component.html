@@ -1,0 +1,12 @@
+@if (visible()) {
+  <button
+    caliburn-icon-button
+    mode="toggle"
+    icon="polygonIcon"
+    style="margin-left: auto"
+    [title]="label()"
+    [ariaLabel]="label()"
+    [checked]="allPolygon()"
+    (select)="execute()"
+  ></button>
+}
