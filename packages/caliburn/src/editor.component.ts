@@ -3145,15 +3145,20 @@ export class CaliburnEditorComponent
       { preferSelected: true, includeLockedElements: true },
     );
 
+    let hitElement: NonDeleted<ExcalidrawElement> | null = null;
+    if (hitElementMightBeLocked && hitElementMightBeLocked.locked) {
+      hitElement = null;
+    } else {
+      hitElement = hitElementMightBeLocked;
+    }
+
     // upstream's `if (!this.handleIframeLikeElementHover(...))` — an
     // iframe-like element taking the hover owns the pointer, element links
     // included. Unguarded, as upstream is: only the fully interactive editor
     // reaches here, and there embeds are always enabled.
     if (
       !handleIframeLikeElementHover(this, {
-        hitElement: hitElementMightBeLocked?.locked
-          ? null
-          : hitElementMightBeLocked,
+        hitElement,
         scenePointer,
         moveEvent: event,
       })
@@ -3173,18 +3178,10 @@ export class CaliburnEditorComponent
       return;
     }
 
-    // upstream reads the branches below off the single `preferSelected` hit
-    // test above; caliburn re-queries, so the option has to come along
-    const hoveredElement = getElementAtPosition(
-      this,
-      scenePointer.x,
-      scenePointer.y,
-      { preferSelected: true },
-    );
     if (
-      hoveredElement &&
-      (hoveredElement.link || isEmbeddableElement(hoveredElement)) &&
-      this.state.selectedElementIds[hoveredElement.id] &&
+      hitElement &&
+      (hitElement.link || isEmbeddableElement(hitElement)) &&
+      this.state.selectedElementIds[hitElement.id] &&
       !this.state.contextMenu &&
       !this.state.showHyperlinkPopup
     ) {
@@ -3199,12 +3196,6 @@ export class CaliburnEditorComponent
     if (!isSelectionLikeTool(this.state.activeTool.type)) {
       return;
     }
-    const hitElement = getElementAtPosition(
-      this,
-      scenePointer.x,
-      scenePointer.y,
-      { preferSelected: true },
-    );
     if (
       // if using cmd/ctrl, we're not dragging
       !event[KEYS.CTRL_OR_CMD] &&
