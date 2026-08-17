@@ -183,7 +183,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
     canvasBackgroundColor: editor.state.viewBackgroundColor,
     embedsValidationStatus: editor.embedsValidationStatus,
     elementsPendingErasure: editor.elementsPendingErasure,
-    pendingFlowchartNodes: null,
+    pendingFlowchartNodes: editor.flowchart.pendingNodes,
     theme: editor.state.theme,
   };
 
@@ -220,6 +220,7 @@ export const renderEditor = (editor: CaliburnEditorComponent) => {
         renderConfig: {
           ...staticRenderConfig,
           renderGrid: false,
+          pendingFlowchartNodes: null,
         },
         appState: editor.state,
       },

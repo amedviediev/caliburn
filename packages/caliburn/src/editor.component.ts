@@ -62,6 +62,7 @@ import {
   getObservedAppState,
   getTransformHandleTypeFromCoords,
   hasBackground,
+  isElementCompletelyInViewport,
   isElementInGroup,
   isBindingElement,
   isElbowArrow,
@@ -178,6 +179,7 @@ import type {
 import { CaliburnArrowText } from "./arrow-text";
 import { CaliburnBucketFill } from "./bucket-fill";
 import { CaliburnDrawShape } from "./draw-shape";
+import { CaliburnFlowchart } from "./flowchart";
 import { actionAddToLibrary } from "./actions/actionAddToLibrary";
 import {
   actionBindText,
@@ -1010,7 +1012,7 @@ export class CaliburnEditorComponent
   /** the element whose link icon the pointer is currently over, if any */
   hitLinkElement: NonDeletedExcalidrawElement | undefined;
 
-  readonly flowchart = { isCreatingChart: false };
+  readonly flowchart = new CaliburnFlowchart(this);
 
   files: BinaryFiles = {};
 
@@ -1122,6 +1124,38 @@ export class CaliburnEditorComponent
   private flushingObservers = false;
 
   private observerFlushPending = false;
+
+  // scroll `elements` into view only if they aren't already fully visible.
+  // Targets their bounds rather than the elements so it also works for
+  // elements not yet committed to the canvas.
+  revealIfHidden = (elements: NonDeletedExcalidrawElement[]) => {
+    if (
+      !elements.length ||
+      isElementCompletelyInViewport(
+        elements,
+        this.canvas.width / window.devicePixelRatio,
+        this.canvas.height / window.devicePixelRatio,
+        {
+          offsetLeft: this.state.offsetLeft,
+          offsetTop: this.state.offsetTop,
+          scrollX: this.state.scrollX,
+          scrollY: this.state.scrollY,
+          zoom: this.state.zoom,
+        },
+        this.scene.getNonDeletedElementsMap(),
+        this.viewport.getOffsets(),
+      )
+    ) {
+      return;
+    }
+
+    this.viewport.setViewport({
+      target: getCommonBounds(elements),
+      fit: "scale-down",
+      animation: { duration: 300 },
+      offsets: { ui: true },
+    });
+  };
 
   /** emits a follow/unfollow intent to the host (which owns the
    *  `userToFollow` state) via both the `onUserFollow` prop and the
@@ -1938,6 +1972,8 @@ export class CaliburnEditorComponent
         });
       }
     }
+
+    this.batchCommits(() => this.flowchart.handleKeyEvent(event));
   };
 
   private onSpaceKeyUp() {
@@ -2109,6 +2145,10 @@ export class CaliburnEditorComponent
             type: "panel",
           });
         }
+      }
+
+      if (this.flowchart.handleKeyEvent(event)) {
+        return;
       }
     }
 
@@ -4558,6 +4598,8 @@ export class CaliburnEditorComponent
     // interaction returns
     this.pointerDownState = null;
     resetPlainPasteTracking();
+
+    this.flowchart.clear();
 
     // These components install their own DOM listeners rather than going
     // through the editor's input handlers, so they must be explicitly

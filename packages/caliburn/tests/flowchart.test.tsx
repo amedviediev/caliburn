@@ -8,20 +8,6 @@ import { API } from "./helpers/api";
 import { UI, Keyboard, Pointer } from "./helpers/ui";
 import { render, unmountComponent } from "./test-utils";
 
-/**
- * caliburn gate (task 58, temporary) — thirteen of the fourteen cases below
- * stay skipped until the flowchart creator and navigator land. Caliburn's
- * editor carries a `flowchart = { isCreatingChart: false }` stub
- * (`editor.component.ts`) in place of upstream's `App.flowchart.ts`, and
- * neither `this.flowchart.handleKeyEvent(event)` call is ported — the keydown
- * one (`App.tsx:5409`), which creates and re-places successor nodes while
- * ctrl+arrow is held, nor the keyup one (`App.tsx:5941`), which commits the
- * pending cluster; the same stub is what leaves alt+arrow navigation between
- * nodes doing nothing. Every one of them un-gates with that port; the
- * fourteenth ("when escaped, no nodes will be created") passes today only
- * because nothing is created either way.
- */
-
 unmountComponent();
 
 const { h } = window;
@@ -57,7 +43,7 @@ describe("flow chart creation", () => {
   });
 
   // multiple at once
-  it.skip("create multiple successor nodes at once", () => {
+  it("create multiple successor nodes at once", () => {
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.ARROW_RIGHT);
       Keyboard.keyPress(KEYS.ARROW_RIGHT);
@@ -70,7 +56,7 @@ describe("flow chart creation", () => {
     expect(h.elements.filter((el) => el.type === "arrow").length).toBe(2);
   });
 
-  it.skip("when directions are changed, only the last same directions will apply", () => {
+  it("when directions are changed, only the last same directions will apply", () => {
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.ARROW_RIGHT);
       Keyboard.keyPress(KEYS.ARROW_RIGHT);
@@ -104,7 +90,7 @@ describe("flow chart creation", () => {
     expect(h.elements.length).toBe(1);
   });
 
-  it.skip("create nodes one at a time", () => {
+  it("create nodes one at a time", () => {
     const initialNode = h.elements[0];
 
     Keyboard.withModifierKeys({ ctrl: true }, () => {
@@ -169,7 +155,7 @@ describe("flow chart creation", () => {
   });
 
   // regression for #8518: additional siblings must not overlap existing ones
-  it.skip("does not overlap existing siblings when adding more children (down)", () => {
+  it("does not overlap existing siblings when adding more children (down)", () => {
     API.clearSelection();
     const parent = API.createElement({
       type: "rectangle",
@@ -207,7 +193,7 @@ describe("flow chart creation", () => {
 
   // regression for #8518: a second batch of children (added by holding the
   // modifier and pressing the arrow several times) must clear the first batch
-  it.skip("does not overlap a previous batch of children (down)", () => {
+  it("does not overlap a previous batch of children (down)", () => {
     API.clearSelection();
     const parent = API.createElement({
       type: "rectangle",
@@ -251,7 +237,7 @@ describe("flow chart creation", () => {
   // regression for #8518: a new child must also clear nodes that aren't the
   // start node's direct siblings but sit where it would land — e.g. a sibling
   // reached through a shared parent
-  it.skip("does not overlap a sibling reached through a shared parent", () => {
+  it("does not overlap a sibling reached through a shared parent", () => {
     API.clearSelection();
     const parent = API.createElement({
       type: "rectangle",
@@ -318,7 +304,7 @@ describe("flow chart band-search placement", () => {
       .filter((el) => el.type === "rectangle")
       .map((el) => ({ x: el.x, y: el.y }));
 
-  it.skip("places the first child exactly one offset away in every direction", () => {
+  it("places the first child exactly one offset away in every direction", () => {
     const cases = [
       { key: KEYS.ARROW_RIGHT, x: 300, y: 0 },
       { key: KEYS.ARROW_LEFT, x: -300, y: 0 },
@@ -344,7 +330,7 @@ describe("flow chart band-search placement", () => {
     }
   });
 
-  it.skip("slides into the nearest free gap between obstacles without moving them", () => {
+  it("slides into the nearest free gap between obstacles without moving them", () => {
     API.clearSelection();
     const parent = API.createElement({
       type: "rectangle",
@@ -374,7 +360,7 @@ describe("flow chart band-search placement", () => {
     expect({ x: c2.x, y: c2.y }).toEqual({ x: 600, y: 200 });
   });
 
-  it.skip("keeps pending nodes in place while the cluster grows", () => {
+  it("keeps pending nodes in place while the cluster grows", () => {
     API.clearSelection();
     const parent = API.createElement({
       type: "rectangle",
@@ -404,7 +390,7 @@ describe("flow chart band-search placement", () => {
     Keyboard.keyUp(KEYS.CTRL_OR_CMD);
   });
 
-  it.skip("repositions the whole pending cluster when it no longer fits", () => {
+  it("repositions the whole pending cluster when it no longer fits", () => {
     API.clearSelection();
     const parent = API.createElement({
       type: "rectangle",
@@ -444,7 +430,7 @@ describe("flow chart band-search placement", () => {
 });
 
 describe("flow chart navigation", () => {
-  it.skip("single node at each level", () => {
+  it("single node at each level", () => {
     /**
      * ▨ -> ▨ -> ▨ -> ▨ -> ▨
      */
@@ -506,7 +492,7 @@ describe("flow chart navigation", () => {
     expect(h.state.selectedElementIds[rightMostNode.id]).toBe(true);
   });
 
-  it.skip("multiple nodes at each level", () => {
+  it("multiple nodes at each level", () => {
     /**
      * from the perspective of the first node, there're four layers, and
      * there are four nodes at the second layer
@@ -601,7 +587,7 @@ describe("flow chart navigation", () => {
     expect(h.state.selectedElementIds[rectangle.id]).toBe(true);
   });
 
-  it.skip("take the most obvious link when possible", () => {
+  it("take the most obvious link when possible", () => {
     /**
      * ▨ → ▨   ▨ → ▨
      *     ↓   ↑

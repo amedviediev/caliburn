@@ -2807,6 +2807,101 @@ export const runSuite = async (browser, url, runner) => {
     );
   });
 
+  // -------------------------------------------------------------- flowchart
+  await withPage("flowchart", async (page) => {
+    runner.group("flowchart shortcuts");
+
+    await runner.check(
+      "flowchart.ctrl-arrow-creates-linked-node",
+      "CtrlOrCmd+Arrow grows a linked node, Escape mid-preview cancels it",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page, [300, 300], [500, 400]);
+        const [parent] = await elements(page);
+        await waitFor(page, (id) => window.h.state.selectedElementIds[id], {
+          args: [parent.id],
+          message: "the drawn rectangle was not left selected",
+        });
+
+        // the real chord, modifier held across the arrow and released after —
+        // the release is what commits the previewed cluster
+        await pressWithMod(page, "ArrowRight");
+        await waitFor(page, () => window.__e2e.elements().length === 3, {
+          message:
+            "CtrlOrCmd+ArrowRight did not commit a successor node and its arrow",
+        });
+
+        // `__e2e.elements()` projects only id and type, and the assertions
+        // below are about geometry and bindings
+        const grown = await page.evaluate((parentId) => {
+          const shape = (el) =>
+            el && {
+              id: el.id,
+              x: el.x,
+              width: el.width,
+              startBinding: el.startBinding?.elementId ?? null,
+              endBinding: el.endBinding?.elementId ?? null,
+            };
+          const live = window.h.elements.filter((el) => !el.isDeleted);
+          return {
+            parent: shape(live.find((el) => el.id === parentId)),
+            child: shape(
+              live.find((el) => el.type === "rectangle" && el.id !== parentId),
+            ),
+            arrow: shape(live.find((el) => el.type === "arrow")),
+          };
+        }, parent.id);
+
+        expect(grown.child, "no successor rectangle was created");
+        expect(grown.arrow, "no arrow was created between the two nodes");
+        expect(
+          grown.child.x > grown.parent.x + grown.parent.width,
+          `the successor landed at x=${grown.child.x}, not to the right of the parent`,
+        );
+        expectEqual(
+          grown.arrow.startBinding,
+          parent.id,
+          "the arrow's start binding",
+        );
+        expectEqual(
+          grown.arrow.endBinding,
+          grown.child.id,
+          "the arrow's end binding",
+        );
+        await waitFor(page, (id) => window.h.state.selectedElementIds[id], {
+          args: [grown.child.id],
+          message: "the committed successor was not selected",
+        });
+
+        // Escape mid-preview drops the pending cluster, so releasing the
+        // modifier afterwards commits nothing
+        const mod = process.platform === "darwin" ? "Meta" : "Control";
+        await page.keyboard.down(mod);
+        await page.keyboard.press("ArrowDown");
+        await waitFor(page, () => !!window.h.app.flowchart.isCreatingChart, {
+          message: "holding the modifier over an arrow started no preview",
+        });
+        await page.keyboard.press("Escape");
+        await waitFor(page, () => !window.h.app.flowchart.isCreatingChart, {
+          message: "Escape did not end the flowchart preview",
+        });
+        await page.keyboard.up(mod);
+
+        expectEqual(
+          (await elements(page)).length,
+          3,
+          "the element count after an escaped preview",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.static", ".excalidraw"],
+        },
+      },
+    );
+  });
+
   // ------------------------------------------------------------- crop editor
   await withPage("crop", async (page) => {
     runner.group("image crop editor");
