@@ -5,7 +5,7 @@ import { getElementAtPosition } from "../src/selection-interaction";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { Pointer } from "./helpers/ui";
+import { Pointer, UI } from "./helpers/ui";
 import { GlobalTestState, act, render } from "./test-utils";
 
 // the hover path derives every branch from a single hit test — spied on here
@@ -139,6 +139,22 @@ describe("hover cursor", () => {
     mouse.moveTo(150, 150);
 
     expect(GlobalTestState.interactiveCanvas.style.cursor).not.toBe("move");
+  });
+
+  it("does not hit-test while a multi-point element is being laid down", () => {
+    API.setElements([linkedRectangle()]);
+    UI.clickTool("line");
+    mouse.reset();
+    mouse.clickAt(400, 400);
+    expect(h.state.multiElement).not.toBe(null);
+
+    vi.mocked(getElementAtPosition).mockClear();
+
+    // over the linked rectangle, which the hover pass would otherwise probe
+    mouse.moveTo(150, 150);
+
+    expect(vi.mocked(getElementAtPosition)).not.toHaveBeenCalled();
+    expect(h.state.showHyperlinkPopup).toBe(false);
   });
 
   it("hit-tests once per pointer move", () => {

@@ -1123,6 +1123,7 @@ export class CaliburnEditorComponent
 
   /** upstream's `clearSelectionIfNotUsingSelection`, queued but not applied */
   private pendingSelectionClear = false;
+  private pendingIsBindingEnabledRestore = false;
 
   lastCompletedCanvasClicks: { x: number; y: number }[] = [];
 
@@ -1751,6 +1752,11 @@ export class CaliburnEditorComponent
     document.addEventListener("keydown", this.onKeyDown);
     document.addEventListener("keyup", this.onKeyUp);
     document.addEventListener("pointermove", this.updateCurrentCursorPosition);
+    // upstream's document-level `removePointer` (`App.tsx`, "#3553"): a
+    // release that never reaches the canvas — a pan or a pinch let go over
+    // the UI — would otherwise leave the pointer in `gesture.pointers`, and
+    // the stale entry makes the next press look like a second finger
+    document.addEventListener("pointerup", this.removeDocumentPointer);
     document.addEventListener("paste", this.pasteFromClipboard);
     document.addEventListener("copy", this.onCopy);
     document.addEventListener("cut", this.onCut);
@@ -1943,6 +1949,7 @@ export class CaliburnEditorComponent
       "pointermove",
       this.updateCurrentCursorPosition,
     );
+    document.removeEventListener("pointerup", this.removeDocumentPointer);
     document.removeEventListener("paste", this.pasteFromClipboard);
     document.removeEventListener("copy", this.onCopy);
     document.removeEventListener("cut", this.onCut);
@@ -2749,6 +2756,13 @@ export class CaliburnEditorComponent
         // is queued behind the clear, so it wins outright
         this.pendingSelectionClear = false;
       }
+      if (
+        this.pendingIsBindingEnabledRestore &&
+        "isBindingEnabled" in partial
+      ) {
+        // same rule for the queued binding-preference restore
+        this.pendingIsBindingEnabledRestore = false;
+      }
       this.state = { ...this.state, ...partial };
     }
     this.applyStateInvariants();
@@ -3034,6 +3048,18 @@ export class CaliburnEditorComponent
     });
   }
 
+  /**
+   * The tool revert's own `setState`, with upstream's post-revert cursor
+   * reset as its callback ("reset once the tool revert has settled",
+   * `App.tsx`). Upstream reverts from a single place per interaction;
+   * caliburn's pointer-up fans out into per-branch finalizers that each carry
+   * a copy of the revert, so the callback lives here — the one place they all
+   * go through — rather than in each of them.
+   */
+  setStateRevertingActiveTool = (state: SetStateArg) => {
+    this.setState(state, () => this.cursor.reset());
+  };
+
   clearSelection(hitElement?: ExcalidrawElement | null) {
     // upstream reads this off the pre-update state, which React only settles
     // once the handler returns
@@ -3210,30 +3236,46 @@ export class CaliburnEditorComponent
 
   handleCanvasPointerDown(event: PointerEvent) {
     this.batchCommits(() => {
-      const canRestoreIsBindingEnabled =
-        this.isInteractionEnabled() ||
-        this.isToolSupported(this.state.activeTool.type);
-      this.handleCanvasPointerDownImpl(event);
-      this.applyPendingSelectionClear();
-      if (canRestoreIsBindingEnabled) {
-        this.restoreIsBindingEnabledToPreference(event);
+      try {
+        this.handleCanvasPointerDownImpl(event);
+      } finally {
+        // both are writes upstream has already queued by the time the
+        // dispatch below them runs, so a dispatch that throws must not
+        // swallow them
+        this.applyPendingSelectionClear();
+        this.applyPendingIsBindingEnabledRestore();
       }
     });
   }
 
   /**
    * Upstream's "if Ctrl is not held, ensure `isBindingEnabled` reflects the
-   * user preference" reset, run on pointer down and pointer up. Upstream
+   * user preference" reset, queued near the top of the pointer down & up
+   * handlers and applied where React's own queue would let it land. Upstream
    * writes it as a plain `setState` — unlike the ctrl toggle itself, which it
    * wraps in `flushSync` — so the restored value only lands once the handler
    * has returned, and the in-flight event still sees the binding state the
-   * pointer went down with. Caliburn's `setState` is synchronous, so the
-   * reset runs after the handler body rather than where upstream writes it.
+   * pointer went down with.
+   *
+   * The same per-write-form rule `armClearSelectionIfNotUsingSelection`
+   * carries applies: an OBJECT-form write of `isBindingEnabled` queued after
+   * it wins outright. The only such write is the ctrl toggle in
+   * `handleLinearElementOnPointerDown`, and ctrl decides both — the toggle
+   * only runs when this arm did not — so the rule is held rather than
+   * exercised. The clear's third arm (a FUNCTIONAL updater queued after it
+   * forces it to land first) has no counterpart: no updater reads
+   * `isBindingEnabled`, and landing it early would show the handler's own
+   * `isBindingEnabled(this.state)` reads a value React still hides from them.
    */
-  private restoreIsBindingEnabledToPreference(event: PointerEvent) {
-    if (event.ctrlKey) {
+  private armRestoreIsBindingEnabledToPreference(event: PointerEvent) {
+    this.pendingIsBindingEnabledRestore = !event.ctrlKey;
+  }
+
+  private applyPendingIsBindingEnabledRestore() {
+    if (!this.pendingIsBindingEnabledRestore) {
       return;
     }
+    this.pendingIsBindingEnabledRestore = false;
     const preferenceEnabled = this.state.bindingPreference === "enabled";
     if (this.state.isBindingEnabled !== preferenceEnabled) {
       this.setState({ isBindingEnabled: preferenceEnabled });
@@ -3262,6 +3304,9 @@ export class CaliburnEditorComponent
     // pointer keeps driving it through the full flow below — safe while
     // non-interactive because that implies view mode, whose gates constrain
     // everything except the tool-usage path
+
+    // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
+    this.armRestoreIsBindingEnabledToPreference(event);
 
     const target = event.target as HTMLElement;
     // capture subsequent pointer events to the canvas
@@ -3780,6 +3825,11 @@ export class CaliburnEditorComponent
       return;
     }
 
+    // NOT the hover pass's gate (that one is upstream's `isPressingAnyButton`,
+    // at the top of `maybeUpdateHoverCursor`) but a dispatch: the canvas
+    // binding runs instead of the gesture's window listener while the pointer
+    // is over the canvas (`markCanvasHandledPointerEvent`), so the gesture's
+    // own move handling has to happen from here.
     if (this.pointerDownState) {
       this.onPointerMoveFromPointerDown(event);
       return;
@@ -3787,7 +3837,10 @@ export class CaliburnEditorComponent
 
     const isOverScrollBar = getScrollBarsAtPointer(this, event).isOverEither;
 
-    handleMultiElementPointerMove(this, event);
+    if (handleMultiElementPointerMove(this, event)) {
+      return;
+    }
+
     maybeSuggestBindingOnHover(this, event);
     maybeUpdateFrameToHighlightOnPointerMove(
       this,
@@ -3997,6 +4050,17 @@ export class CaliburnEditorComponent
     event: PointerEvent,
     isOverScrollBar: boolean,
   ) {
+    // upstream's pointer-move gate (App.tsx:7908), which ends its handler and
+    // so covers this whole helper: a pointer that is pressing anything owns
+    // the interaction, and the hover affordances stay out of it. Caliburn's
+    // own `pointerDownState` arm upstream of this call is the gesture's move
+    // DISPATCH rather than a gate, so the pressed-button cases it doesn't
+    // cover — a secondary-button drag, a press the pen-mode guard refused, a
+    // drag that began off the canvas, a scrollbar drag — land here.
+    if (Boolean(event.buttons)) {
+      return;
+    }
+
     // upstream's pointer-move gate (App.tsx:7908-7920) admits only these tools
     // to the hover affordances, while caliburn gates its own branches further
     // down (the laser short-circuit, `isSelectionLikeTool`) — so this block
@@ -4217,7 +4281,7 @@ export class CaliburnEditorComponent
     }
     this.batchCommits(() => {
       this.handleCanvasPointerUpImpl(event);
-      this.restoreIsBindingEnabledToPreference(event);
+      this.applyPendingIsBindingEnabledRestore();
     });
   }
 
@@ -4225,6 +4289,13 @@ export class CaliburnEditorComponent
   removePointer(event: PointerEvent) {
     this.batchCommits(() => removePointer(this, event));
   }
+
+  /** the same, from upstream's document-level pointerup listener — the
+   * canvas's own release already went through `handleCanvasPointerUpImpl` and
+   * the map is a `delete` by pointer id either way */
+  private removeDocumentPointer = (event: PointerEvent) => {
+    this.removePointer(event);
+  };
 
   private handleCanvasPointerUpImpl(event: PointerEvent) {
     // a missing-pointer-up cleanup replays this with the gesture's pointer
@@ -4267,6 +4338,8 @@ export class CaliburnEditorComponent
           TAP_TWICE_TIMEOUT;
       this.lastPointerUpEvent = event;
     }
+
+    this.armRestoreIsBindingEnabledToPreference(event);
 
     this.lastPointerMoveCoords = viewportCoordsToSceneCoords(event, this.state);
 
@@ -4411,7 +4484,7 @@ export class CaliburnEditorComponent
   handlePointerUpFromPointerDown(event: PointerEvent) {
     this.batchCommits(() => {
       this.handleCanvasPointerUpImpl(event);
-      this.restoreIsBindingEnabledToPreference(event);
+      this.applyPendingIsBindingEnabledRestore();
     });
   }
 

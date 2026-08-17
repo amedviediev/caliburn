@@ -374,15 +374,6 @@ export const cleanupAfterDragOnPointerUp = (
   // just in case, tool changes mid drag, always clean up
   editor.lassoTrail.endPath();
 
-  // a lasso session that grew out of the selection tool reverts to it
-  if (
-    editor.state.activeTool.type === "lasso" &&
-    editor.state.activeTool.fromSelection &&
-    !editor.isToolLocked()
-  ) {
-    editor.setActiveTool({ type: editor.state.preferredSelectionTool.type });
-  }
-
   editor.setState((prevState) => ({
     isResizing: false,
     isRotating: false,
@@ -426,7 +417,7 @@ export const revertActiveToolOnPointerUp = (
       // if lasso is turned on but from selection => reset to selection
       (activeTool.type === "lasso" && activeTool.fromSelection))
   ) {
-    editor.setState({
+    editor.setStateRevertingActiveTool({
       newElement: null,
       suggestedBinding: null,
       activeTool: updateActiveTool(editor.state, {

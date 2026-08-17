@@ -511,14 +511,19 @@ export const maybeDragLinearPoint = (
 /**
  * Hover-move handling while a multi-point element is being laid down:
  * adds/removes the uncommitted trailing point and drags it along.
+ *
+ * Returns whether it took the move: upstream's own block ends its pointer-move
+ * handler with a `return` (`App.tsx`), so none of the hover affordances after
+ * it — the hit test, the iframe hover, the element-link affordance, the
+ * hyperlink popup — run while a point is being placed.
  */
 export const handleMultiElementPointerMove = (
   editor: CaliburnEditorComponent,
   event: PointerEvent,
-) => {
+): boolean => {
   const { multiElement, selectedLinearElement } = editor.state;
   if (!multiElement || !selectedLinearElement) {
-    return;
+    return false;
   }
 
   const { x: scenePointerX, y: scenePointerY } = viewportCoordsToSceneCoords(
@@ -530,6 +535,8 @@ export const handleMultiElementPointerMove = (
   const lastPoint = points[points.length - 1];
 
   const { lastCommittedPoint } = selectedLinearElement;
+
+  editor.cursor.applyForTool();
 
   if (lastPoint === lastCommittedPoint) {
     if (
@@ -569,6 +576,10 @@ export const handleMultiElementPointerMove = (
         },
         { informMutation: false, isDragging: false },
       );
+    } else {
+      editor.cursor.set(CURSOR_TYPE.POINTER);
+      // in this branch, we're inside the commit zone, and no uncommitted
+      // point exists. Thus do nothing (don't add/remove points).
     }
   } else if (
     points.length > 2 &&
@@ -578,6 +589,7 @@ export const handleMultiElementPointerMove = (
       lastCommittedPoint,
     ) < LINE_CONFIRM_THRESHOLD
   ) {
+    editor.cursor.set(CURSOR_TYPE.POINTER);
     editor.scene.mutateElement(
       multiElement,
       {
@@ -606,6 +618,10 @@ export const handleMultiElementPointerMove = (
       },
     });
   } else {
+    if (isPathALoop(points, editor.state.zoom.value)) {
+      editor.cursor.set(CURSOR_TYPE.POINTER);
+    }
+
     invariant(
       editor.state.selectedLinearElement,
       "Expected selectedLinearElement to be set to operate on a linear element",
@@ -622,6 +638,8 @@ export const handleMultiElementPointerMove = (
       editor.setState(newState);
     }
   }
+
+  return true;
 };
 
 /**
@@ -868,7 +886,7 @@ export const finalizeLinearOnPointerUp = (
 
     editor.setState({ suggestedBinding: null });
     if (!editor.isToolLocked()) {
-      editor.setState((prevState) => ({
+      editor.setStateRevertingActiveTool((prevState) => ({
         newElement: null,
         activeTool: updateActiveTool(editor.state, {
           type: editor.state.preferredSelectionTool.type,

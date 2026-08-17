@@ -754,15 +754,11 @@ export const handleTextOnPointerDown = (
   }
 
   if (!editor.isToolLocked()) {
-    editor.setState(
-      {
-        activeTool: updateActiveTool(editor.state, {
-          type: editor.state.preferredSelectionTool.type,
-        }),
-      },
-      // reset once the tool revert has settled
-      () => editor.cursor.reset(),
-    );
+    editor.setStateRevertingActiveTool({
+      activeTool: updateActiveTool(editor.state, {
+        type: editor.state.preferredSelectionTool.type,
+      }),
+    });
   } else {
     editor.cursor.reset();
   }

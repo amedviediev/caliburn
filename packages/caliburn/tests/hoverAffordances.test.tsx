@@ -370,5 +370,62 @@ describe("hover affordances", () => {
       expect(h.state.selectedLinearElement?.hoverPointIndex).toBe(-1);
       expect(cursor()).toBe(CURSOR_TYPE.CROSSHAIR);
     });
+
+    it("shows the pointer cursor inside the commit zone, the tool's outside it", () => {
+      UI.clickTool("line");
+      mouse.reset();
+      mouse.clickAt(100, 100);
+      mouse.moveTo(200, 100);
+      // the second click is what commits a point to measure the zone from
+      mouse.clickAt(200, 100);
+
+      // within LINE_CONFIRM_THRESHOLD of the last committed point, where a
+      // click would place no new point
+      mouse.moveTo(203, 100);
+      expect(cursor()).toBe(CURSOR_TYPE.POINTER);
+
+      // and out again
+      mouse.moveTo(300, 100);
+      expect(cursor()).toBe(CURSOR_TYPE.CROSSHAIR);
+    });
+  });
+
+  describe("while a button is pressed", () => {
+    it("shows no hover affordance", () => {
+      const element = rectangle();
+      API.setElements([element]);
+      API.setSelectedElements([element]);
+
+      const [x, y] = handleCenter(element, "nw");
+      mouse.moveTo(x, y);
+      expect(cursor()).toBe("nwse-resize");
+
+      // a drag that started elsewhere — the canvas never saw its pointer
+      // down, so only `event.buttons` tells the hover pass to stand down
+      fireEvent.pointerMove(GlobalTestState.interactiveCanvas, {
+        clientX: x,
+        clientY: y,
+        pointerType: "mouse",
+        pointerId: 1,
+        buttons: 1,
+      });
+
+      expect(h.state.selectedLinearElement).toBe(null);
+      expect(cursor()).toBe("nwse-resize");
+
+      // moving off the handle with the button held leaves the cursor alone
+      fireEvent.pointerMove(GlobalTestState.interactiveCanvas, {
+        clientX: 600,
+        clientY: 600,
+        pointerType: "mouse",
+        pointerId: 1,
+        buttons: 1,
+      });
+      expect(cursor()).toBe("nwse-resize");
+
+      // released, the hover pass takes over again
+      mouse.moveTo(600, 600);
+      expect(cursor()).not.toBe("nwse-resize");
+    });
   });
 });

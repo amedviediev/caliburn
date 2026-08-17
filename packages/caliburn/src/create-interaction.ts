@@ -371,7 +371,7 @@ export const finalizeNewElementOnPointerUp = (
   }
 
   if (!editor.isToolLocked() && activeTool.type !== "freedraw") {
-    editor.setState({
+    editor.setStateRevertingActiveTool({
       newElement: null,
       suggestedBinding: null,
       activeTool: updateActiveTool(editor.state, {
