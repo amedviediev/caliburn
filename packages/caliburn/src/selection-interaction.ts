@@ -26,6 +26,7 @@ import {
   isCursorInFrame,
   isElbowArrow,
   isEmbeddableElement,
+  isFrameLikeElement,
   isIframeLikeElement,
   isLinearElement,
   isNonDeletedElement,
@@ -205,6 +206,9 @@ const hitElement = (
     element,
     threshold: getElementHitThreshold(editor, element),
     elementsMap: editor.scene.getNonDeletedElementsMap(),
+    frameNameBound: isFrameLikeElement(element)
+      ? editor.frameNameBoundsCache.get(element)
+      : null,
   });
 };
 
@@ -311,6 +315,9 @@ export const getElementAtPosition = (
       // this also avoids the need to update past tests
       threshold: getElementHitThreshold(editor, elementWithHighestZIndex) / 2,
       elementsMap: editor.scene.getNonDeletedElementsMap(),
+      frameNameBound: isFrameLikeElement(elementWithHighestZIndex)
+        ? editor.frameNameBoundsCache.get(elementWithHighestZIndex)
+        : null,
     })
       ? elementWithHighestZIndex
       : allHitElements[allHitElements.length - 2];
@@ -975,6 +982,9 @@ export const maybeDeselectOnPointerUp = (
           element: hitElement,
           elementsMap,
           threshold: getElementHitThreshold(editor, hitElement),
+          frameNameBound: isFrameLikeElement(hitElement)
+            ? editor.frameNameBoundsCache.get(hitElement)
+            : null,
         },
         elementsMap,
       )) ||

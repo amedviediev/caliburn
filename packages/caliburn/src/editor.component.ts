@@ -135,6 +135,7 @@ import type {
   BinaryFileData,
   BinaryFiles,
   CollaboratorPointer,
+  FrameNameBoundsCache,
   Gesture,
   InteractionConfig,
   LibraryItems,
@@ -805,6 +806,62 @@ export class CaliburnEditorComponent
    * `randomId()` draws from the same test-env sequence the element ids do.
    */
   readonly id = `caliburn-editor-${nextEditorId++}`;
+
+  /**
+   * upstream `App.getFrameNameDOMId` — public here because the frame names
+   * are rendered by their own component (`frame-name.component`), which has
+   * to stamp the id the cache below looks the node up by.
+   */
+  getFrameNameDOMId = (frameElement: ExcalidrawElement) => {
+    return `${this.id}-frame-name-${frameElement.id}`;
+  };
+
+  frameNameBoundsCache: FrameNameBoundsCache = {
+    get: (frameElement) => {
+      let bounds = this.frameNameBoundsCache._cache.get(frameElement.id);
+      if (
+        !bounds ||
+        bounds.zoom !== this.state.zoom.value ||
+        bounds.versionNonce !== frameElement.versionNonce
+      ) {
+        const frameNameDiv = document.getElementById(
+          this.getFrameNameDOMId(frameElement),
+        );
+
+        if (frameNameDiv) {
+          const box = frameNameDiv.getBoundingClientRect();
+          const boxSceneTopLeft = viewportCoordsToSceneCoords(
+            { clientX: box.x, clientY: box.y },
+            this.state,
+          );
+          const boxSceneBottomRight = viewportCoordsToSceneCoords(
+            { clientX: box.right, clientY: box.bottom },
+            this.state,
+          );
+
+          bounds = {
+            x: boxSceneTopLeft.x,
+            y: boxSceneTopLeft.y,
+            width: boxSceneBottomRight.x - boxSceneTopLeft.x,
+            height: boxSceneBottomRight.y - boxSceneTopLeft.y,
+            zoom: this.state.zoom.value,
+            versionNonce: frameElement.versionNonce,
+          };
+
+          this.frameNameBoundsCache._cache.set(frameElement.id, bounds);
+
+          return bounds;
+        }
+        return null;
+      }
+
+      return bounds;
+    },
+    /**
+     * @private
+     */
+    _cache: new Map(),
+  };
 
   /**
    * The library state class is vendored (`data/library.ts`) and takes the app

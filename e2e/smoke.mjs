@@ -2309,6 +2309,102 @@ export const runSuite = async (browser, url, runner) => {
     );
   });
 
+  // ----------------------------------------------------------------- frames
+  await withPage("frames", async (page) => {
+    runner.group("frame name label");
+
+    await runner.check(
+      "frames.name-label-selects-frame",
+      "clicking a frame's name label selects the frame",
+      async () => {
+        await resetEditor(page);
+        // NOTE the frame tool itself creates nothing in caliburn (upstream's
+        // `createFrameElementOnPointerDown` is not ported yet), so the frame
+        // is drawn the other way a user can: wrap a shape in one
+        await drawRectangle(page);
+        await waitFor(
+          page,
+          () => Object.keys(window.h.state.selectedElementIds).length === 1,
+          { message: "the drawn rectangle was not left selected" },
+        );
+        await pressWithMod(page, "/");
+        await waitFor(
+          page,
+          () => !!document.querySelector(".command-palette-dialog input"),
+          { message: "Cmd+/ did not open the command palette" },
+        );
+        await page.keyboard.type("wrap selection in frame");
+        await waitFor(
+          page,
+          () => {
+            const first = document.querySelector(
+              ".command-palette-dialog .command-item",
+            );
+            return !!first && /frame/i.test(first.textContent ?? "");
+          },
+          { message: "no Wrap selection in frame command to run" },
+        );
+        await clickAndExpect(
+          page,
+          ".command-palette-dialog .command-item",
+          () => window.__e2e.elements().some((el) => el.type === "frame"),
+          { message: "running the wrap command created no frame" },
+        );
+        const frame = (await elements(page)).find((el) => el.type === "frame");
+
+        // wrapping leaves the frame selected — the label click has to be what
+        // selects it
+        await page.mouse.click(1150, 800);
+        await waitFor(
+          page,
+          () => Object.keys(window.h.state.selectedElementIds).length === 0,
+          { message: "clicking empty canvas did not clear the selection" },
+        );
+
+        // the id `App.frameNameBoundsCache` looks the label's box up by
+        const label = `[id="${await page.evaluate(
+          (id) => `${window.h.app.id}-frame-name-${id}`,
+          frame.id,
+        )}"]`;
+        const box = await rectOf(page, label);
+        expect(
+          !!box && box.width > 0 && box.height > 0,
+          `the frame's name label did not render a box (${JSON.stringify(
+            box,
+          )})`,
+        );
+        // above the frame itself, so only its name can answer the hit test
+        const frameTop = await page.evaluate((id) => {
+          const { zoom, offsetTop, scrollY } = window.h.state;
+          const el = window.h.elements.find((element) => element.id === id);
+          return (el.y + scrollY) * zoom.value + offsetTop;
+        }, frame.id);
+        expect(
+          box.y + box.height <= frameTop,
+          `the name label overlaps the frame it names (label bottom ${
+            box.y + box.height
+          }, frame top ${frameTop})`,
+        );
+
+        await clickCenter(page, label);
+        await waitFor(
+          page,
+          (id) => window.h.state.selectedElementIds[id] === true,
+          {
+            args: [frame.id],
+            message: "clicking the frame's name label did not select it",
+          },
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".frame-name", "canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+  });
+
   // ------------------------------------------------------------- crop editor
   await withPage("crop", async (page) => {
     runner.group("image crop editor");

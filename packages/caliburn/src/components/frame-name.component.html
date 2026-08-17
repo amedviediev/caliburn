@@ -1,5 +1,6 @@
 @for (frame of frames(); track frame.id) {
 <div
+  [id]="domId(frame)"
   class="{{ frameNameClass }}"
   [style]="labelStyle(frame)"
   (pointerdown)="editor().handleCanvasPointerDown($event)"

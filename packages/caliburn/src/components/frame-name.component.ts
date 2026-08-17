@@ -75,6 +75,11 @@ export class CaliburnFrameNameComponent {
     return getFrameLikeTitle(frame);
   }
 
+  /** the id `App.frameNameBoundsCache` reads the label's box by */
+  protected domId(frame: ExcalidrawFrameLikeElement) {
+    return this.host.getFrameNameDOMId(frame);
+  }
+
   protected labelStyle(frame: ExcalidrawFrameLikeElement) {
     const state = this.state();
     const isDarkTheme = state.theme === THEME.DARK;
