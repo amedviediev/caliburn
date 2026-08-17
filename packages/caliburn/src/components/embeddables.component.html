@@ -1,0 +1,7 @@
+@for (embeddable of embeddables(); track embeddable.element.id) {
+  <div
+    caliburn-embeddable
+    [element]="embeddable.element"
+    [isVisible]="embeddable.isVisible"
+  ></div>
+}

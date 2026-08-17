@@ -141,8 +141,14 @@ export const maybeDragSelectedElements = (
 
   // prevent dragging even if we're no longer holding cmd/ctrl otherwise
   // it would have weird results (stuff jumping all over the screen)
+  // Checking for editingTextElement to avoid jump while editing on mobile #6503
   // (with cmd/ctrl held the pointer falls through to the marquee instead)
-  if (selectedElements.length === 0 || pointerDownState.withCmdOrCtrl) {
+  if (
+    selectedElements.length === 0 ||
+    pointerDownState.withCmdOrCtrl ||
+    editor.state.editingTextElement ||
+    editor.state.activeEmbeddable?.state === "active"
+  ) {
     return false;
   }
   {

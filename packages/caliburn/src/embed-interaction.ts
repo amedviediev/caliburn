@@ -4,11 +4,14 @@ import {
   CURSOR_TYPE,
   DRAGGING_THRESHOLD,
   POINTER_BUTTON,
+  YOUTUBE_STATES,
   oneOf,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
 
-import { isIframeLikeElement } from "@excalidraw/element";
+import { isIframeElement, isIframeLikeElement } from "@excalidraw/element";
+
+import type { ValueOf } from "@excalidraw/common/utility-types";
 
 import type {
   ExcalidrawIframeLikeElement,
@@ -20,6 +23,87 @@ import { gesture, isHoldingSpace } from "./pan-gesture";
 import { getElementAtPosition } from "./selection-interaction";
 
 import type { CaliburnEditorComponent } from "./editor.component";
+
+/**
+ * Map of youtube embed video states.
+ *
+ * Upstream keeps this module-level in `App.tsx`; here it sits beside its two
+ * readers — the center-click play/pause handshake below and
+ * `onWindowMessage`, which the player reports its state back through.
+ */
+const YOUTUBE_VIDEO_STATES = new Map<
+  ExcalidrawElement["id"],
+  ValueOf<typeof YOUTUBE_STATES>
+>();
+
+/**
+ * upstream `App.onWindowMessage` — the vimeo/youtube player protocol.
+ *
+ * Upstream registers it unbound (`addEventListener(window, EVENT.MESSAGE,
+ * this.onWindowMessage)`) and it reads no editor state, so it ports as a
+ * plain function; it reaches every editor on the page through the
+ * `iframe.excalidraw__embeddable` query, exactly as upstream's does.
+ */
+export const onWindowMessage = (event: MessageEvent) => {
+  if (
+    event.origin !== "https://player.vimeo.com" &&
+    event.origin !== "https://www.youtube.com"
+  ) {
+    return;
+  }
+
+  let data = null;
+  try {
+    data = JSON.parse(event.data);
+  } catch (e) {}
+  if (!data) {
+    return;
+  }
+
+  switch (event.origin) {
+    case "https://player.vimeo.com":
+      //Allowing for multiple instances of Excalidraw running in the window
+      if (data.method === "paused") {
+        let source: Window | null = null;
+        const iframes = document.body.querySelectorAll(
+          "iframe.excalidraw__embeddable",
+        );
+        if (!iframes) {
+          break;
+        }
+        for (const iframe of iframes as NodeListOf<HTMLIFrameElement>) {
+          if (iframe.contentWindow === event.source) {
+            source = iframe.contentWindow;
+          }
+        }
+        source?.postMessage(
+          JSON.stringify({
+            method: data.value ? "play" : "pause",
+            value: true,
+          }),
+          "*",
+        );
+      }
+      break;
+    case "https://www.youtube.com":
+      if (
+        data.event === "infoDelivery" &&
+        data.info &&
+        data.id &&
+        typeof data.info.playerState === "number"
+      ) {
+        const id = data.id;
+        const playerState = data.info.playerState as number;
+        if ((Object.values(YOUTUBE_STATES) as number[]).includes(playerState)) {
+          YOUTUBE_VIDEO_STATES.set(
+            id,
+            playerState as ValueOf<typeof YOUTUBE_STATES>,
+          );
+        }
+      }
+      break;
+  }
+};
 
 const isIframeLikeElementCenter = (
   editor: CaliburnEditorComponent,
@@ -85,13 +169,6 @@ export const handleIframeLikeElementHover = (
  * upstream `App.handleIframeLikeCenterClick`.
  *
  * @returns true if iframe-like element click handled
- *
- * Upstream continues past the activation to drive the embedded document
- * itself (the YouTube/Vimeo `postMessage` play/pause handshake, reached
- * through `App.getHTMLIFrameElement`). Those live on the rendered `<iframe>`
- * overlay — `App.renderEmbeddables`, which caliburn has not ported — so the
- * port ends where upstream's own `if (!iframe?.contentWindow) return true;`
- * would.
  */
 export const handleIframeLikeCenterClick = (
   editor: CaliburnEditorComponent,
@@ -189,6 +266,61 @@ export const handleIframeLikeCenterClick = (
       }),
     );
   }, 100);
+
+  if (isIframeElement(iframeLikeElement)) {
+    return true;
+  }
+
+  const iframe = editor.getHTMLIFrameElement(iframeLikeElement);
+
+  if (!iframe?.contentWindow) {
+    return true;
+  }
+
+  if (iframe.src.includes("youtube")) {
+    const state = YOUTUBE_VIDEO_STATES.get(iframeLikeElement.id);
+    if (!state) {
+      YOUTUBE_VIDEO_STATES.set(iframeLikeElement.id, YOUTUBE_STATES.UNSTARTED);
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: "listening",
+          id: iframeLikeElement.id,
+        }),
+        "*",
+      );
+    }
+    switch (state) {
+      case YOUTUBE_STATES.PLAYING:
+      case YOUTUBE_STATES.BUFFERING:
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "pauseVideo",
+            args: "",
+          }),
+          "*",
+        );
+        break;
+      default:
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "playVideo",
+            args: "",
+          }),
+          "*",
+        );
+    }
+  }
+
+  if (iframe.src.includes("player.vimeo.com")) {
+    iframe.contentWindow.postMessage(
+      JSON.stringify({
+        method: "paused", //video play/pause in onWindowMessage handler
+      }),
+      "*",
+    );
+  }
 
   return true;
 };

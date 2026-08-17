@@ -1,0 +1,29 @@
+<div
+  class="excalidraw__embeddable-container__inner"
+  [style.width]="innerWidth()"
+  [style.height]="innerHeight()"
+  [style.transform]="innerTransform()"
+  [style.pointerEvents]="innerPointerEvents()"
+>
+  @if (isHovered()) {
+    <div class="excalidraw__embeddable-hint">{{ hint() }}</div>
+  }
+  <div class="excalidraw__embeddable__outer" [style.padding]="outerPadding()">
+    <div
+      class="excalidraw__embeddable__content"
+      [style.width]="contentSize()"
+      [style.height]="contentSize()"
+      [style.transform]="contentTransform()"
+    >
+      <iframe
+        #iframe
+        class="excalidraw__embeddable"
+        scrolling="no"
+        referrerpolicy="no-referrer-when-downgrade"
+        title="Excalidraw Embedded Content"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </div>
+</div>

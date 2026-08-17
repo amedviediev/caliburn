@@ -68,6 +68,7 @@ import {
   isElbowArrow,
   isEmbeddableElement,
   isFrameLikeElement,
+  isIframeElement,
   isImageElement,
   isLinearElement,
   isMeasureTextSupported,
@@ -90,6 +91,7 @@ import { editorJotaiStore } from "@excalidraw/excalidraw/editor-jotai";
 import { exportCanvas } from "@excalidraw/excalidraw/data";
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
+import { copyTextToSystemClipboard } from "@excalidraw/excalidraw/clipboard";
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import {
@@ -138,6 +140,8 @@ import type {
   ExcalidrawElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawFrameLikeElement,
+  ExcalidrawIframeElement,
+  ExcalidrawIframeLikeElement,
   FileId,
   NonDeleted,
   NonDeletedExcalidrawElement,
@@ -156,6 +160,7 @@ import type {
   BinaryFiles,
   CollaboratorPointer,
   ElementsPendingErasure,
+  EmbedsValidationStatus,
   FrameNameBoundsCache,
   Gesture,
   InteractionConfig,
@@ -254,13 +259,14 @@ import {
 import {
   handleIframeLikeCenterClick,
   handleIframeLikeElementHover,
+  onWindowMessage,
 } from "./embed-interaction";
 import {
   applyElementLinkHoverAffordance,
   getElementLinkAtPosition,
   maybeHandleElementLinkClick,
 } from "./link-interaction";
-import { languageGenerationSignal } from "./i18n";
+import { languageGenerationSignal, translated } from "./i18n";
 import { renderEditor } from "./render";
 import {
   actionAlignBottom,
@@ -311,7 +317,13 @@ import {
 import { CaliburnConvertElementTypePopupComponent } from "./components/convert-element-type-popup.component";
 import { CaliburnCursorHintComponent } from "./components/cursor-hint.component";
 import { CursorHints } from "./components/cursor-hints";
+import {
+  areElementCanvasButtonsHidden,
+  CaliburnElementCanvasButtonsComponent,
+} from "./components/element-canvas-buttons.component";
+import { CaliburnEmbeddablesComponent } from "./components/embeddables.component";
 import { CaliburnEyeDropperComponent } from "./components/eye-dropper.component";
+import { CaliburnIconButtonComponent } from "./components/icon-button.component";
 import { provideCaliburnIcons } from "./components/icons";
 import { CaliburnFrameNameComponent } from "./components/frame-name.component";
 import { CaliburnHyperlinkComponent } from "./components/hyperlink/hyperlink.component";
@@ -535,9 +547,12 @@ const MAX_OBSERVER_FLUSH_DEPTH = 50;
     CaliburnContextMenuComponent,
     CaliburnConvertElementTypePopupComponent,
     CaliburnCursorHintComponent,
+    CaliburnElementCanvasButtonsComponent,
+    CaliburnEmbeddablesComponent,
     CaliburnEyeDropperComponent,
     CaliburnFrameNameComponent,
     CaliburnHyperlinkComponent,
+    CaliburnIconButtonComponent,
     CaliburnLayerUIComponent,
   ],
   providers: [provideCaliburnIcons()],
@@ -743,7 +758,17 @@ export class CaliburnEditorComponent
 
   rc: RoughCanvas | null = null;
 
-  embedsValidationStatus: Map<ExcalidrawElement["id"], boolean> = new Map();
+  iFrameRefs = new Map<ExcalidrawElement["id"], HTMLIFrameElement>();
+  /**
+   * Indicates whether the embeddable's url has been validated for rendering.
+   * If value not set, indicates that the validation is pending.
+   * Initially or on url change the flag is not reset so that we can guarantee
+   * the validation came from a trusted source (the editor).
+   **/
+  embedsValidationStatus: EmbedsValidationStatus = new Map();
+  /** embeds that have been inserted to DOM (as a perf optim, we don't want to
+   * insert to DOM before user initially scrolls to them) */
+  initializedEmbeds = new Set<ExcalidrawIframeLikeElement["id"]>();
 
   elementsPendingErasure: ElementsPendingErasure = new Set();
 
@@ -1685,9 +1710,11 @@ export class CaliburnEditorComponent
     document.addEventListener("paste", this.pasteFromClipboard);
     document.addEventListener("copy", this.onCopy);
     document.addEventListener("cut", this.onCut);
+    document.addEventListener("fullscreenchange", this.onFullscreenChange);
     window.addEventListener("resize", this.onWindowResize);
     window.addEventListener("focus", this.onWindowFocus);
     window.addEventListener("blur", this.onWindowBlur);
+    window.addEventListener("message", onWindowMessage);
 
     this.commit();
   }
@@ -1729,6 +1756,26 @@ export class CaliburnEditorComponent
    */
   private onWindowBlur = () => {
     setHoldingSpace(false);
+  };
+
+  /**
+   * generally invoked only if fullscreen was invoked programmatically
+   *
+   * Upstream registers this from its edit-mode-only listener branch; caliburn
+   * registers its document/window listeners once, as it does for the rest of
+   * that branch (`onResize`, `onBlur`), and the handler's own guard is what
+   * decides whether there is anything to clear.
+   */
+  private onFullscreenChange = () => {
+    if (
+      // points to the iframe element we fullscreened
+      !document.fullscreenElement &&
+      this.state.activeEmbeddable?.state === "active"
+    ) {
+      this.setState({
+        activeEmbeddable: null,
+      });
+    }
   };
 
   ngAfterViewInit() {
@@ -1828,9 +1875,11 @@ export class CaliburnEditorComponent
     document.removeEventListener("paste", this.pasteFromClipboard);
     document.removeEventListener("copy", this.onCopy);
     document.removeEventListener("cut", this.onCut);
+    document.removeEventListener("fullscreenchange", this.onFullscreenChange);
     window.removeEventListener("resize", this.onWindowResize);
     window.removeEventListener("focus", this.onWindowFocus);
     window.removeEventListener("blur", this.onWindowBlur);
+    window.removeEventListener("message", onWindowMessage);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.removeSceneUpdateListener?.();
@@ -3628,6 +3677,40 @@ export class CaliburnEditorComponent
     }
   }
 
+  /**
+   * upstream `App.cacheEmbeddableRef` — called from the per-element
+   * `caliburn-embeddable` once its `<iframe>` is in the DOM, standing in for
+   * upstream's React `ref` callback. Like upstream's, it never removes an
+   * entry: the map is pruned only by the GC pass in `updateEmbeddables`.
+   */
+  cacheEmbeddableRef(
+    element: ExcalidrawIframeLikeElement,
+    ref: HTMLIFrameElement | null,
+  ) {
+    if (ref) {
+      this.iFrameRefs.set(element.id, ref);
+    }
+  }
+
+  /** upstream `App.getHTMLIFrameElement` */
+  getHTMLIFrameElement(
+    element: ExcalidrawIframeLikeElement,
+  ): HTMLIFrameElement | undefined {
+    return this.iFrameRefs.get(element.id);
+  }
+
+  /** upstream `App.onIframeSrcCopy` */
+  onIframeSrcCopy(element: ExcalidrawIframeElement) {
+    if (element.customData?.generationData?.status === "done") {
+      copyTextToSystemClipboard(element.customData.generationData.html);
+      this.setToast({
+        message: "copied to clipboard",
+        closable: false,
+        duration: 1500,
+      });
+    }
+  }
+
   /** upstream `App.handleIframeLikeCenterClick` */
   private handleIframeLikeCenterClick(): boolean {
     return handleIframeLikeCenterClick(this);
@@ -4034,7 +4117,7 @@ export class CaliburnEditorComponent
       this.isEmbedsEnabled() &&
       this.handleIframeLikeCenterClick();
 
-    if (
+    const elementLinkClickHandled =
       !iframeLikeCenterClickHandled &&
       isGenuinePointerUp &&
       this.isLinksEnabled() &&
@@ -4042,10 +4125,25 @@ export class CaliburnEditorComponent
         this,
         event,
         viewportCoordsToSceneCoords(event, this.state),
-      )
-    ) {
+      );
+
+    if (elementLinkClickHandled) {
       this.pointerDownState = null;
       return;
+    }
+
+    // upstream's view-mode tail of `handleCanvasPointerUp`: a release that
+    // neither activated an embed nor followed an element link deactivates
+    // whatever embed was active and clears the selection
+    if (
+      !iframeLikeCenterClickHandled &&
+      isGenuinePointerUp &&
+      this.state.viewModeEnabled
+    ) {
+      this.setState({
+        activeEmbeddable: null,
+        selectedElementIds: {},
+      });
     }
 
     if (this.pointerDownState) {
@@ -4182,6 +4280,58 @@ export class CaliburnEditorComponent
     }
     const selectedElements = this.scene.getSelectedElements(this.state);
     return selectedElements.length === 1 ? selectedElements : [];
+  }
+
+  /**
+   * The single selected `iframe` element upstream renders its
+   * `ElementCanvasButtons` column for — the copy-source and fullscreen pair.
+   * `null` covers both upstream's own condition and `ElementCanvasButtons`'
+   * early return, which Angular cannot express from inside a host element.
+   *
+   * Upstream renders a second such column for a selected magic frame (the AI
+   * "convert to code" trigger, gated behind `aiEnabled`); that one is not
+   * part of the port.
+   */
+  protected readonly copySourceLabel = translated(() => t("labels.copySource"));
+
+  iframeCanvasButtonsElement(): NonDeleted<ExcalidrawIframeElement> | null {
+    this.changeGeneration();
+    if (!this.isDefaultUIEnabled() || areElementCanvasButtonsHidden(this)) {
+      return null;
+    }
+    const selectedElements = this.scene.getSelectedElements(this.state);
+    const firstSelectedElement = selectedElements[0];
+    return selectedElements.length === 1 &&
+      isIframeElement(firstSelectedElement) &&
+      firstSelectedElement.customData?.generationData?.status === "done"
+      ? firstSelectedElement
+      : null;
+  }
+
+  /** upstream's "Enter fullscreen" `ElementCanvasButton` for an iframe element */
+  requestEmbeddableFullscreen(element: NonDeleted<ExcalidrawIframeElement>) {
+    const iframe = this.getHTMLIFrameElement(element);
+    if (iframe) {
+      try {
+        iframe.requestFullscreen();
+        this.setState({
+          activeEmbeddable: {
+            element,
+            state: "active",
+          },
+          selectedElementIds: {
+            [element.id]: true,
+          },
+          newElement: null,
+          selectionElement: null,
+        });
+      } catch (err: any) {
+        console.warn(err);
+        this.setState({
+          errorMessage: "Couldn't enter fullscreen",
+        });
+      }
+    }
   }
 
   private clearHighlightsOnPointerUp() {
@@ -4939,18 +5089,29 @@ export class CaliburnEditorComponent
    * fresh statuses are already picked up by this very render pass.
    */
   private updateEmbeddables() {
+    const iframeLikes = new Set<ExcalidrawIframeLikeElement["id"]>();
+
     for (const element of this.scene.getNonDeletedElements()) {
-      if (
-        isEmbeddableElement(element) &&
-        !this.embedsValidationStatus.has(element.id)
-      ) {
-        this.embedsValidationStatus.set(
-          element.id,
-          embeddableURLValidator(element.link, this.validateEmbeddable()),
-        );
-        ShapeCache.delete(element);
+      if (isEmbeddableElement(element)) {
+        iframeLikes.add(element.id);
+        if (!this.embedsValidationStatus.has(element.id)) {
+          this.embedsValidationStatus.set(
+            element.id,
+            embeddableURLValidator(element.link, this.validateEmbeddable()),
+          );
+          ShapeCache.delete(element);
+        }
+      } else if (isIframeElement(element)) {
+        iframeLikes.add(element.id);
       }
     }
+
+    // GC
+    this.iFrameRefs.forEach((ref, id) => {
+      if (!iframeLikes.has(id)) {
+        this.iFrameRefs.delete(id);
+      }
+    });
   }
 
   /**

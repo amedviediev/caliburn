@@ -79,5 +79,32 @@
     @for (element of hyperlinkElements(); track element.id) {
       <caliburn-hyperlink [element]="element" />
     }
+    @if (iframeCanvasButtonsElement(); as iframeElement) {
+      <div caliburn-element-canvas-buttons [element]="iframeElement">
+        <button
+          caliburn-icon-button
+          class="ToolIcon__MagicButton"
+          mode="toggle"
+          size="small"
+          icon="copyIcon"
+          [checked]="false"
+          [title]="copySourceLabel()"
+          [ariaLabel]="copySourceLabel()"
+          (select)="onIframeSrcCopy(iframeElement)"
+        ></button>
+        <button
+          caliburn-icon-button
+          class="ToolIcon__MagicButton"
+          mode="toggle"
+          size="small"
+          icon="fullscreenIcon"
+          [checked]="false"
+          title="Enter fullscreen"
+          ariaLabel="Enter fullscreen"
+          (select)="requestEmbeddableFullscreen(iframeElement)"
+        ></button>
+      </div>
+    }
   }
+  <caliburn-embeddables />
 </div>
