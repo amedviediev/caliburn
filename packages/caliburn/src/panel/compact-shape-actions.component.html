@@ -1,0 +1,549 @@
+<ng-template #strokeColor>
+  <div class="compact-action-item">
+    <caliburn-color-picker
+      type="elementStroke"
+      customizableTopPicks="elementStroke"
+      [label]="labels().stroke"
+      [color]="currentStrokeColor()"
+      [palette]="strokePalette"
+      [topPicks]="strokeTopPicks"
+      [updateData]="updateStrokeColor"
+      (colorChange)="setStrokeColor($event)"
+    />
+  </div>
+</ng-template>
+
+<ng-template #backgroundColor>
+  <div class="compact-action-item">
+    @if (isBucketFillTool()) {
+      <caliburn-color-picker
+        type="elementBackground"
+        customizableTopPicks="bucketFill"
+        [label]="labels().background"
+        [color]="bucketFillBackgroundColor()"
+        [palette]="backgroundPalette"
+        [topPicks]="bucketFillTopPicks"
+        [excludedColors]="bucketFillExcludedColors"
+        [updateData]="updateBucketFillBackgroundColor"
+        (colorChange)="setBucketFillBackgroundColor($event)"
+      />
+    } @else {
+      <caliburn-color-picker
+        type="elementBackground"
+        customizableTopPicks="elementBackground"
+        [label]="labels().background"
+        [color]="currentBackgroundColor()"
+        [palette]="backgroundPalette"
+        [topPicks]="backgroundTopPicks"
+        [updateData]="updateBackgroundColor"
+        (colorChange)="setBackgroundColor($event)"
+      />
+    }
+  </div>
+</ng-template>
+
+<ng-template #freedrawModeButton>
+  <div class="compact-action-item">
+    <button
+      type="button"
+      class="compact-action-button"
+      [attr.title]="labels().pressure"
+      [attr.aria-label]="labels().pressure"
+      (click)="cycleFreedrawMode()"
+    >
+      <ng-icon [name]="freedrawModeIcon()" />
+    </button>
+  </div>
+</ng-template>
+
+<ng-template #combinedShapeProperties>
+  @if (visible()) {
+    <div class="compact-action-item">
+      <button
+        type="button"
+        class="compact-action-button properties-trigger"
+        [class.active]="isPopupOpen('compactStrokeStyles')"
+        [attr.title]="labels().stroke"
+        (click)="togglePopup('compactStrokeStyles', $event)"
+      >
+        <ng-icon name="adjustmentsIcon" />
+      </button>
+      @if (isPopupOpen('compactStrokeStyles')) {
+        <div
+          caliburn-properties-popover
+          class="shape-actions-theme-scope properties-content"
+          [triggerRect]="triggerRect('compactStrokeStyles')"
+          (close)="closePopup()"
+        >
+          <div class="selected-shape-actions" style="max-width: 13rem">
+            @if (predicates().fill) {
+              <fieldset>
+                <legend>{{ labels().fill }}</legend>
+                <div class="buttonList">
+                  @for (option of fillOptions(); track option.value) {
+                    <button
+                      type="button"
+                      [attr.title]="option.text"
+                      [attr.data-testid]="option.testId"
+                      [class.active]="fillStyleActive(option)"
+                      (click)="setFillStyle(option, $event)"
+                    >
+                      <ng-icon [name]="option.icon" />
+                    </button>
+                  }
+                </div>
+              </fieldset>
+            }
+            @if (predicates().strokeWidth) {
+              <fieldset>
+                <legend>{{ labels().strokeWidth }}</legend>
+                <div class="buttonList">
+                  @for (option of strokeWidthOptions(); track option.text) {
+                    <label
+                      [class.active]="strokeWidthValue() === option.value"
+                      [attr.title]="option.text"
+                    >
+                      <input
+                        type="radio"
+                        name="stroke-width"
+                        [attr.data-testid]="option.testId"
+                        [checked]="strokeWidthValue() === option.value"
+                        (change)="execute(strokeWidthAction, option.value)"
+                      />
+                      <ng-icon [name]="option.icon" />
+                    </label>
+                  }
+                </div>
+              </fieldset>
+            }
+            @if (predicates().freedrawMode) {
+              <fieldset>
+                <legend>{{ labels().pressure }}</legend>
+                <div class="buttonList">
+                  @for (option of freedrawModeOptions(); track option.text) {
+                    <label
+                      [class.active]="freedrawModeValue() === option.value"
+                      [attr.title]="option.text"
+                    >
+                      <input
+                        type="radio"
+                        name="strokeOptions.variability"
+                        [checked]="freedrawModeValue() === option.value"
+                        (change)="execute(freedrawModeAction, option.value)"
+                      />
+                      <ng-icon [name]="option.icon" />
+                    </label>
+                  }
+                </div>
+              </fieldset>
+            }
+            @if (predicates().strokeStyle) {
+              <fieldset>
+                <legend>{{ labels().strokeStyle }}</legend>
+                <div class="buttonList">
+                  @for (option of strokeStyleOptions(); track option.text) {
+                    <label
+                      [class.active]="strokeStyleValue() === option.value"
+                      [attr.title]="option.text"
+                    >
+                      <input
+                        type="radio"
+                        name="strokeStyle"
+                        [checked]="strokeStyleValue() === option.value"
+                        (change)="execute(strokeStyleAction, option.value)"
+                      />
+                      <ng-icon [name]="option.icon" />
+                    </label>
+                  }
+                </div>
+              </fieldset>
+            }
+            @if (predicates().sloppiness) {
+              <fieldset>
+                <legend>{{ labels().sloppiness }}</legend>
+                <div class="buttonList">
+                  @for (option of sloppinessOptions(); track option.text) {
+                    <label
+                      [class.active]="sloppinessValue() === option.value"
+                      [attr.title]="option.text"
+                    >
+                      <input
+                        type="radio"
+                        name="sloppiness"
+                        [checked]="sloppinessValue() === option.value"
+                        (change)="execute(sloppinessAction, option.value)"
+                      />
+                      <ng-icon [name]="option.icon" />
+                    </label>
+                  }
+                </div>
+              </fieldset>
+            }
+            @if (predicates().roundness) {
+              <fieldset>
+                <legend>{{ labels().edges }}</legend>
+                <div class="buttonList">
+                  @for (option of roundnessOptions(); track option.text) {
+                    <label
+                      [class.active]="roundnessValue() === option.value"
+                      [attr.title]="option.text"
+                    >
+                      <input
+                        type="radio"
+                        name="edges"
+                        [checked]="roundnessValue() === option.value"
+                        (change)="execute(roundnessAction, option.value)"
+                      />
+                      <ng-icon [name]="option.icon" />
+                    </label>
+                  }
+                </div>
+              </fieldset>
+            }
+            @if (predicates().opacity) {
+              <fieldset>
+                <legend>{{ labels().opacity }}</legend>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  data-testid="opacity"
+                  [value]="currentOpacity()"
+                  (input)="setOpacity($event)"
+                  (change)="setOpacity($event)"
+                />
+              </fieldset>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</ng-template>
+
+<ng-template #textProperties>
+  <div class="compact-action-item">
+    <button
+      type="button"
+      class="compact-action-button properties-trigger"
+      [class.active]="isPopupOpen('compactTextProperties')"
+      [attr.title]="labels().textAlign"
+      (click)="togglePopup('compactTextProperties', $event)"
+    >
+      <ng-icon name="textSizeIcon" />
+    </button>
+    @if (isPopupOpen('compactTextProperties')) {
+      <div
+        caliburn-properties-popover
+        class="shape-actions-theme-scope properties-content"
+        [triggerRect]="triggerRect('compactTextProperties')"
+        (close)="closePopup()"
+      >
+        <div class="selected-shape-actions" style="max-width: 13rem">
+          @if (predicates().text) {
+            <fieldset>
+              <legend>{{ labels().fontSize }}</legend>
+              <div class="buttonList">
+                @for (option of fontSizeOptions(); track option.text) {
+                  <label
+                    [class.active]="fontSizeValue() === option.value"
+                    [attr.title]="option.text"
+                  >
+                    <input
+                      type="radio"
+                      name="font-size"
+                      [attr.data-testid]="option.testId"
+                      [checked]="fontSizeValue() === option.value"
+                      (change)="execute(fontSizeAction, option.value)"
+                    />
+                    <ng-icon [name]="option.icon" />
+                  </label>
+                }
+              </div>
+            </fieldset>
+          }
+          @if (predicates().textAlign) {
+            <fieldset>
+              <legend>{{ labels().textAlign }}</legend>
+              <div class="buttonList">
+                @for (option of textAlignOptions(); track option.text) {
+                  <label
+                    [class.active]="textAlignValue() === option.value"
+                    [attr.title]="option.text"
+                  >
+                    <input
+                      type="radio"
+                      name="text-align"
+                      [attr.data-testid]="option.testId"
+                      [checked]="textAlignValue() === option.value"
+                      (change)="execute(textAlignAction, option.value)"
+                    />
+                    <ng-icon [name]="option.icon" />
+                  </label>
+                }
+              </div>
+            </fieldset>
+          }
+          @if (predicates().verticalAlign) {
+            <fieldset>
+              <div class="buttonList">
+                @for (option of verticalAlignOptions(); track option.text) {
+                  <label
+                    [class.active]="verticalAlignValue() === option.value"
+                    [attr.title]="option.text"
+                  >
+                    <input
+                      type="radio"
+                      name="text-align"
+                      [attr.data-testid]="option.testId"
+                      [checked]="verticalAlignValue() === option.value"
+                      (change)="execute(verticalAlignAction, option.value)"
+                    />
+                    <ng-icon [name]="verticalAlignIcon(option)" />
+                  </label>
+                }
+              </div>
+            </fieldset>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</ng-template>
+
+<ng-template #fontFamily>
+  <div class="compact-action-item">
+    <div class="buttonList">
+      @for (option of fontFamilyOptions(); track option.text) {
+        <button
+          type="button"
+          [attr.title]="option.text"
+          [attr.data-testid]="option.testId"
+          [class.active]="fontFamilyValue() === option.value"
+          (click)="setFontFamily(option.value)"
+        >
+          <ng-icon [name]="option.icon" />
+        </button>
+      }
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #extraActions let-showDuplicate="showDuplicate" let-showDelete="showDelete">
+  @if (predicates().showExtraActions) {
+    <div class="compact-action-item">
+      <button
+        type="button"
+        class="compact-action-button properties-trigger"
+        [class.active]="isPopupOpen('compactOtherProperties')"
+        [attr.title]="labels().actions"
+        (click)="togglePopup('compactOtherProperties', $event)"
+      >
+        <ng-icon name="dotsHorizontalIcon" />
+      </button>
+      @if (isPopupOpen('compactOtherProperties')) {
+        <div
+          caliburn-properties-popover
+          class="shape-actions-theme-scope properties-content"
+          [triggerRect]="triggerRect('compactOtherProperties')"
+          (close)="closePopup()"
+        >
+          <div
+            class="selected-shape-actions"
+            style="
+              max-width: 12rem;
+              justify-content: center;
+              align-items: center;
+            "
+          >
+            @if (predicates().layers) {
+              <fieldset>
+                <legend>{{ labels().layers }}</legend>
+                <div class="buttonList">
+                  @for (option of layerOptions(); track option.text) {
+                    <button
+                      type="button"
+                      [attr.title]="option.text"
+                      [attr.aria-label]="option.text"
+                      (click)="execute(option.action, null)"
+                    >
+                      <ng-icon [name]="actionIcon(option.action)" />
+                    </button>
+                  }
+                </div>
+              </fieldset>
+            }
+            <fieldset>
+              <legend>{{ labels().actions }}</legend>
+              <div class="buttonList">
+                @for (option of extraActionOptions(); track option.text) {
+                  @if (
+                    isCompactExtraAction(option, showDuplicate, showDelete)
+                  ) {
+                    <button
+                      type="button"
+                      [attr.title]="option.text"
+                      [attr.aria-label]="option.text"
+                      (click)="execute(option.action, null)"
+                    >
+                      <div
+                        class="ToolIcon__icon"
+                        aria-hidden="true"
+                        aria-disabled="false"
+                      >
+                        <ng-icon [name]="actionIcon(option.action)" />
+                      </div>
+                    </button>
+                  }
+                }
+              </div>
+            </fieldset>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</ng-template>
+
+<ng-template #dedicatedAction let-action="action" let-text="text">
+  <div class="compact-action-item">
+    <button
+      type="button"
+      class="compact-action-button"
+      [attr.title]="text"
+      [attr.aria-label]="text"
+      (click)="execute(action, null)"
+    >
+      <ng-icon [name]="actionIcon(action)" />
+    </button>
+  </div>
+</ng-template>
+
+@if (isMobile()) {
+  <caliburn-island
+    #island
+    class="compact-shape-actions mobile-shape-actions"
+    style="
+      flex-direction: row;
+      box-shadow: none;
+      padding: 0;
+      z-index: 2;
+      background-color: transparent;
+      align-items: center;
+      pointer-events: none;
+    "
+    [style.height.px]="rowHeight"
+    [style.gap.px]="gap"
+    [style.marginBottom.px]="4"
+  >
+    <div
+      style="display: flex; flex-direction: row; flex: 1"
+      [style.gap.px]="gap"
+    >
+      @if (predicates().strokeColor) {
+        <ng-container [ngTemplateOutlet]="strokeColor" />
+      }
+      @if (predicates().backgroundColor) {
+        <ng-container [ngTemplateOutlet]="backgroundColor" />
+      }
+      <ng-container [ngTemplateOutlet]="combinedShapeProperties" />
+      @if (predicates().text) {
+        <ng-container [ngTemplateOutlet]="fontFamily" />
+        <ng-container [ngTemplateOutlet]="textProperties" />
+      }
+      <ng-container
+        [ngTemplateOutlet]="extraActions"
+        [ngTemplateOutletContext]="{
+          showDuplicate: !showDuplicateOutside(),
+          showDelete: !showDeleteOutside()
+        }"
+      />
+    </div>
+    <div style="display: flex; flex-direction: row" [style.gap.px]="gap">
+      <div class="compact-action-item">
+        <button
+          type="button"
+          class="compact-action-button"
+          data-testid="button-undo"
+          [attr.aria-label]="compactLabels().undo"
+          [attr.title]="compactLabels().undo"
+          [disabled]="isUndoStackEmpty()"
+          (click)="undo()"
+        >
+          <ng-icon name="undoIcon" />
+        </button>
+      </div>
+      <div class="compact-action-item">
+        <button
+          type="button"
+          class="compact-action-button"
+          data-testid="button-redo"
+          [attr.aria-label]="compactLabels().redo"
+          [attr.title]="compactLabels().redo"
+          [disabled]="isRedoStackEmpty()"
+          (click)="redo()"
+        >
+          <ng-icon name="redoIcon" />
+        </button>
+      </div>
+      @if (showDuplicateOutside() && predicates().showExtraActions) {
+        <ng-container
+          [ngTemplateOutlet]="dedicatedAction"
+          [ngTemplateOutletContext]="{
+            action: duplicateAction,
+            text: compactLabels().duplicateSelection
+          }"
+        />
+      }
+      @if (showDeleteOutside() && predicates().showExtraActions) {
+        <ng-container
+          [ngTemplateOutlet]="dedicatedAction"
+          [ngTemplateOutletContext]="{
+            action: deleteAction,
+            text: compactLabels().delete
+          }"
+        />
+      }
+    </div>
+  </caliburn-island>
+} @else if (visible()) {
+  <caliburn-island class="compact-shape-actions-island" [padding]="0">
+  <div class="compact-shape-actions">
+    @if (predicates().strokeColor) {
+      <ng-container [ngTemplateOutlet]="strokeColor" />
+    }
+    @if (predicates().backgroundColor) {
+      <ng-container [ngTemplateOutlet]="backgroundColor" />
+    }
+    @if (predicates().freedrawMode) {
+      <ng-container [ngTemplateOutlet]="freedrawModeButton" />
+    }
+    <ng-container [ngTemplateOutlet]="combinedShapeProperties" />
+    @if (predicates().text) {
+      <ng-container [ngTemplateOutlet]="fontFamily" />
+      <ng-container [ngTemplateOutlet]="textProperties" />
+    }
+    @if (predicates().showExtraActions) {
+      <ng-container
+        [ngTemplateOutlet]="dedicatedAction"
+        [ngTemplateOutletContext]="{
+          action: duplicateAction,
+          text: compactLabels().duplicateSelection
+        }"
+      />
+      <ng-container
+        [ngTemplateOutlet]="dedicatedAction"
+        [ngTemplateOutletContext]="{
+          action: deleteAction,
+          text: compactLabels().delete
+        }"
+      />
+    }
+    <ng-container
+      [ngTemplateOutlet]="extraActions"
+      [ngTemplateOutletContext]="{ showDuplicate: false, showDelete: false }"
+    />
+  </div>
+  </caliburn-island>
+}

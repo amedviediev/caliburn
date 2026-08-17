@@ -22,6 +22,7 @@ import {
   DEFAULT_ELEMENT_STROKE_PICKS,
   THEME,
   applyDarkModeFilter,
+  deriveStylesPanelMode,
   isColorDark,
 } from "@excalidraw/common";
 
@@ -62,12 +63,11 @@ const isColorPickerPopup = (
  * Angular port of upstream `ColorPicker/ColorPicker.tsx` — the top-picks
  * strip, the active-color trigger and the popup it opens.
  *
- * Caliburn's styles panel is always upstream's `stylesPanelMode: "full"`
- * (see `AppViewport`'s `getStylesPanelMode`), so the compact/mobile branches
- * (`compact-sizing`, `mobile-border`, the stroke overlay icon, the in-popup
- * title, hidden hotkey labels) have no reachable call site and are not
- * ported. Neither is the top-picks drag & drop customization
- * (`customizableTopPicks` / `topPicksDnD.tsx`) — see `top-picks.component.ts`.
+ * The compact/mobile branches follow upstream's `useStylesPanelMode()`: the
+ * top-picks strip and its separator drop out, the trigger takes the compact
+ * sizing (plus the mobile border and, for stroke, the icon overlay) and the
+ * popup shows section titles but hides hotkey labels on phones. Top-picks
+ * drag & drop customization is gated off in compact mode, as upstream.
  */
 @Component({
   selector: "caliburn-color-picker",
@@ -134,10 +134,21 @@ export class CaliburnColorPickerComponent {
 
   protected readonly isOpen = computed(() => this.openPopup() === this.type());
 
-  // caliburn's styles panel is always upstream's `stylesPanelMode: "full"`,
-  // so the compact-mode half of upstream's gate is always false here
+  /** upstream's `useStylesPanelMode()` */
+  private readonly stylesPanelMode = computed(() =>
+    deriveStylesPanelMode(this.editor.editorInterface),
+  );
+
+  protected readonly isCompactMode = computed(
+    () => this.stylesPanelMode() !== "full",
+  );
+
+  protected readonly isMobileMode = computed(
+    () => this.stylesPanelMode() === "mobile",
+  );
+
   protected readonly isTopPicksCustomizable = computed(
-    () => !!this.customizableTopPicks(),
+    () => !!this.customizableTopPicks() && !this.isCompactMode(),
   );
 
   /** user-pinned picks trump the (host-provided or default) baseline */
@@ -217,8 +228,25 @@ export class CaliburnColorPickerComponent {
       "is-transparent": !color || color === "transparent",
       "has-outline":
         !color || !isColorDark(color, COLOR_OUTLINE_CONTRAST_THRESHOLD),
+      "compact-sizing": this.isCompactMode(),
+      "mobile-border": this.isMobileMode(),
     });
   });
+
+  /** upstream's `mode === "stroke"` overlay: the compact trigger draws the
+   * stroke icon over the swatch, in whichever of black/white contrasts */
+  protected readonly strokeOverlayColor = computed(() => {
+    const displayColor = this.displayColor();
+    return displayColor &&
+      isColorDark(displayColor, COLOR_OUTLINE_CONTRAST_THRESHOLD)
+      ? "#fff"
+      : "#111";
+  });
+
+  protected readonly showStrokeOverlay = computed(
+    () =>
+      this.isCompactMode() && !!this.color() && this.type() === "elementStroke",
+  );
 
   protected readonly triggerTitle = computed(() =>
     this.type() === "elementStroke"

@@ -7,13 +7,18 @@ import {
   inject,
 } from "@angular/core";
 
-import { DEFAULT_SIDEBAR, capitalizeString } from "@excalidraw/common";
+import {
+  DEFAULT_SIDEBAR,
+  capitalizeString,
+  deriveStylesPanelMode,
+} from "@excalidraw/common";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getScrollToContentState } from "@excalidraw/excalidraw/viewport";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
+import { CaliburnCompactShapeActionsComponent } from "../panel/compact-shape-actions.component";
 import { CaliburnShapeActionsComponent } from "../panel/shape-actions.component";
 
 import { translated } from "../i18n";
@@ -29,6 +34,7 @@ import { CaliburnHelpDialogComponent } from "./help-dialog.component";
 import { CaliburnImageExportDialogComponent } from "./image-export-dialog.component";
 import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.component";
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
+import { CaliburnMobileMenuComponent } from "./mobile-menu.component";
 import { CaliburnOverwriteConfirmComponent } from "./overwrite-confirm/overwrite-confirm.component";
 import { isSidebarDocked } from "./sidebar/common";
 import { CaliburnStatsComponent } from "./stats/stats.component";
@@ -96,9 +102,11 @@ let nextLayerUIId = 0;
     CaliburnErrorDialogComponent,
     CaliburnFixedSideContainerComponent,
     CaliburnFooterComponent,
+    CaliburnCompactShapeActionsComponent,
     CaliburnHelpDialogComponent,
     CaliburnImageExportDialogComponent,
     CaliburnJSONExportDialogComponent,
+    CaliburnMobileMenuComponent,
     CaliburnOverwriteConfirmComponent,
     CaliburnShapeActionsComponent,
     CaliburnSidebarTriggerComponent,
@@ -168,6 +176,38 @@ export class CaliburnLayerUIComponent {
     this.state();
     return this.editor.renderWelcomeScreen();
   });
+
+  /** upstream's `useEditorInterface()` / `useStylesPanelMode()` — read through
+   * the editor-interface signal so a resize that changes the form factor
+   * re-renders the layout, as a re-render does upstream */
+  protected readonly isPhone = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
+
+  protected readonly isCompactStylesPanel = computed(
+    () => deriveStylesPanelMode(this.editor.editorInterface) === "compact",
+  );
+
+  /** upstream's `spacing` table — the compact layout tightens the gaps */
+  protected readonly spacing = computed(() =>
+    this.isCompactStylesPanel()
+      ? {
+          menuTopGap: 4,
+          toolbarColGap: 4,
+          toolbarRowGap: 1,
+          toolbarInnerRowGap: 0.5,
+          islandPadding: 1,
+          collabMarginLeft: 8,
+        }
+      : {
+          menuTopGap: 6,
+          toolbarColGap: 4,
+          toolbarRowGap: 1,
+          toolbarInnerRowGap: 1,
+          islandPadding: 1,
+          collabMarginLeft: 8,
+        },
+  );
 
   protected readonly isSidebarDockedAndFits = computed(
     () =>

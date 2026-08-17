@@ -22,6 +22,8 @@
 @use "../../excalidraw/components/HintViewer.scss";
 @use "../../excalidraw/components/LayerUI.scss";
 @use "../../excalidraw/components/Toolbar.scss";
+@use "../../excalidraw/components/MobileToolbar.scss";
+@use "../../excalidraw/components/ToolPopover.scss";
 @use "../../excalidraw/components/ColorPicker/ColorPicker.scss";
 @use "../../excalidraw/components/main-menu/DefaultItems.scss";
 @use "../../excalidraw/components/ConfirmDialog.scss";
@@ -135,6 +137,12 @@ caliburn-live-collaboration-trigger,
 caliburn-color-picker,
 caliburn-color-input,
 caliburn-layer-ui,
+caliburn-mobile-menu,
+caliburn-mobile-toolbar,
+caliburn-tool-popover,
+caliburn-selection-tool-popover,
+caliburn-freedraw-tool-popover,
+caliburn-compact-shape-actions,
 caliburn-command-palette,
 caliburn-command-palette-inner,
 caliburn-footer,

@@ -30,6 +30,9 @@
   }
 }
 <caliburn-command-palette />
+@if (isPhone()) {
+  <caliburn-mobile-menu />
+} @else {
 @if (viewportStatusFrame()?.border; as border) {
   <div
     class="viewport-status-frame__border"
@@ -65,7 +68,10 @@
   }
   <caliburn-fixed-side-container side="top">
     <div class="App-menu App-menu_top">
-      <caliburn-stack-col [gap]="6" class="App-menu_top__left">
+      <caliburn-stack-col
+        [gap]="spacing().menuTopGap"
+        class="App-menu_top__left"
+      >
         <div style="position: relative">
           <div class="excalidraw-ui-top-left">
             @if (topLeftUI(); as topLeft) {
@@ -86,8 +92,17 @@
           }
         </div>
         @if (defaultUIEnabled()) {
-          <div class="selected-shape-actions-container">
-            <caliburn-shape-actions />
+          <div
+            class="selected-shape-actions-container"
+            [class.selected-shape-actions-container--compact]="
+              isCompactStylesPanel()
+            "
+          >
+            @if (isCompactStylesPanel()) {
+              <caliburn-compact-shape-actions variant="compact" />
+            } @else {
+              <caliburn-shape-actions />
+            }
           </div>
         }
       </caliburn-stack-col>
@@ -101,9 +116,9 @@
                 <caliburn-welcome-screen-toolbar-hint />
               }
             }
-            <caliburn-stack-col [gap]="4" align="start">
+            <caliburn-stack-col [gap]="spacing().toolbarColGap" align="start">
               <caliburn-stack-row
-                [gap]="1"
+                [gap]="spacing().toolbarRowGap"
                 class="App-toolbar-container"
                 [class.zen-mode]="state().zenModeEnabled"
               >
@@ -116,6 +131,7 @@
       <div
         class="layer-ui__wrapper__top-right zen-mode-transition"
         [class.transition-right]="state().zenModeEnabled"
+        [class.layer-ui__wrapper__top-right--compact]="isCompactStylesPanel()"
       >
         @if (defaultUIEnabled() && state().collaborators.size) {
           <caliburn-user-list
@@ -182,6 +198,7 @@
     </div>
   }
 </div>
+}
 @if (sidebar(); as hostSidebar) {
   <ng-container *ngTemplateOutlet="hostSidebar" />
 }

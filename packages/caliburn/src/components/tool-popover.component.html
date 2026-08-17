@@ -1,0 +1,36 @@
+<button
+  caliburn-icon-button
+  mode="toggle"
+  [class.fillable]="displayedOption().fillable"
+  [icon]="displayedOption().icon"
+  [checked]="isActive()"
+  [disabled]="triggerDisabled()"
+  [title]="triggerTitle()"
+  [ariaLabel]="triggerTitle()"
+  [testId]="testId()"
+  (select)="onTriggerSelect()"
+></button>
+@if (open()) {
+  <div
+    class="tool-popover-content"
+    style="position: fixed; transform: translateX(-50%)"
+    [style.top.px]="contentTop()"
+    [style.bottom.px]="contentBottom()"
+    [style.left.px]="contentLeft()"
+  >
+    @for (option of options(); track option.type) {
+      <button
+        caliburn-icon-button
+        mode="toggle"
+        [class.fillable]="option.fillable"
+        [icon]="option.icon"
+        [checked]="currentType() === option.type"
+        [disabled]="isToolButtonDisabled(option.type)"
+        [title]="optionTitle(option)"
+        [ariaLabel]="optionTitle(option)"
+        [testId]="'toolbar-' + option.type"
+        (select)="onOptionSelect(option)"
+      ></button>
+    }
+  </div>
+}

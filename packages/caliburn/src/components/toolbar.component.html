@@ -1,12 +1,13 @@
 <caliburn-island
   class="App-toolbar"
   [class.zen-mode]="state().zenModeEnabled"
+  [class.App-toolbar--compact]="isCompactStylesPanel()"
   [padding]="1"
   viewportUi="top"
 >
   <caliburn-hint-viewer />
   <h2 class="visually-hidden" [id]="headingId()">{{ labels().shapes }}</h2>
-  <caliburn-stack-row [gap]="1">
+  <caliburn-stack-row [gap]="isCompactStylesPanel() ? 0.5 : 1">
     @if (forcedTool() === null) {
       <button
         caliburn-icon-button
@@ -26,7 +27,80 @@
       ></div>
     }
 
-    @for (button of buttons(); track button.type) {
+    @let hand = handButton();
+    <button
+      caliburn-icon-button
+      mode="toggle"
+      [class.fillable]="hand.fillable"
+      [icon]="hand.icon"
+      [checked]="hand.checked"
+      [disabled]="hand.disabled"
+      [title]="hand.title"
+      [ariaLabel]="hand.ariaLabel"
+      [ariaKeyshortcuts]="hand.shortcut"
+      [keyBindingLabel]="hand.keyBindingLabel"
+      [testId]="hand.testId"
+      (select)="onToolSelect(hand.type, $event)"
+    ></button>
+
+    @if (isCompactStylesPanel()) {
+      <caliburn-selection-tool-popover />
+    } @else {
+      @let selection = selectionButton();
+      <button
+        caliburn-icon-button
+        mode="toggle"
+        [class.fillable]="selection.fillable"
+        [icon]="selection.icon"
+        [checked]="selection.checked"
+        [disabled]="selection.disabled"
+        [title]="selection.title"
+        [ariaLabel]="selection.ariaLabel"
+        [ariaKeyshortcuts]="selection.shortcut"
+        [keyBindingLabel]="selection.keyBindingLabel"
+        [testId]="selection.testId"
+        (select)="onToolSelect(selection.type, $event)"
+      ></button>
+    }
+
+    @for (button of shapeButtons(); track button.type) {
+      <button
+        caliburn-icon-button
+        mode="toggle"
+        [class.fillable]="button.fillable"
+        [icon]="button.icon"
+        [checked]="button.checked"
+        [disabled]="button.disabled"
+        [title]="button.title"
+        [ariaLabel]="button.ariaLabel"
+        [ariaKeyshortcuts]="button.shortcut"
+        [keyBindingLabel]="button.keyBindingLabel"
+        [testId]="button.testId"
+        (select)="onToolSelect(button.type, $event)"
+      ></button>
+    }
+
+    @if (isCompactStylesPanel()) {
+      <caliburn-freedraw-tool-popover />
+    } @else {
+      @let freedraw = freedrawButton();
+      <button
+        caliburn-icon-button
+        mode="toggle"
+        [class.fillable]="freedraw.fillable"
+        [icon]="freedraw.icon"
+        [checked]="freedraw.checked"
+        [disabled]="freedraw.disabled"
+        [title]="freedraw.title"
+        [ariaLabel]="freedraw.ariaLabel"
+        [ariaKeyshortcuts]="freedraw.shortcut"
+        [keyBindingLabel]="freedraw.keyBindingLabel"
+        [testId]="freedraw.testId"
+        (select)="onToolSelect(freedraw.type, $event)"
+      ></button>
+    }
+
+    @for (button of trailingButtons(); track button.type) {
       <button
         caliburn-icon-button
         mode="toggle"
@@ -52,7 +126,7 @@
         [class.App-toolbar__extra-tools-trigger--selected]="
           isExtraToolSelected()
         "
-        [mobile]="isMobile"
+        [mobile]="isMobile()"
         [title]="labels().extraTools"
         (toggle)="toggleExtraTools()"
       >
@@ -60,7 +134,7 @@
       </button>
       <caliburn-dropdown-menu-content
         class="App-toolbar__extra-tools-dropdown"
-        [mobile]="isMobile"
+        [mobile]="isMobile()"
         (closeOutside)="closeExtraTools()"
         (itemSelected)="closeExtraTools()"
       >

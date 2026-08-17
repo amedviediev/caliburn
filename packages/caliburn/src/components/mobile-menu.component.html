@@ -1,0 +1,114 @@
+<ng-template #scrollBackButton>
+  <button
+    type="button"
+    class="scroll-back-to-content"
+    (click)="scrollBackToContent()"
+  >
+    {{ scrollBackToContentLabel() }}
+  </button>
+</ng-template>
+
+<!-- welcome screen, bottom bar, and top bar all have the same z-index;
+     ordered in this reverse order so that top bar is on top -->
+<div class="App-welcome-screen">
+  @if (renderWelcomeScreen()) {
+    @if (welcomeScreenCenter(); as center) {
+      <ng-container *ngTemplateOutlet="center" />
+    } @else {
+      <caliburn-welcome-screen-center>
+        <caliburn-welcome-screen-logo />
+        <caliburn-welcome-screen-heading>{{
+          welcomeScreenHeading()
+        }}</caliburn-welcome-screen-heading>
+        <caliburn-welcome-screen-menu>
+          <caliburn-welcome-screen-menu-item-load-scene />
+          <caliburn-welcome-screen-menu-item-help />
+        </caliburn-welcome-screen-menu>
+      </caliburn-welcome-screen-center>
+    }
+  }
+</div>
+
+@if (shouldRenderDefaultBottomBar()) {
+  <div
+    class="App-bottom-bar"
+    data-viewport-ui="bottom"
+    [style.marginBottom.px]="bottomBarMargin"
+  >
+    @if (showScrollBackToContent()) {
+      <div class="floating-status-stack">
+        <ng-container *ngTemplateOutlet="scrollBackButton" />
+      </div>
+    }
+
+    <caliburn-compact-shape-actions variant="mobile" />
+
+    <caliburn-island class="App-toolbar">
+      @if (state().openDialog?.name !== "elementLinkSelector") {
+        <caliburn-mobile-toolbar />
+      }
+    </caliburn-island>
+  </div>
+} @else if (showScrollBackToContent()) {
+  <div class="floating-status-stack">
+    <ng-container *ngTemplateOutlet="scrollBackButton" />
+  </div>
+}
+
+@if (viewportStatusFrame()?.label; as label) {
+  <div class="viewport-status-frame__badge-row">
+    <div
+      caliburn-viewport-status-badge
+      [label]="label"
+      [border]="viewportStatusFrame()!.border"
+    ></div>
+  </div>
+}
+
+<caliburn-fixed-side-container side="top" class="App-top-bar">
+  @if (state().openDialog?.name !== "elementLinkSelector") {
+    <div
+      class="App-toolbar-content"
+      style="display: flex; flex-direction: row; justify-content: space-between"
+    >
+      <div class="excalidraw-ui-top-left">
+        @if (topLeftUI(); as topLeft) {
+          <ng-container *ngTemplateOutlet="topLeft" />
+        }
+        @if (mainMenu(); as menu) {
+          <ng-container *ngTemplateOutlet="menu" />
+        } @else if (defaultUIEnabled()) {
+          <caliburn-default-main-menu />
+        }
+      </div>
+      <div class="excalidraw-ui-top-right">
+        @if (topRightUI(); as topRight) {
+          <ng-container *ngTemplateOutlet="topRight" />
+        } @else if (showSidebarTrigger()) {
+          <button
+            caliburn-sidebar-trigger
+            triggerClass="default-sidebar-trigger"
+            icon="sidebarRightIcon"
+            [name]="defaultSidebarName"
+            [tab]="defaultSidebarTab"
+            [title]="libraryTitle()"
+            (toggle)="onSidebarToggle($event)"
+          ></button>
+        }
+        @if (
+          defaultUIEnabled() &&
+          state().viewModeEnabled &&
+          isInteractionEnabled()
+        ) {
+          <button
+            type="button"
+            class="disable-view-mode"
+            (click)="exitViewMode()"
+          >
+            <ng-icon name="pencilIcon" />
+          </button>
+        }
+      </div>
+    </div>
+  }
+</caliburn-fixed-side-container>

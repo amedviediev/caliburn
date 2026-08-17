@@ -1,0 +1,147 @@
+<div #toolbar class="mobile-toolbar">
+  @let hand = toolButton("hand");
+  <button
+    caliburn-icon-button
+    mode="toggle"
+    [class.fillable]="hand.fillable"
+    [icon]="hand.icon"
+    [checked]="hand.checked"
+    [disabled]="hand.disabled"
+    [title]="hand.title"
+    [ariaLabel]="hand.ariaLabel"
+    [testId]="hand.testId"
+    (select)="onToolSelect(hand.type)"
+  ></button>
+
+  <caliburn-selection-tool-popover />
+
+  <caliburn-freedraw-tool-popover />
+
+  @let eraser = toolButton("eraser");
+  <button
+    caliburn-icon-button
+    mode="toggle"
+    [class.fillable]="eraser.fillable"
+    [icon]="eraser.icon"
+    [checked]="eraser.checked"
+    [disabled]="eraser.disabled"
+    [title]="eraser.title"
+    [ariaLabel]="eraser.ariaLabel"
+    [testId]="eraser.testId"
+    (select)="onToolSelect(eraser.type)"
+  ></button>
+
+  <caliburn-tool-popover
+    testId="toolbar-rectangle"
+    [options]="shapeTools()"
+    [defaultOption]="genericShapeDefault()"
+    [displayedOption]="genericShapeOption()"
+    (toolChange)="onGenericShapeChange($event)"
+  />
+
+  <caliburn-tool-popover
+    testId="toolbar-arrow"
+    [options]="linearElementTools()"
+    [defaultOption]="linearElementDefault()"
+    [displayedOption]="linearElementOption()"
+    (toolChange)="onLinearElementChange($event)"
+  />
+
+  @if (showTextToolOutside()) {
+    @let text = toolButton("text");
+    <button
+      caliburn-icon-button
+      mode="toggle"
+      [class.fillable]="text.fillable"
+      [icon]="text.icon"
+      [checked]="text.checked"
+      [disabled]="text.disabled"
+      [title]="text.title"
+      [ariaLabel]="text.ariaLabel"
+      [testId]="text.testId"
+      (select)="onToolSelect(text.type)"
+    ></button>
+  }
+
+  @if (showImageToolOutside()) {
+    @let image = toolButton("image");
+    <button
+      caliburn-icon-button
+      mode="toggle"
+      [class.fillable]="image.fillable"
+      [icon]="image.icon"
+      [checked]="image.checked"
+      [disabled]="image.disabled"
+      [title]="image.title"
+      [ariaLabel]="image.ariaLabel"
+      [testId]="image.testId"
+      (select)="onToolSelect(image.type)"
+    ></button>
+  }
+
+  @if (showFrameToolOutside()) {
+    @let frame = toolButton("frame");
+    <button
+      caliburn-icon-button
+      mode="toggle"
+      [class.fillable]="frame.fillable"
+      [icon]="frame.icon"
+      [checked]="frame.checked"
+      [disabled]="frame.disabled"
+      [title]="frame.title"
+      [ariaLabel]="frame.ariaLabel"
+      [testId]="frame.testId"
+      (select)="onToolSelect(frame.type)"
+    ></button>
+  }
+
+  <caliburn-dropdown-menu [open]="extraToolsOpen()">
+    <button
+      caliburn-dropdown-menu-trigger
+      class="App-toolbar__extra-tools-trigger App-toolbar__extra-tools-trigger--mobile"
+      [class.App-toolbar__extra-tools-trigger--selected]="
+        isExtraToolSelected() || extraToolsOpen()
+      "
+      [mobile]="true"
+      [title]="labels().extraTools"
+      [style.width.px]="triggerWidth"
+      [style.height.px]="triggerWidth"
+      style="display: flex; align-items: center; justify-content: center"
+      (toggle)="toggleExtraTools()"
+    >
+      <ng-icon [name]="extraToolsIcon()" />
+    </button>
+    <caliburn-dropdown-menu-content
+      class="App-toolbar__extra-tools-dropdown"
+      align="start"
+      [mobile]="true"
+      (closeOutside)="closeExtraTools()"
+      (itemSelected)="closeExtraTools()"
+    >
+      @for (item of dropdownTools(); track item.type) {
+        <button
+          caliburn-dropdown-menu-item
+          [icon]="item.icon"
+          [shortcut]="item.shortcut"
+          [testId]="item.testId"
+          [selected]="item.selected"
+          [disabled]="item.disabled"
+          (select)="setActiveTool(item.type)"
+        >
+          {{ item.label }}
+        </button>
+      }
+      <div style="margin: 6px 0; font-size: 14px; font-weight: 600">
+        Generate
+      </div>
+      <button
+        caliburn-dropdown-menu-item
+        icon="mermaidLogoIcon"
+        testId="toolbar-embeddable"
+        (select)="openMermaidToExcalidraw()"
+      >
+        {{ labels().mermaidToExcalidraw }}
+      </button>
+    </caliburn-dropdown-menu-content>
+  </caliburn-dropdown-menu>
+</div>

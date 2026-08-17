@@ -7,6 +7,7 @@ exports[`<Excalidraw/> > <MainMenu/> > should render main menu with host menu it
   style="position: fixed; top: 8px; left: 0px;"
 >
   <!--container-->
+  <!--container-->
   <caliburn-island
     class="Island dropdown-menu-container"
     style="--padding: 2;"
@@ -139,6 +140,7 @@ exports[`<Excalidraw/> > <MainMenu/> > should render main menu with host menu it
         </caliburn-dropdown-menu-item-content>
       </button>
     </caliburn-menu-help>
+    <!--ng-container-->
   </caliburn-island>
   <!--container-->
 </div>
@@ -150,6 +152,7 @@ exports[`<Excalidraw/> > Test UIOptions prop > Test canvasActions > should rende
   data-testid="dropdown-menu"
   style="position: fixed; top: 8px; left: 0px;"
 >
+  <!--container-->
   <!--container-->
   <caliburn-island
     class="Island dropdown-menu-container"
@@ -781,6 +784,7 @@ exports[`<Excalidraw/> > Test UIOptions prop > Test canvasActions > should rende
               <caliburn-button-separator
                 style="width: 1px; height: 1rem; background-color: var(--default-border-color); margin: 0 auto;"
               />
+              <!--container-->
               <button
                 aria-label="Canvas background"
                 class="active-color color-picker__button has-outline properties-trigger"
@@ -794,6 +798,7 @@ exports[`<Excalidraw/> > Test UIOptions prop > Test canvasActions > should rende
                 >
                   <!--container-->
                 </div>
+                <!--container-->
               </button>
               <!--container-->
             </div>
@@ -802,6 +807,7 @@ exports[`<Excalidraw/> > Test UIOptions prop > Test canvasActions > should rende
       </div>
       <!--container-->
     </caliburn-menu-change-canvas-background>
+    <!--ng-container-->
   </caliburn-island>
   <!--container-->
 </div>

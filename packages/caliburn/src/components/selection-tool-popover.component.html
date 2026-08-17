@@ -1,0 +1,7 @@
+<caliburn-tool-popover
+  testId="toolbar-selection"
+  [options]="selectionTools()"
+  [defaultOption]="preferredType()"
+  [displayedOption]="displayedOption()"
+  (toolChange)="onToolChange($event)"
+/>

@@ -9,13 +9,14 @@
     (caliburn-dropdown-menu-item-select)="onItemSelect($any($event))"
     #menuRoot
   >
+    <ng-template #items><ng-content /></ng-template>
     @if (mobile()) {
       <caliburn-stack-col class="dropdown-menu-container">
-        <ng-content />
+        <ng-container [ngTemplateOutlet]="items" />
       </caliburn-stack-col>
     } @else {
       <caliburn-island class="dropdown-menu-container" [padding]="2">
-        <ng-content />
+        <ng-container [ngTemplateOutlet]="items" />
       </caliburn-island>
     }
   </div>

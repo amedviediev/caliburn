@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  forwardRef,
   inject,
   input,
   output,
@@ -10,12 +11,16 @@ import {
 
 import { EVENT, KEYS } from "@excalidraw/common";
 
+import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../../editor.component";
+
 import { CaliburnIslandComponent } from "../island.component";
 
+import type { CaliburnEditorComponent } from "../../editor.component";
 import type { OnDestroy, OnInit } from "@angular/core";
 
 /** upstream's Radix placement for this popover: `side="right"`,
- * `sideOffset={20}`, `align="start"`, `alignOffset={-16}` */
+ * `align="start"` — or `side="bottom"`, `align="center"` in mobile portrait —
+ * with `sideOffset={20}` and `alignOffset={-16}` either way */
 const SIDE_OFFSET = 20;
 const ALIGN_OFFSET = -16;
 
@@ -40,6 +45,8 @@ const ALIGN_OFFSET = -16;
     style: "position: fixed; z-index: var(--zIndex-ui-styles-popup)",
     "[style.top.px]": "top()",
     "[style.left.px]": "left()",
+    "[style.transform]": "transform()",
+    "[style.marginLeft]": "marginLeft()",
   },
   imports: [CaliburnIslandComponent],
   templateUrl: "./properties-popover.component.html",
@@ -47,19 +54,51 @@ const ALIGN_OFFSET = -16;
 export class CaliburnPropertiesPopoverComponent implements OnInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
+  private readonly editor = inject<CaliburnEditorComponent>(
+    forwardRef(() => CaliburnEditorComponentToken),
+  );
+
   readonly triggerRect = input.required<DOMRect | null>();
 
   readonly close = output<void>();
 
+  /** upstream flips the popover under its trigger in mobile portrait, where
+   * there is no room to its side */
+  private readonly isMobilePortrait = computed(() => {
+    const editorInterface = this.editor.editorInterface;
+    return (
+      editorInterface.formFactor === "phone" && !editorInterface.isLandscape
+    );
+  });
+
   protected readonly top = computed(() => {
     const rect = this.triggerRect();
-    return rect ? rect.top + ALIGN_OFFSET : 0;
+    if (!rect) {
+      return 0;
+    }
+    return this.isMobilePortrait()
+      ? rect.bottom + SIDE_OFFSET
+      : rect.top + ALIGN_OFFSET;
   });
 
   protected readonly left = computed(() => {
     const rect = this.triggerRect();
-    return rect ? rect.right + SIDE_OFFSET : 0;
+    if (!rect) {
+      return 0;
+    }
+    return this.isMobilePortrait()
+      ? rect.left + rect.width / 2
+      : rect.right + SIDE_OFFSET;
   });
+
+  protected readonly transform = computed(() =>
+    this.isMobilePortrait() ? "translateX(-50%)" : null,
+  );
+
+  /** upstream's phone-only `marginLeft: "0.5rem"` */
+  protected readonly marginLeft = computed(() =>
+    this.editor.editorInterface.formFactor === "phone" ? "0.5rem" : null,
+  );
 
   private readonly onDocPointerDown = (event: Event) => {
     const target = event.target as Node | null;

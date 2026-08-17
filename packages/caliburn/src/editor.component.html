@@ -4,6 +4,12 @@
   [class]="className()"
   [class.theme--dark]="isDarkTheme()"
   [class.excalidraw--view-mode]="state.viewModeEnabled"
+  [class.excalidraw--mobile]="editorInterface.formFactor === 'phone'"
+  [class.excalidraw--mobile-toolbar]="
+    editorInterface.formFactor === 'phone' &&
+    isDefaultUIEnabled() &&
+    !state.viewModeEnabled
+  "
   [class.excalidraw--non-interactive]="!isInteractionEnabled()"
   [class.excalidraw--navigation]="
     !isInteractionEnabled() && isNavigationEnabled()
@@ -43,6 +49,11 @@
     (contextmenu)="handleCanvasContextMenu($event)"
     (wheel)="handleWheel($event)"
   ></canvas>
+  @if (viewportStatusFrame()?.border; as border) {
+    @if (editorInterface.formFactor === "phone") {
+      <div class="viewport-status-frame__border" [style.borderColor]="border"></div>
+    }
+  }
   <caliburn-frame-names />
   @if (isDefaultUIEnabled() && showShapeSwitchPanel()) {
     <div caliburn-convert-element-type-popup></div>

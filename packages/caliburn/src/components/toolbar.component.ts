@@ -1,13 +1,18 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   forwardRef,
   inject,
   input,
   signal,
 } from "@angular/core";
 
-import { KEYS, capitalizeString } from "@excalidraw/common";
+import {
+  KEYS,
+  capitalizeString,
+  deriveStylesPanelMode,
+} from "@excalidraw/common";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import {
@@ -31,9 +36,11 @@ import { CaliburnDropdownMenuContentComponent } from "./dropdown-menu/dropdown-m
 import { CaliburnDropdownMenuItemComponent } from "./dropdown-menu/dropdown-menu-item.component";
 import { CaliburnDropdownMenuTriggerComponent } from "./dropdown-menu/dropdown-menu-trigger.component";
 import { CaliburnDropdownMenuComponent } from "./dropdown-menu/dropdown-menu.component";
+import { CaliburnFreedrawToolPopoverComponent } from "./freedraw-tool-popover.component";
 import { CaliburnHintViewerComponent } from "./hint-viewer.component";
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 import { CaliburnIslandComponent } from "./island.component";
+import { CaliburnSelectionToolPopoverComponent } from "./selection-tool-popover.component";
 import { CaliburnStackRowComponent } from "./stack.component";
 import { TOOL_ICONS } from "./tools";
 
@@ -78,9 +85,11 @@ type ToolButtonView = {
     CaliburnDropdownMenuContentComponent,
     CaliburnDropdownMenuItemComponent,
     CaliburnDropdownMenuTriggerComponent,
+    CaliburnFreedrawToolPopoverComponent,
     CaliburnHintViewerComponent,
     CaliburnIconButtonComponent,
     CaliburnIslandComponent,
+    CaliburnSelectionToolPopoverComponent,
     CaliburnStackRowComponent,
   ],
   templateUrl: "./toolbar.component.html",
@@ -104,8 +113,20 @@ export class CaliburnToolbarComponent {
   protected readonly extraToolsOpen = this.extraToolsMenuOpen.asReadonly();
 
   /** the primitives take upstream's `useEditorInterface()` as an input */
-  protected readonly isMobile =
-    this.editor.editorInterface.formFactor === "phone";
+  protected readonly isMobile = computed(
+    () => this.editor.editorInterface.formFactor === "phone",
+  );
+
+  /** upstream's `useStylesPanelMode()`: the tablet / compact-desktop toolbar
+   * tightens its spacing and groups selection ⇄ lasso and freedraw ⇄
+   * draw-shape behind `ToolPopover`s */
+  protected readonly isCompactStylesPanel = computed(
+    () => deriveStylesPanelMode(this.editor.editorInterface) === "compact",
+  );
+
+  private isFullStylesPanel() {
+    return deriveStylesPanelMode(this.editor.editorInterface) === "full";
+  }
 
   protected state() {
     this.editor.changeGeneration();
@@ -145,21 +166,34 @@ export class CaliburnToolbarComponent {
     };
   }
 
-  protected buttons(): ToolButtonView[] {
-    const state = this.state();
-    const isLassoPreferred = state.preferredSelectionTool.type === "lasso";
+  protected handButton(): ToolButtonView {
+    return this.toolButton("hand", { hideKeyBinding: true });
+  }
 
+  /** upstream renders the selection ⇄ lasso popover here in compact mode; the
+   * full toolbar renders whichever of the two is the preferred tool */
+  protected selectionButton(): ToolButtonView {
+    return this.state().preferredSelectionTool.type === "lasso"
+      ? this.toolButton("lasso", { shortcutType: "selection" })
+      : this.toolButton("selection");
+  }
+
+  protected shapeButtons(): ToolButtonView[] {
     return [
-      this.toolButton("hand", { hideKeyBinding: true }),
-      isLassoPreferred
-        ? this.toolButton("lasso", { shortcutType: "selection" })
-        : this.toolButton("selection"),
       this.toolButton("rectangle"),
       this.toolButton("diamond"),
       this.toolButton("ellipse"),
       this.toolButton("arrow"),
       this.toolButton("line"),
-      this.toolButton("freedraw"),
+    ];
+  }
+
+  protected freedrawButton(): ToolButtonView {
+    return this.toolButton("freedraw");
+  }
+
+  protected trailingButtons(): ToolButtonView[] {
+    return [
       this.toolButton("text"),
       ...(this.editor.props.UIOptions.tools?.image === false
         ? []
@@ -217,21 +251,28 @@ export class CaliburnToolbarComponent {
         selected: activeToolType === "bucketfill",
         disabled: this.isToolButtonDisabled("bucketfill"),
       },
-      {
-        type: "lasso" as const,
-        icon: TOOL_ICONS.lasso,
-        shortcut: undefined,
-        testId: "toolbar-lasso",
-        label: t("toolBar.lasso"),
-        selected: this.isLassoToolSelected(),
-        disabled: this.isToolButtonDisabled("lasso"),
-      },
+      // upstream only offers lasso from the dropdown in the full toolbar: the
+      // compact one already groups it with selection behind a `ToolPopover`
+      ...(this.isFullStylesPanel()
+        ? [
+            {
+              type: "lasso" as const,
+              icon: TOOL_ICONS.lasso,
+              shortcut: undefined,
+              testId: "toolbar-lasso",
+              label: t("toolBar.lasso"),
+              selected: this.isLassoToolSelected(),
+              disabled: this.isToolButtonDisabled("lasso"),
+            },
+          ]
+        : []),
     ];
   }
 
   private isLassoToolSelected() {
     const state = this.state();
     return (
+      this.isFullStylesPanel() &&
       state.activeTool.type === "lasso" &&
       state.preferredSelectionTool.type !== "lasso"
     );
@@ -242,7 +283,7 @@ export class CaliburnToolbarComponent {
     return (
       activeToolType === "frame" ||
       activeToolType === "embeddable" ||
-      activeToolType === "autoshape" ||
+      (this.isFullStylesPanel() && activeToolType === "autoshape") ||
       activeToolType === "laser" ||
       activeToolType === "bucketfill" ||
       this.isLassoToolSelected()
@@ -254,10 +295,11 @@ export class CaliburnToolbarComponent {
     switch (activeToolType) {
       case "frame":
       case "embeddable":
-      case "autoshape":
       case "laser":
       case "bucketfill":
         return TOOL_ICONS[activeToolType];
+      case "autoshape":
+        return this.isFullStylesPanel() ? TOOL_ICONS.autoshape : "dotsIcon";
       default:
         return this.isLassoToolSelected() ? TOOL_ICONS.lasso : "dotsIcon";
     }

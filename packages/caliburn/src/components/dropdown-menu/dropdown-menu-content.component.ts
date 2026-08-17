@@ -1,3 +1,5 @@
+import { NgTemplateOutlet } from "@angular/common";
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,6 +33,9 @@ import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
  * `open` is true, injected via DI (no `forwardRef`: no import cycle between
  * this file and `dropdown-menu.component.ts`). `mobile` replaces
  * `useEditorInterface().formFactor === "phone"`, see the trigger component.
+ * The projected items go through a single `<ng-content>` held in a template:
+ * Angular projects into only the last `<ng-content>` of a given selector, so
+ * one per branch would leave the mobile branch empty.
  *
  * Positioning: `caliburn-dropdown-menu` (the shared wrapper) is `display:
  * contents`, so it can't itself be a `position: relative` containing block
@@ -43,7 +48,11 @@ import type { ElementRef, OnDestroy, OnInit } from "@angular/core";
 @Component({
   selector: "caliburn-dropdown-menu-content",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnIslandComponent, CaliburnStackColComponent],
+  imports: [
+    NgTemplateOutlet,
+    CaliburnIslandComponent,
+    CaliburnStackColComponent,
+  ],
   templateUrl: "./dropdown-menu-content.component.html",
 })
 export class CaliburnDropdownMenuContentComponent implements OnInit, OnDestroy {
