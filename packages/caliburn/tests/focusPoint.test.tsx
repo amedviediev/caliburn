@@ -4,13 +4,14 @@ import { pointFrom } from "@excalidraw/math";
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
+  NonDeleted,
 } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { Keyboard, Pointer } from "./helpers/ui";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
 import { render } from "./test-utils";
 
 const mouse = new Pointer("mouse");
@@ -225,6 +226,116 @@ describe("focus point", () => {
       Keyboard.undo();
 
       expect(arrowById(arrow.id).endBinding?.fixedPoint).toEqual([0.5, 0.5]);
+    });
+
+    it("restores the orbit bind mode", () => {
+      selectedBoundArrow();
+      API.setAppState({ bindMode: "inside" });
+
+      mouse.clickAt(600, 600);
+
+      expect(h.state.bindMode).toBe("orbit");
+    });
+
+    it("drops the linear editor when the release lands off a multi-selection", () => {
+      const { arrow, rectangle } = selectedBoundArrow();
+      API.setSelectedElements([arrow, rectangle]);
+      API.setAppState({
+        selectedLinearElement: h.state.selectedLinearElement,
+      });
+
+      // the rectangle, which is not the linear element the editor is on
+      mouse.clickAt(210, 110);
+
+      expect(h.state.selectedLinearElement).toBe(null);
+    });
+  });
+
+  describe("elbow normalization on release", () => {
+    it("renormalizes an elbow arrow bound to the dragged shape", () => {
+      const start = API.createElement({
+        type: "rectangle",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+      });
+      const end = API.createElement({
+        type: "rectangle",
+        x: 400,
+        y: 0,
+        width: 100,
+        height: 100,
+      });
+      API.setElements([start, end]);
+
+      UI.clickTool("arrow");
+      UI.clickOnTestId("elbow-arrow");
+      mouse.reset();
+      mouse.moveTo(50, 50);
+      mouse.click();
+      mouse.moveTo(450, 50);
+      mouse.click();
+
+      const arrow = h.elements.at(-1) as NonDeleted<ExcalidrawArrowElement>;
+      expect(arrow.startBinding?.elementId).toBe(start.id);
+      expect(arrow.endBinding?.elementId).toBe(end.id);
+
+      mouse.reset();
+      API.setSelectedElements([start, arrow]);
+      mouse.downAt(50, 0);
+      mouse.moveTo(50, 300);
+
+      // the drag itself keeps the route up to date, so the release's
+      // normalization pass is what has to be observed
+      const mutateElement = vi.spyOn(h.app.scene, "mutateElement");
+      const routeAtRelease = arrowById(arrow.id).points;
+      mouse.up();
+
+      expect(mutateElement).toHaveBeenCalledWith(
+        expect.objectContaining({ id: arrow.id }),
+        {},
+      );
+      expect(arrowById(arrow.id).points).toEqual(routeAtRelease);
+    });
+
+    it("normalizes the selected elbow arrow's own route", () => {
+      const rectangle = API.createElement({
+        type: "rectangle",
+        x: 300,
+        y: 0,
+        width: 100,
+        height: 100,
+      });
+      API.setElements([rectangle]);
+
+      UI.clickTool("arrow");
+      UI.clickOnTestId("elbow-arrow");
+      mouse.reset();
+      mouse.moveTo(0, 50);
+      mouse.click();
+      mouse.moveTo(150, 50);
+      mouse.click();
+
+      const arrow = h.elements.at(-1) as ExcalidrawArrowElement;
+      expect(h.state.selectedLinearElement?.elementId).toBe(arrow.id);
+      expect(h.state.selectedLinearElement?.isEditing).toBe(false);
+
+      // drag the free endpoint over the rectangle, where the drag snaps it to
+      // the outline and the release recomputes the route from the binding
+      mouse.reset();
+      mouse.downAt(150, 50);
+      mouse.moveTo(340, 40);
+
+      const mutateElement = vi.spyOn(h.app.scene, "mutateElement");
+      const routeAtRelease = arrowById(arrow.id).points;
+      mouse.up();
+
+      expect(mutateElement).toHaveBeenCalledWith(
+        expect.objectContaining({ id: arrow.id }),
+        {},
+      );
+      expect(arrowById(arrow.id).points).toEqual(routeAtRelease);
     });
   });
 });

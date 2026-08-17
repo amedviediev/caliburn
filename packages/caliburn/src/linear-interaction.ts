@@ -997,6 +997,17 @@ export const handleLinearEditorPointerUp = (
       }
     }
   } else if (editor.state.selectedLinearElement) {
+    // Normalize elbow arrow points, remove close parallel segments
+    if (editor.state.selectedLinearElement.elbowed) {
+      const element = LinearElementEditor.getElement(
+        editor.state.selectedLinearElement.elementId,
+        editor.scene.getNonDeletedElementsMap(),
+      );
+      if (element) {
+        editor.scene.mutateElement(element, {});
+      }
+    }
+
     if (editor.state.selectedLinearElement.draggedFocusPointBinding) {
       handleFocusPointPointerUp(
         editor.state.selectedLinearElement,
@@ -1012,6 +1023,15 @@ export const handleLinearEditorPointerUp = (
           },
         },
       });
+    } else if (
+      pointerDownState.hit?.element?.id !==
+      editor.state.selectedLinearElement.elementId
+    ) {
+      const selectedElements = editor.scene.getSelectedElements(editor.state);
+      // set selectedLinearElement to null if there is more than one element selected since we don't want to show linear element handles
+      if (selectedElements.length > 1) {
+        editor.setState({ selectedLinearElement: null });
+      }
     } else if (editor.state.selectedLinearElement.isDragging) {
       editor.setState({
         selectedLinearElement: {

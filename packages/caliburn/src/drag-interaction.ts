@@ -16,6 +16,7 @@ import {
   getDragOffsetXY,
   getSelectionStateForElements,
   isBindableElement,
+  isElbowArrow,
   isSomeElementSelected,
   newElementWith,
   syncMovedIndices,
@@ -347,6 +348,36 @@ export const maybeDragSelectedElements = (
   }
 
   return true;
+};
+
+/**
+ * An elbow arrow bound to a shape that was itself dragged has been re-routed
+ * point by point along the way; the release normalizes the route once, the
+ * same way a direct edit of the arrow does.
+ */
+export const renormalizeBoundElbowArrowsOnPointerUp = (
+  editor: CaliburnEditorComponent,
+  pointerDownState: PointerDownState,
+) => {
+  if (
+    !pointerDownState.drag.hasOccurred ||
+    !pointerDownState.hit?.element?.id
+  ) {
+    return;
+  }
+
+  const elementsMap = editor.scene.getNonDeletedElementsMap();
+  const element = elementsMap.get(pointerDownState.hit.element.id);
+  if (isBindableElement(element)) {
+    // Renormalize elbow arrows when they are changed via indirect move
+    element.boundElements
+      ?.filter((e) => e.type === "arrow")
+      .map((e) => elementsMap.get(e.id))
+      .filter((e) => isElbowArrow(e))
+      .forEach((e) => {
+        !!e && editor.scene.mutateElement(e, {});
+      });
+  }
 };
 
 export const cleanupAfterDragOnPointerUp = (

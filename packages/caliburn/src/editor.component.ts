@@ -365,6 +365,7 @@ import {
 } from "./linear-interaction";
 import {
   cleanupAfterDragOnPointerUp,
+  renormalizeBoundElbowArrowsOnPointerUp,
   revertActiveToolOnPointerUp,
 } from "./drag-interaction";
 import { handleEraser, maybeEraseOnPointerUp } from "./eraser-interaction";
@@ -4440,6 +4441,16 @@ export class CaliburnEditorComponent
       } else {
         handleLinearEditorPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
+        // upstream pairs this with the `selectedElementsAreBeingDragged: false`
+        // that caliburn writes from `cleanupAfterDragOnPointerUp` instead:
+        // React hands the whole handler the state the gesture ran under, while
+        // caliburn's writes commit as they are made, and the frame-membership
+        // update below still has to see the drag flag set. Nothing left in the
+        // handler reads the bind mode, so this one lands at upstream's slot.
+        this.setState({
+          bindMode: "orbit",
+        });
+        renormalizeBoundElbowArrowsOnPointerUp(this, this.pointerDownState);
         handleSelectionPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
         maybeSelectLinearElementOnPointerUp(this, this.pointerDownState);
