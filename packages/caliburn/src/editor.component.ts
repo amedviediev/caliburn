@@ -15,7 +15,10 @@ import {
   AppEventBus,
   DEFAULT_IMAGE_OPTIONS,
   DEFAULT_UI_OPTIONS,
+  EVENT,
   THEME,
+  TOOL_TYPE,
+  addEventListener,
   arrayToMap,
   getDateTime,
   muteFSAbortError,
@@ -90,6 +93,7 @@ import { findShapeByKey } from "@excalidraw/excalidraw/components/Tools";
 
 import {
   getDefaultAppState,
+  isEraserActive,
   isHandToolActive,
 } from "@excalidraw/excalidraw/appState";
 import { Fonts } from "@excalidraw/excalidraw/fonts";
@@ -147,6 +151,7 @@ import type {
   SidebarName,
   SidebarTabName,
   ToolType,
+  UnsubscribeCallback,
   UserToFollow,
 } from "@excalidraw/excalidraw/types";
 import type { SetViewportOptions } from "@excalidraw/excalidraw/viewport";
@@ -998,6 +1003,16 @@ export class CaliburnEditorComponent
     [payload: OnUserFollowedPayload]
   >();
 
+  /**
+   * Upstream's emitter of the same name, minus the in-flight gesture's own
+   * subscription — caliburn's pointer session replays its teardown itself
+   * (`pointer-session.ts`), so this carries only the subscribers upstream
+   * adds from outside a gesture.
+   */
+  private readonly missingPointerEventCleanupEmitter = new Emitter<
+    [event: PointerEvent | null]
+  >();
+
   readonly onPointerDownEmitter = new Emitter<
     [
       activeTool: AppState["activeTool"],
@@ -1634,6 +1649,7 @@ export class CaliburnEditorComponent
     this.unsubLibraryItems();
     clearLibraryItemSvgCache();
     this.onChangeEmitter.clear();
+    this.missingPointerEventCleanupEmitter.clear();
     this.store.onStoreIncrementEmitter.clear();
     this.store.onDurableIncrementEmitter.clear();
     this.appStateObserver.clear();
@@ -2851,10 +2867,63 @@ export class CaliburnEditorComponent
     });
     this.savePointer(event.clientX, event.clientY, "down");
 
+    if (
+      event.button === POINTER_BUTTON.ERASER &&
+      // must not switch tools while non-interactive (reachable when the
+      // active tool is allowed via `interaction.enabled.tools`) or while
+      // the active tool is host-controlled
+      this.isInteractionEnabled() &&
+      !this.activeTool() &&
+      this.state.activeTool.type !== TOOL_TYPE.eraser
+    ) {
+      // upstream re-enters the handler from a `setState` callback, so the
+      // eraser is active by the time the second pass reads it; here the
+      // write lands before the call returns, so the two run in sequence
+      this.setState({
+        activeTool: updateActiveTool(this.state, {
+          type: TOOL_TYPE.eraser,
+          lastActiveTool: this.state.activeTool,
+        }),
+      });
+      this.handleCanvasPointerDown(event);
+      const onPointerUp = () => {
+        unsubPointerUp();
+        unsubCleanup?.();
+        if (isEraserActive(this.state)) {
+          this.setState({
+            activeTool: updateActiveTool(this.state, {
+              ...(this.state.activeTool.lastActiveTool || {
+                type: TOOL_TYPE.selection,
+              }),
+              lastActiveTool: null,
+            }),
+          });
+        }
+      };
+
+      const unsubPointerUp = addEventListener(
+        window,
+        EVENT.POINTER_UP,
+        onPointerUp,
+        {
+          once: true,
+        },
+      );
+      let unsubCleanup: UnsubscribeCallback | undefined;
+      // subscribe inside rAF lest it'd be triggered on the same pointerdown
+      // if we start erasing while coming from blurred document since
+      // we cleanup pointer events on focus
+      requestAnimationFrame(() => {
+        unsubCleanup = this.missingPointerEventCleanupEmitter.once(onPointerUp);
+      });
+      return;
+    }
+
     // only handle left mouse button or touch
     if (
       event.button !== POINTER_BUTTON.MAIN &&
-      event.button !== POINTER_BUTTON.TOUCH
+      event.button !== POINTER_BUTTON.TOUCH &&
+      event.button !== POINTER_BUTTON.ERASER
     ) {
       return;
     }
@@ -3393,6 +3462,7 @@ export class CaliburnEditorComponent
   private maybeCleanupAfterMissingPointerUp = (event: PointerEvent | null) => {
     endPanSession();
     replayPointerSessionUp(event);
+    this.missingPointerEventCleanupEmitter.trigger(event).clear();
   };
 
   /**
