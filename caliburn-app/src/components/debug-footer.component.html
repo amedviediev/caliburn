@@ -1,0 +1,44 @@
+<button
+  class="ToolIcon_type_button"
+  data-testid="debug-forward"
+  aria-label="Move forward"
+  type="button"
+  (click)="trashFrames()"
+>
+  <div class="ToolIcon__icon" aria-hidden="true" aria-disabled="false">
+    <ng-icon name="trashIcon" />
+  </div>
+</button>
+<button
+  class="ToolIcon_type_button"
+  data-testid="debug-forward"
+  aria-label="Move forward"
+  type="button"
+  (click)="moveBackward()"
+>
+  <div class="ToolIcon__icon" aria-hidden="true" aria-disabled="false">
+    <ng-icon name="arrowheadArrowIconFlipped" />
+  </div>
+</button>
+<button
+  class="ToolIcon_type_button"
+  data-testid="debug-forward"
+  aria-label="Move forward"
+  type="button"
+  (click)="reset()"
+>
+  <div class="ToolIcon__icon" aria-hidden="true" aria-disabled="false">
+    <ng-icon name="closeIcon" />
+  </div>
+</button>
+<button
+  class="ToolIcon_type_button"
+  data-testid="debug-backward"
+  aria-label="Move backward"
+  type="button"
+  (click)="moveForward()"
+>
+  <div class="ToolIcon__icon" aria-hidden="true" aria-disabled="false">
+    <ng-icon name="arrowheadArrowIcon" />
+  </div>
+</button>

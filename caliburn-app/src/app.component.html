@@ -51,6 +51,7 @@
         [isCollabEnabled]="isCollabEnabled"
         [theme]="appTheme()"
         (collabDialogOpen)="openCollabDialog()"
+        (refresh)="refreshVisualDebugger()"
       />
     </ng-template>
     <ng-template #welcomeScreenCenterSlot>
@@ -63,7 +64,10 @@
       <caliburn-welcome-screen-menu-hint [label]="menuHintLabel()" />
     </ng-template>
     <ng-template #footerSlot>
-      <caliburn-app-footer />
+      <caliburn-app-footer
+        [visualDebuggerEnabled]="visualDebuggerEnabled()"
+        (refresh)="renderDebugScene()"
+      />
     </ng-template>
     <ng-template #topRightSlot>
       @if (isCollabEnabled) {
@@ -105,6 +109,9 @@
       <caliburn-error-dialog (close)="clearCollabError()">{{
         message
       }}</caliburn-error-dialog>
+    }
+    @if (debugCanvasAppState(); as state) {
+      <caliburn-debug-canvas [appState]="state" [scale]="debugCanvasScale" />
     }
   </caliburn-editor>
 </ng-template>

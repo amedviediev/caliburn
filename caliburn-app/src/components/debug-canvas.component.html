@@ -1,0 +1,10 @@
+<canvas
+  #canvas
+  style="position: absolute; z-index: 2; pointer-events: none"
+  [style.width.px]="appState().width"
+  [style.height.px]="appState().height"
+  [width]="appState().width * scale()"
+  [height]="appState().height * scale()"
+>
+  Debug Canvas
+</canvas>

@@ -12,6 +12,7 @@ import {
 import {
   EVENT,
   debounce,
+  isDevEnv,
   isRunningInIframe,
   isTestEnv,
   preventUnload,
@@ -85,6 +86,12 @@ import { CaliburnAppCollabErrorComponent } from "./collab/collab-error.component
 import { CaliburnAppFooterComponent } from "./components/app-footer.component";
 import { CaliburnAppMainMenuComponent } from "./components/app-main-menu.component";
 import { CaliburnAppWelcomeScreenComponent } from "./components/app-welcome-screen.component";
+import {
+  debugRenderer,
+  isVisualDebuggerEnabled,
+  loadSavedDebugState,
+} from "./components/debug-canvas";
+import { CaliburnDebugCanvasComponent } from "./components/debug-canvas.component";
 import {
   exportToBackend,
   getCollaborationLinkData,
@@ -298,8 +305,8 @@ const initializeScene = async (opts: {
  * mounts, so the resolved scene is applied through `updateScene` instead —
  * the same path upstream's own `hashchange` handler takes.
  *
- * The `TopErrorBoundary`, the visual debugger, the simulated collaborators,
- * `CustomStats` and the AI/Excalidraw+ surfaces are not ported.
+ * The `TopErrorBoundary`, the simulated collaborators, `CustomStats` and the
+ * AI/Excalidraw+ surfaces are not ported.
  */
 @Component({
   selector: "caliburn-app",
@@ -311,6 +318,7 @@ const initializeScene = async (opts: {
     CaliburnAppMainMenuComponent,
     CaliburnAppShareDialogComponent,
     CaliburnAppWelcomeScreenComponent,
+    CaliburnDebugCanvasComponent,
     CaliburnEditorComponent,
     CaliburnErrorDialogComponent,
     CaliburnLiveCollaborationTriggerComponent,
@@ -324,6 +332,24 @@ export class CaliburnAppComponent implements OnDestroy {
   protected readonly collab = inject(CollabService);
 
   private readonly editorRef = viewChild(CaliburnEditorComponent);
+  private readonly debugCanvasRef = viewChild(CaliburnDebugCanvasComponent);
+
+  /**
+   * Upstream re-reads `isVisualDebuggerEnabled()` on every app render, which
+   * is what makes `<DebugCanvas>` mount and unmount with the flag;
+   * `window.visualDebug` is not reactive, so the answer is mirrored here and
+   * re-read whenever something asks for a refresh (upstream's `forceRefresh`).
+   */
+  protected readonly visualDebuggerEnabled = signal(false);
+  private readonly debugAppState = signal<AppState | null>(null);
+  protected readonly debugCanvasAppState = computed(() =>
+    this.visualDebuggerEnabled() ? this.debugAppState() : null,
+  );
+
+  /** read per render, as upstream's `scale={window.devicePixelRatio}` is */
+  protected get debugCanvasScale() {
+    return window.devicePixelRatio;
+  }
 
   protected readonly isCollabDisabled = isRunningInIframe();
   protected readonly isCollabEnabled = !this.isCollabDisabled;
@@ -424,6 +450,19 @@ export class CaliburnAppComponent implements OnDestroy {
     });
 
     handleLibrary(api);
+
+    if (isDevEnv()) {
+      const debugState = loadSavedDebugState();
+
+      if (debugState.enabled && !window.visualDebug) {
+        window.visualDebug = {
+          data: [],
+        };
+      } else {
+        delete window.visualDebug;
+      }
+      this.refreshVisualDebugger();
+    }
 
     if (!this.initialized) {
       this.initialized = true;
@@ -785,6 +824,42 @@ export class CaliburnAppComponent implements OnDestroy {
           }
         }
       });
+    }
+
+    // Render the debug scene if the debug canvas is available
+    const debugCanvas = this.debugCanvasRef()?.canvasElement();
+    if (debugCanvas && this.excalidrawAPI) {
+      debugRenderer(debugCanvas, appState, elements, window.devicePixelRatio);
+    }
+    // upstream re-reads `excalidrawAPI.getAppState()` on every app render to
+    // size the overlay; this is the app's own view of the same state
+    if (this.visualDebuggerEnabled()) {
+      this.debugAppState.set(appState);
+    }
+  }
+
+  /** upstream's `forceRefresh`, narrowed to what it exists for here */
+  protected refreshVisualDebugger() {
+    this.debugAppState.set(this.excalidrawAPI?.getAppState() ?? null);
+    this.visualDebuggerEnabled.set(isVisualDebuggerEnabled());
+  }
+
+  /**
+   * The repaint upstream's `<AppFooter onChange>` asks for through
+   * `excalidrawAPI.refresh()` — which only reaches the debug canvas because
+   * it re-renders the app, and the re-render re-runs `debugRenderer`.
+   * Caliburn's imperative API has no `refresh`, so the repaint is direct.
+   */
+  protected renderDebugScene() {
+    const debugCanvas = this.debugCanvasRef()?.canvasElement();
+    const excalidrawAPI = this.excalidrawAPI;
+    if (debugCanvas && excalidrawAPI) {
+      debugRenderer(
+        debugCanvas,
+        excalidrawAPI.getAppState(),
+        excalidrawAPI.getSceneElementsIncludingDeleted(),
+        window.devicePixelRatio,
+      );
     }
   }
 

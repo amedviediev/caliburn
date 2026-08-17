@@ -1,5 +1,8 @@
 <caliburn-footer-center>
   <div style="display: flex; gap: 0.5rem; align-items: center">
+    @if (visualDebuggerEnabled()) {
+      <caliburn-debug-footer (refresh)="refresh.emit()" />
+    }
     <caliburn-app-encrypted-icon />
   </div>
 </caliburn-footer-center>

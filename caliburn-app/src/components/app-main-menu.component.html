@@ -15,6 +15,16 @@
   <caliburn-menu-clear-canvas />
   <caliburn-dropdown-menu-separator />
   <caliburn-menu-socials />
+  @if (isDevEnv) {
+    <button
+      caliburn-dropdown-menu-item
+      icon="eyeIcon"
+      testId="visual-debug-menu-item"
+      (select)="toggleVisualDebug()"
+    >
+      Visual Debug
+    </button>
+  }
   <caliburn-dropdown-menu-separator />
   <caliburn-menu-preferences />
   <caliburn-menu-toggle-theme [allowSystemTheme]="true" [theme]="theme()" />

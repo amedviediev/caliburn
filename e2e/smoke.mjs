@@ -238,6 +238,52 @@ const openHelpDialog = async (page) => {
   await waitForAnimations(page, ".HelpDialog .Modal__content");
 };
 
+/** the dev-only visual debugger: its main-menu toggle, the overlay it mounts
+ * and the footer stepper's one unambiguously addressable button (upstream
+ * labels the other three "debug-forward" alike) */
+const VISUAL_DEBUG_ITEM = '[data-testid="visual-debug-menu-item"]';
+const DEBUG_CANVAS = ".excalidraw caliburn-debug-canvas canvas";
+const DEBUG_STEP_FORWARD = '[data-testid="debug-backward"]';
+
+/**
+ * The overlay's painted pixels inside the box the visual-debug check draws
+ * into. Runs in the page, so it has to stay self-contained.
+ */
+const paintedDebugPixels = (sel) => {
+  const canvas = document.querySelector(sel);
+  if (!canvas) {
+    return -1;
+  }
+  const dpr = window.devicePixelRatio;
+  const box = canvas
+    .getContext("2d")
+    .getImageData(
+      Math.round(270 * dpr),
+      Math.round(270 * dpr),
+      Math.round(60 * dpr),
+      Math.round(60 * dpr),
+    );
+  let painted = 0;
+  for (let i = 3; i < box.data.length; i += 4) {
+    if (box.data[i] > 0) {
+      painted += 1;
+    }
+  }
+  return painted;
+};
+
+/** the debug renderer is throttled to an animation frame, so the repaint
+ * lands after the click that asked for it */
+const waitForDebugPaint = async (page) => {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    if ((await page.evaluate(paintedDebugPixels, DEBUG_CANVAS)) > 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("the pushed debug primitives never reached the overlay");
+};
+
 const LANGUAGE_PICKER =
   ".dropdown-menu-container select.dropdown-select__language";
 
@@ -678,6 +724,157 @@ export const runSuite = async (browser, url, runner) => {
             '[data-testid="dropdown-menu"]',
             ".dropdown-menu-container",
           ],
+        },
+      },
+    );
+
+    await runner.check(
+      "baseline.visual-debug-toggle",
+      "the dev-only Visual Debug item mounts, paints and unmounts the debug canvas",
+      async () => {
+        await resetEditor(page);
+        await openMainMenu(page);
+        await expectOwnsPixels(page, VISUAL_DEBUG_ITEM, "Visual Debug item");
+        expectEqual(
+          await page.evaluate(
+            (sel) => document.querySelector(sel).textContent.trim(),
+            VISUAL_DEBUG_ITEM,
+          ),
+          "Visual Debug",
+          "the Visual Debug item's label",
+        );
+        expectEqual(
+          await page.evaluate(() => !!window.visualDebug),
+          false,
+          "window.visualDebug before the toggle",
+        );
+
+        await clickAndExpect(
+          page,
+          VISUAL_DEBUG_ITEM,
+          (sel) => !!window.visualDebug && !!document.querySelector(sel),
+          {
+            args: [DEBUG_CANVAS],
+            message: "toggling Visual Debug did not mount the debug canvas",
+          },
+        );
+
+        // the overlay is sized off appState at the device pixel ratio, and
+        // must not eat pointer events on its way over the scene
+        const overlay = await page.evaluate((sel) => {
+          const canvas = document.querySelector(sel);
+          const style = getComputedStyle(canvas);
+          return {
+            width: canvas.width,
+            height: canvas.height,
+            cssWidth: style.width,
+            cssHeight: style.height,
+            position: style.position,
+            pointerEvents: style.pointerEvents,
+            expectedWidth: window.h.state.width * window.devicePixelRatio,
+            expectedHeight: window.h.state.height * window.devicePixelRatio,
+            expectedCssWidth: `${window.h.state.width}px`,
+            expectedCssHeight: `${window.h.state.height}px`,
+          };
+        }, DEBUG_CANVAS);
+        expectEqual(
+          overlay.width,
+          overlay.expectedWidth,
+          "debug canvas backing-store width",
+        );
+        expectEqual(
+          overlay.height,
+          overlay.expectedHeight,
+          "debug canvas backing-store height",
+        );
+        expectEqual(
+          overlay.cssWidth,
+          overlay.expectedCssWidth,
+          "debug canvas CSS width",
+        );
+        expectEqual(
+          overlay.cssHeight,
+          overlay.expectedCssHeight,
+          "debug canvas CSS height",
+        );
+        expectEqual(overlay.position, "absolute", "debug canvas position");
+        expectEqual(
+          overlay.pointerEvents,
+          "none",
+          "debug canvas pointerEvents",
+        );
+
+        // the frame stepper the visual debugger puts in the footer
+        expect(
+          await page.evaluate(
+            (sel) => !!document.querySelector(sel),
+            DEBUG_STEP_FORWARD,
+          ),
+          "the debug footer's frame stepper did not mount",
+        );
+
+        // a primitive shaped exactly as `@excalidraw/element/visualdebug`'s
+        // producers push them must reach the overlay's pixels; the sample box
+        // is empty until it does
+        expectEqual(
+          await page.evaluate(paintedDebugPixels, DEBUG_CANVAS),
+          0,
+          "painted pixels in the sample box before anything was pushed",
+        );
+        await page.evaluate(() => {
+          const { scrollX, scrollY, zoom } = window.h.state;
+          const toScene = (x, y) => [
+            x / zoom.value - scrollX,
+            y / zoom.value - scrollY,
+          ];
+          window.visualDebug.data = [
+            [
+              {
+                color: "#ff0000",
+                permanent: true,
+                data: [toScene(280, 300), toScene(320, 300)],
+              },
+              {
+                color: "#ff0000",
+                permanent: true,
+                data: [toScene(300, 280), toScene(300, 320)],
+              },
+            ],
+          ];
+        });
+        // the stepper's own repaint, which is what upstream's
+        // `<AppFooter onChange>` exists to trigger
+        await clickCenter(page, DEBUG_STEP_FORWARD);
+        await waitForDebugPaint(page);
+
+        await openMainMenu(page);
+        await clickAndExpect(
+          page,
+          VISUAL_DEBUG_ITEM,
+          (sel) => !window.visualDebug && !document.querySelector(sel),
+          {
+            args: [DEBUG_CANVAS],
+            message: "toggling Visual Debug off did not unmount the canvas",
+          },
+        );
+        expectEqual(
+          await page.evaluate(
+            (sel) => !!document.querySelector(sel),
+            DEBUG_STEP_FORWARD,
+          ),
+          false,
+          "the debug footer's frame stepper survived the toggle",
+        );
+        expectEqual(
+          await page.evaluate(() => localStorage.getItem("excalidraw-debug")),
+          JSON.stringify({ enabled: false }),
+          "the persisted debug state",
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [VISUAL_DEBUG_ITEM, DEBUG_CANVAS],
         },
       },
     );
