@@ -38,6 +38,7 @@ import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.componen
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
 import { CaliburnMobileMenuComponent } from "./mobile-menu.component";
 import { CaliburnOverwriteConfirmComponent } from "./overwrite-confirm/overwrite-confirm.component";
+import { CaliburnPasteChartDialogComponent } from "./paste-chart-dialog.component";
 import { CaliburnPenModeButtonComponent } from "./pen-mode-button.component";
 import { isSidebarDocked } from "./sidebar/common";
 import { CaliburnStatsComponent } from "./stats/stats.component";
@@ -111,6 +112,7 @@ let nextLayerUIId = 0;
     CaliburnJSONExportDialogComponent,
     CaliburnMobileMenuComponent,
     CaliburnOverwriteConfirmComponent,
+    CaliburnPasteChartDialogComponent,
     CaliburnPenModeButtonComponent,
     CaliburnShapeActionsComponent,
     CaliburnSidebarTriggerComponent,
@@ -219,6 +221,11 @@ export class CaliburnLayerUIComponent {
       isSidebarDocked() &&
       this.editor.editorInterface.canFitSidebar,
   );
+
+  protected readonly chartsDialog = computed(() => {
+    const openDialog = this.state().openDialog;
+    return openDialog?.name === "charts" ? openDialog : null;
+  });
 
   protected readonly elementLinkSourceId = computed(() => {
     const openDialog = this.state().openDialog;

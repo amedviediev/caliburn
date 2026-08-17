@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from "@angular/common";
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,7 +22,7 @@ import { translated } from "../i18n";
 import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnModalComponent } from "./modal.component";
 
-import type { AfterViewInit, OnDestroy } from "@angular/core";
+import type { AfterViewInit, OnDestroy, TemplateRef } from "@angular/core";
 
 export type DialogSize = number | "small" | "regular" | "wide" | undefined;
 
@@ -61,7 +62,12 @@ let nextDialogId = 0;
 @Component({
   selector: "caliburn-dialog",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CaliburnModalComponent, CaliburnIslandComponent, NgIcon],
+  imports: [
+    NgTemplateOutlet,
+    CaliburnModalComponent,
+    CaliburnIslandComponent,
+    NgIcon,
+  ],
   templateUrl: "./dialog.component.html",
 })
 export class CaliburnDialogComponent implements AfterViewInit, OnDestroy {
@@ -70,6 +76,10 @@ export class CaliburnDialogComponent implements AfterViewInit, OnDestroy {
   readonly closeLabel = translated(() => t("buttons.close"));
 
   readonly title = input<string | false>(false);
+  /** upstream's `title` is a `ReactNode`, so `PasteChartDialog` passes a whole
+   * element tree; this is that form — a template rendered inside the same
+   * `<h2 id=…-dialog-title>` wrapper, and it takes precedence over `title` */
+  readonly titleTemplate = input<TemplateRef<unknown> | null>(null);
   readonly size = input<DialogSize>();
   readonly autofocus = input(true);
   readonly closeOnClickOutside = input(true);

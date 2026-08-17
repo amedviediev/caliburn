@@ -25,6 +25,13 @@
 }
 <caliburn-json-export-dialog />
 @if (defaultUIEnabled()) {
+  @if (chartsDialog(); as charts) {
+    <caliburn-paste-chart-dialog
+      [data]="charts.data"
+      [rawText]="charts.rawText"
+      (close)="closeDialog()"
+    />
+  }
   @if (elementLinkSourceId(); as sourceElementId) {
     <caliburn-element-link-dialog [sourceElementId]="sourceElementId" />
   }

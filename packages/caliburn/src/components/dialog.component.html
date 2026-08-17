@@ -7,9 +7,15 @@
   (closeRequest)="onClose()"
 >
   <caliburn-island>
-    @if (title()) {
+    @if (titleTemplate() || title()) {
       <h2 [id]="titleId" class="Dialog__title">
-        <span class="Dialog__titleContent">{{ title() }}</span>
+        @if (titleTemplate(); as template) {
+          <span class="Dialog__titleContent">
+            <ng-container *ngTemplateOutlet="template" />
+          </span>
+        } @else {
+          <span class="Dialog__titleContent">{{ title() }}</span>
+        }
       </h2>
     }
     @if (fullscreen()) {

@@ -1650,6 +1650,80 @@ export const runSuite = async (browser, url, runner) => {
         },
       },
     );
+
+    await runner.check(
+      "dialog.paste-chart-inserts-a-chart",
+      "pasting a spreadsheet offers chart previews and the bar one inserts a chart",
+      async () => {
+        await resetEditor(page);
+
+        // the harness runs without clipboard-read permission, so the paste
+        // carries its own DataTransfer — the same way the embeds group pastes
+        // a link; the editor only takes it with the canvas under the pointer
+        await page.mouse.move(700, 450);
+        await page.mouse.click(700, 450);
+        await page.evaluate((tsv) => {
+          const data = new DataTransfer();
+          data.setData("text/plain", tsv);
+          document.dispatchEvent(
+            new ClipboardEvent("paste", {
+              clipboardData: data,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        }, "Week\tUsers\nWeek 1\t814\nWeek 2\t1030\nWeek 3\t4264");
+
+        await waitFor(
+          page,
+          () =>
+            !!document.querySelector(
+              ".Modal.PasteChartDialog button.ChartPreview .ChartPreview__canvas svg",
+            ),
+          { message: "pasting a spreadsheet rendered no chart preview" },
+        );
+        await waitForAnimations(
+          page,
+          ".Modal.PasteChartDialog .Modal__content",
+        );
+
+        const labels = await page.evaluate(() =>
+          [
+            ...document.querySelectorAll(
+              ".Modal.PasteChartDialog button.ChartPreview",
+            ),
+          ].map((button) => button.getAttribute("aria-label")),
+        );
+        expectEqual(
+          labels.join("/"),
+          "Bar chart/Line chart/Radar chart/Plain text",
+          "chart previews",
+        );
+
+        // the bar preview is the first one rendered
+        await clickCenter(page, ".Modal.PasteChartDialog button.ChartPreview");
+        await waitFor(
+          page,
+          () => !document.querySelector(".Modal.PasteChartDialog"),
+          { message: "clicking the bar preview left the dialog open" },
+        );
+
+        const els = await elements(page);
+        expect(els.length > 0, "clicking the bar preview inserted no elements");
+        expect(
+          els.some((el) => el.type === "rectangle"),
+          `the inserted chart has no bars (${[
+            ...new Set(els.map((el) => el.type)),
+          ].join("/")})`,
+        );
+      },
+      {
+        evidence: {
+          page,
+          selectors: [".Modal.PasteChartDialog", ".ChartPreview"],
+        },
+      },
+    );
   });
 
   // ------------------------------------------------------- extra-tools menu

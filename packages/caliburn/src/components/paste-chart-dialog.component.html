@@ -1,0 +1,41 @@
+<ng-template #dialogTitle>
+  <div class="PasteChartDialog__title">
+    <div class="PasteChartDialog__titleText">{{ titleText() }}</div>
+    <div
+      class="PasteChartDialog__reshuffleBtn"
+      role="button"
+      tabindex="0"
+      (click)="handleReshuffleColors()"
+      (keydown)="handleReshuffleKeyDown($event)"
+    >
+      <ng-icon name="bucketFillIcon" />
+    </div>
+  </div>
+</ng-template>
+<caliburn-dialog
+  size="regular"
+  class="PasteChartDialog"
+  [titleTemplate]="dialogTitle"
+  [autofocus]="false"
+  (closeRequest)="handleClose()"
+>
+  <div class="container">
+    @for (chartType of validChartTypes(); track chartType) {
+      <button
+        caliburn-chart-preview
+        [mode]="chartType"
+        [spreadsheet]="data()"
+        [colorSeed]="colorSeed()"
+        (selected)="handleChartClick(chartType, $event)"
+      ></button>
+    }
+    @if (rawText()) {
+      <button
+        caliburn-chart-preview
+        mode="plaintext"
+        [rawText]="rawText()"
+        (selected)="handlePlainTextClick(rawText())"
+      ></button>
+    }
+  </div>
+</caliburn-dialog>

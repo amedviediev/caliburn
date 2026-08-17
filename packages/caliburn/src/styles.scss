@@ -34,6 +34,7 @@
 @use "../../excalidraw/components/Card.scss";
 @use "../../excalidraw/components/ExportDialog.scss";
 @use "../../excalidraw/components/ImageExportDialog.scss";
+@use "../../excalidraw/components/PasteChartDialog.scss";
 @use "../../excalidraw/components/Switch.scss";
 @use "../../excalidraw/components/TextInput.scss";
 @use "../../excalidraw/components/ProjectName.scss";
@@ -189,6 +190,7 @@ caliburn-help-dialog,
 caliburn-image-export-dialog,
 caliburn-json-export-dialog,
 caliburn-overwrite-confirm,
+caliburn-paste-chart-dialog,
 caliburn-shareable-link-dialog,
 caliburn-ttd-dialog,
 caliburn-mermaid-to-excalidraw,
