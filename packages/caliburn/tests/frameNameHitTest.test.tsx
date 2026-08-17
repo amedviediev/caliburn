@@ -7,7 +7,12 @@ import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
 import { Pointer } from "./helpers/ui";
-import { render, waitFor } from "./test-utils";
+import {
+  mockBoundingClientRect,
+  render,
+  restoreOriginalGetBoundingClientRect,
+  waitFor,
+} from "./test-utils";
 
 const mouse = new Pointer("mouse");
 
@@ -61,7 +66,16 @@ const frameWithStubbedNameBox = async (box = LABEL) => {
 describe("frame name hit testing", () => {
   beforeEach(async () => {
     mouse.reset();
+    // a name label only renders while its frame is in the viewport, and jsdom
+    // reports none of its own — the box keeps the offsets at zero, so viewport
+    // coordinates stay scene coordinates
+    mockBoundingClientRect({ width: 1920, height: 1080 });
     await render(<Excalidraw />);
+    await waitFor(() => expect(h.state.width).toBe(1920));
+  });
+
+  afterEach(() => {
+    restoreOriginalGetBoundingClientRect();
   });
 
   it("selects the frame when its name label is clicked", async () => {

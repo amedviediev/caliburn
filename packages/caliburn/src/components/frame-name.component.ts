@@ -17,7 +17,11 @@ import {
   applyDarkModeFilter,
   sceneCoordsToViewportCoords,
 } from "@excalidraw/common";
-import { getFrameLikeTitle } from "@excalidraw/element";
+import {
+  getFrameLikeTitle,
+  isElementInViewport,
+  isFrameLikeElement,
+} from "@excalidraw/element";
 
 import type { ExcalidrawFrameLikeElement } from "@excalidraw/element/types";
 
@@ -66,9 +70,70 @@ export class CaliburnFrameNameComponent {
     return this.host.state;
   }
 
-  protected frames() {
+  protected frames(): readonly ExcalidrawFrameLikeElement[] {
     this.host.changeGeneration();
-    return this.host.scene.getNonDeletedFramesLikes();
+    const state = this.host.state;
+
+    if (!state.frameRendering.enabled || !state.frameRendering.name) {
+      if (state.editingFrame) {
+        this.commitEditingFrame(null);
+      }
+      return [];
+    }
+
+    return this.host.scene.getNonDeletedFramesLikes().filter((frame) => {
+      if (
+        !isElementInViewport(
+          frame,
+          this.host.canvas.width / window.devicePixelRatio,
+          this.host.canvas.height / window.devicePixelRatio,
+          {
+            offsetLeft: state.offsetLeft,
+            offsetTop: state.offsetTop,
+            scrollX: state.scrollX,
+            scrollY: state.scrollY,
+            zoom: state.zoom,
+          },
+          this.host.scene.getNonDeletedElementsMap(),
+        )
+      ) {
+        if (state.editingFrame === frame.id) {
+          this.commitEditingFrame(frame);
+        }
+        // if frame not visible, don't render its name
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * Upstream commits the in-flight name edit from inside `renderFrameNames`,
+   * i.e. during render; here `frames()` is called from the template, where a
+   * `setState` (which runs change detection) cannot re-enter, so the commit is
+   * deferred by a microtask — the same way the view-mode-entry commit in
+   * `editor.component.ts` is. Re-checked on the way out so only the edit that
+   * was in flight when the label stopped rendering is the one committed.
+   */
+  private commitEditingFrame(frame: ExcalidrawFrameLikeElement | null) {
+    const editingFrame = this.host.state.editingFrame;
+    queueMicrotask(() => {
+      if (this.host.state.editingFrame === editingFrame) {
+        resetEditingFrame(this.host, frame);
+      }
+    });
+  }
+
+  /** upstream's `focusedSearchMatch` in `renderFrameNames` */
+  private focusedSearchMatch() {
+    const state = this.state();
+    return state.searchMatches?.focusedId &&
+      isFrameLikeElement(
+        this.host.scene.getElement(state.searchMatches.focusedId),
+      )
+      ? state.searchMatches.matches.find((sm) => sm.focus)
+      : null;
   }
 
   protected title(frame: ExcalidrawFrameLikeElement) {
@@ -83,6 +148,7 @@ export class CaliburnFrameNameComponent {
   protected labelStyle(frame: ExcalidrawFrameLikeElement) {
     const state = this.state();
     const isDarkTheme = state.theme === THEME.DARK;
+    const focusedSearchMatch = this.focusedSearchMatch();
     const { x: x1, y: y1 } = sceneCoordsToViewportCoords(
       { sceneX: frame.x, sceneY: frame.y },
       state,
@@ -101,7 +167,10 @@ export class CaliburnFrameNameComponent {
         : FRAME_STYLE.nameColorLightTheme,
       lineHeight: `${FRAME_STYLE.nameLineHeight}`,
       width: "max-content",
-      maxWidth: `${frame.width * state.zoom.value}px`,
+      maxWidth:
+        focusedSearchMatch?.id === frame.id && focusedSearchMatch?.focus
+          ? "none"
+          : `${frame.width * state.zoom.value}px`,
       overflow: frame.id === state.editingFrame ? "visible" : "hidden",
       whiteSpace: "nowrap",
       textOverflow: "ellipsis",
