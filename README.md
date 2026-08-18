@@ -6,7 +6,7 @@ Caliburn is a production-ready Angular port of [Excalidraw](https://github.com/e
 
 The port was forked at [`abeeaeb`](https://github.com/excalidraw/excalidraw/commit/abeeaeba217ab3b5193b78c8d8d63c373b518ced) and continues to track Excalidraw upstream. Caliburn is not affiliated with the Excalidraw team.
 
-The name is Excalibur's older form — Latin _Caliburnus_, from the Welsh _Caledfwlch_.
+The name is Excalibur's older form - Latin _Caliburnus_, from the Welsh _Caledfwlch_.
 
 ## Highlights
 
@@ -62,11 +62,11 @@ yarn e2e
 
 ## Why a port
 
-Most of Excalidraw is not React. The element model, geometry, arrow binding, collision and export — over 40,000 lines — are plain TypeScript with no framework in them, and they come with a large test suite. Only the UI layer is React. Caliburn vendors the framework-free core unchanged and rewrites the UI layer in Angular, so Angular applications get the same element engine and the same file format without shipping React.
+Most of Excalidraw is not React. The element model, geometry, arrow binding, collision and export - over 40,000 lines - are plain TypeScript with no framework in them, and they come with a large test suite. Only the UI layer is React. Caliburn vendors the framework-free core unchanged and rewrites the UI layer in Angular, so Angular applications get the same element engine and the same file format without shipping React.
 
 ## How the port works
 
-- The core packages — `@excalidraw/element`, `@excalidraw/math`, `@excalidraw/common`, `@excalidraw/utils` — are vendored upstream source and are never edited here. That keeps `git merge upstream/main` cheap and keeps their tests passing as-is. A fix that belongs in them goes upstream as a pull request and comes back through a merge.
+- The core packages - `@excalidraw/element`, `@excalidraw/math`, `@excalidraw/common`, `@excalidraw/utils` - are vendored upstream source and are never edited here. That keeps `git merge upstream/main` cheap and keeps their tests passing as-is. A fix that belongs in them goes upstream as a pull request and comes back through a merge.
 - The upstream test suite is the oracle. Its tests drive DOM pointer events against a canvas and assert on editor state, not on React internals, so they can gate the Angular port slice by slice.
 - Geometry snapshots are never re-recorded to make a test pass. A snapshot that looks wrong is a bug to investigate, not a file to update.
 
@@ -85,7 +85,7 @@ git remote add upstream https://github.com/excalidraw/excalidraw.git
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The license retains Excalidraw's copyright notice: this repository holds Excalidraw source verbatim, Excalidraw source translated, and new code, all under the same license. `packages/laser-pointer/LICENSE` is that package's own MIT notice and stays with it.
+MIT - see [LICENSE](LICENSE). The license retains Excalidraw's copyright notice: this repository holds Excalidraw source verbatim, Excalidraw source translated, and new code, all under the same license. `packages/laser-pointer/LICENSE` is that package's own MIT notice and stays with it.
 
 Fonts bundled in the repository are separate works and are not covered by the code's MIT license. Every bundled family is licensed under SIL OFL 1.1 or MIT and carries its license text alongside its files. See [`packages/excalidraw/fonts`](packages/excalidraw/fonts/README.md).
 
