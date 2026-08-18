@@ -1751,7 +1751,9 @@ export class CaliburnEditorComponent
     });
     this.removeSceneUpdateListener = this.scene.onUpdate(() => {
       this.commit();
-      this.cdr.detectChanges();
+      if (this.batchDepth === 0) {
+        this.cdr.detectChanges();
+      }
     });
 
     document.addEventListener("keydown", this.onKeyDown);
@@ -2868,9 +2870,12 @@ export class CaliburnEditorComponent
         this.state.zoom,
       );
     }
+    // batched state and scene writes render once, when the batch ends — the
+    // intermediate views React's batching never produces must not be produced
+    // here either. The two deliberate exceptions are the signal-only flushes in
+    // `onKeyDownImpl` (the clear-canvas dialog) and `openEyeDropper`, which
+    // write no app state and so have no commit to ride along with.
     if (this.batchDepth === 0) {
-      // batched writes render once, when the batch ends — the intermediate
-      // views React's batching never produces must not be produced here either
       this.cdr.detectChanges();
     }
     callback?.();
@@ -4283,6 +4288,22 @@ export class CaliburnEditorComponent
       !this.state.showHyperlinkPopup
     ) {
       this.setState({ showHyperlinkPopup: "info" });
+    } else if (
+      // upstream's own arm (App.tsx:8060-8066) rather than a case of the
+      // merged one below: it precedes the view-mode, element-link and
+      // scrollbar arms, so a pointer inside the selection's bounding box
+      // drags it whatever is underneath. The tool gate is caliburn's — it
+      // stands in for upstream's pointer-move gate (:7908-7920), which this
+      // helper has no counterpart for
+      isSelectionLikeTool(this.state.activeTool.type) &&
+      !event[KEYS.CTRL_OR_CMD] &&
+      isHittingCommonBoundingBoxOfSelectedElements(
+        this,
+        scenePointer,
+        this.scene.getSelectedElements(this.state),
+      )
+    ) {
+      this.cursor.set(CURSOR_TYPE.MOVE);
     } else if (this.state.viewModeEnabled) {
       this.cursor.set(CURSOR_TYPE.GRAB);
     } else if (isOverScrollBar) {

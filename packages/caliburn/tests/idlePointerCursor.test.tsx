@@ -172,5 +172,38 @@ describe("the idle per-move cursor", () => {
 
       expect(cursor()).toBe(CURSOR_TYPE.AUTO);
     });
+
+    it("loses to the common bounding box of a multi-selection", () => {
+      // `isHittingCommonBoundingBoxOfSelectedElements` needs two of them, and
+      // its arm precedes the scrollbar arm upstream — dragging the selection
+      // wins over the bar it happens to lie under
+      const left = API.createElement({
+        type: "rectangle",
+        x: 700,
+        y: 100,
+        width: 100,
+        height: 200,
+      });
+      const right = API.createElement({
+        type: "rectangle",
+        x: 900,
+        y: 100,
+        width: 100,
+        height: 1000,
+      });
+      API.setElements([left, right]);
+      API.setSelectedElements([left, right]);
+
+      const vertical = scrollBars().vertical!;
+      const x = vertical.x + vertical.width / 2;
+      const y = vertical.y + 200;
+      expect(x).toBeGreaterThan(left.x);
+      expect(x).toBeLessThan(right.x + right.width);
+      expect(y).toBeGreaterThan(left.y);
+
+      mouse.moveTo(x, y);
+
+      expect(cursor()).toBe(CURSOR_TYPE.MOVE);
+    });
   });
 });

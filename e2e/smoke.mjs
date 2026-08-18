@@ -3876,6 +3876,15 @@ export const runSuite = async (browser, url, runner) => {
             focus.isContainer,
             `focus stayed on ${focus.active} instead of the editor container`,
           );
+
+          // leave it shut, so the checks after this one start where the ones
+          // before it did
+          await tapCenter(page, trigger);
+          await waitFor(
+            page,
+            () => !document.querySelector(".tool-popover-content"),
+            { message: "the tool popover would not close again" },
+          );
         },
         {
           evidence: {
