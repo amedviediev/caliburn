@@ -2343,9 +2343,8 @@ export class CaliburnEditorComponent
         this.bucketFill.openTemporaryEyeDropper();
         event.preventDefault();
         return;
-      } else {
-        maybeHandleArrowPointlikeDrag({ app: this as any, event });
       }
+      maybeHandleArrowPointlikeDrag({ app: this as any, event });
     }
 
     if (this.actionManager.handleKeyDown(event)) {
