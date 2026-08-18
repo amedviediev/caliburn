@@ -18,8 +18,8 @@ import { getElementAtPosition } from "../src/selection-interaction";
 import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
-import { Pointer, UI } from "./helpers/ui";
-import { GlobalTestState, act, render } from "./test-utils";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
+import { GlobalTestState, act, fireEvent, render } from "./test-utils";
 
 const cursor = () => GlobalTestState.interactiveCanvas.style.cursor;
 
@@ -247,6 +247,22 @@ describe("hover cursor", () => {
       expect(h.state.hoveredArrowTextAnchor).not.toBe(null);
       expect(cursor()).toBe(CURSOR_TYPE.POINTER);
     });
+
+    it("leaves the anchor alone while a button is pressed", () => {
+      API.setElements([arrow()]);
+      UI.clickTool("text");
+
+      // the free end of the arrow again, but with a button held and no
+      // gesture of its own — the whole hover pass, the anchor with it, stays
+      // out of a pointer something else is holding
+      fireEvent.pointerMove(GlobalTestState.interactiveCanvas, {
+        clientX: 100,
+        clientY: 100,
+        buttons: 1,
+      });
+
+      expect(h.state.hoveredArrowTextAnchor).toBe(null);
+    });
   });
 
   it("shows the default cursor while picking an element to link to", () => {
@@ -315,5 +331,29 @@ describe("hover cursor", () => {
     mouse.moveTo(150, 150);
 
     expect(cursor()).not.toBe(CURSOR_TYPE.MOVE);
+  });
+
+  it("shows the default cursor over a selected element while ctrl is held", () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      backgroundColor: "#ffec99",
+    });
+    API.setElements([rectangle]);
+    act(() => {
+      h.app.setActiveTool({ type: "lasso" });
+    });
+    API.setSelectedElements([rectangle]);
+
+    // ctrl means "not dragging", which is upstream's own else: the default
+    // cursor, not the tool's own crosshair
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.moveTo(150, 150);
+    });
+
+    expect(cursor()).toBe(CURSOR_TYPE.AUTO);
   });
 });

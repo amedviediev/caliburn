@@ -249,6 +249,69 @@ describe("element links", () => {
     expect(h.state.openDialog).toBeNull();
     expect(h.elements[0].link).toContain(target.id);
   });
+
+  describe("the link target's dim affordance", () => {
+    /** opens the selector on a source element, with `target` to hover */
+    const pickingFor = (groupIds: string[] = []) => {
+      const source = API.createElement({ type: "rectangle", width: 100 });
+      const target = API.createElement({
+        type: "rectangle",
+        x: 200,
+        y: 200,
+        width: 100,
+        height: 100,
+        backgroundColor: "#ffec99",
+        groupIds,
+      });
+      const sibling = API.createElement({
+        type: "rectangle",
+        x: 400,
+        y: 200,
+        width: 100,
+        height: 100,
+        groupIds,
+      });
+      API.setElements([source, target, sibling]);
+      act(() => {
+        API.setAppState({
+          openDialog: {
+            name: "elementLinkSelector",
+            sourceElementId: source.id,
+          },
+        });
+      });
+      return { target, sibling };
+    };
+
+    it("marks the hovered element", () => {
+      const { target } = pickingFor();
+
+      mouse.moveTo(250, 250);
+
+      expect(h.state.hoveredElementIds).toEqual({ [target.id]: true });
+    });
+
+    it("marks the hovered element's whole group", () => {
+      const { target, sibling } = pickingFor(["group"]);
+
+      mouse.moveTo(250, 250);
+
+      expect(h.state.hoveredElementIds).toEqual({
+        [target.id]: true,
+        [sibling.id]: true,
+      });
+    });
+
+    it("clears it once nothing is hovered", () => {
+      const { target } = pickingFor();
+      mouse.moveTo(250, 250);
+      expect(h.state.hoveredElementIds[target.id]).toBe(true);
+
+      mouse.moveTo(600, 600);
+
+      expect(h.state.hoveredElementIds).toEqual({});
+    });
+  });
 });
 
 describe("element links with links disabled", () => {

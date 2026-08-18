@@ -870,16 +870,20 @@ describe("the suggested binding while hovering", () => {
   it("neither suggests nor clears while binding is off", () => {
     hoverable();
     mouse.moveTo(150, 95);
-    expect(h.state.suggestedBinding).not.toBe(null);
-    API.setAppState({ isBindingEnabled: false });
+    const suggested = h.state.suggestedBinding;
+    expect(suggested).not.toBe(null);
+
+    // cleared first, so that a suggestion afterwards can only be a new one
+    API.setAppState({ isBindingEnabled: false, suggestedBinding: null });
 
     // inside the element, which only the binding-gated pass suggests from
     mouse.moveTo(150, 150);
-    expect(h.state.suggestedBinding).not.toBe(null);
+    expect(h.state.suggestedBinding).toBe(null);
 
-    // and away from it, where the same pass would clear it
+    // and away from it, where the same pass would clear a live one
+    API.setAppState({ suggestedBinding: suggested });
     mouse.moveTo(500, 500);
-    expect(h.state.suggestedBinding).not.toBe(null);
+    expect(h.state.suggestedBinding).toBe(suggested);
   });
 
   it("suggests nothing for a tool that cannot bind", () => {

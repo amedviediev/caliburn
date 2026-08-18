@@ -47,6 +47,7 @@ import {
   supportsResizeObserver,
   updateActiveTool,
   updateObject,
+  updateStable,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
 import {
@@ -89,6 +90,7 @@ import {
   maybeHandleArrowPointlikeDrag,
   newElementWith,
   normalizeSVG,
+  selectGroupsForSelectedElements,
   syncInvalidIndices,
   updateBoundElements,
 } from "@excalidraw/element";
@@ -4113,14 +4115,7 @@ export class CaliburnEditorComponent
     }
 
     maybeSuggestBindingOnHover(this, event);
-    const hoveredArrowTextAnchor =
-      this.arrowText.updateHoveredAnchor(scenePointer);
-    this.maybeUpdateHoverCursor(
-      scenePointer,
-      event,
-      isOverScrollBar,
-      hoveredArrowTextAnchor,
-    );
+    this.maybeUpdateHoverCursor(scenePointer, event, isOverScrollBar);
   }
 
   /**
@@ -4321,7 +4316,6 @@ export class CaliburnEditorComponent
     scenePointer: { x: number; y: number },
     event: PointerEvent,
     isOverScrollBar: boolean,
-    hoveredArrowTextAnchor: AppState["hoveredArrowTextAnchor"],
   ) {
     // upstream's pointer-move gate (App.tsx:7908), which ends its handler and
     // so covers this whole helper: a pointer that is pressing anything owns
@@ -4452,6 +4446,12 @@ export class CaliburnEditorComponent
       hitElement = hitElementMightBeLocked;
     }
 
+    // upstream's own slot for it (`App.tsx`), inside the hover pass: a
+    // pointer that is pressing something owns the interaction, and the eraser
+    // has returned above, so neither reaches the anchor
+    const hoveredArrowTextAnchor =
+      this.arrowText.updateHoveredAnchor(scenePointer);
+
     // upstream's `if (!this.handleIframeLikeElementHover(...))` — an
     // iframe-like element taking the hover owns the pointer, element links
     // included. Unguarded, as upstream is: only the fully interactive editor
@@ -4469,11 +4469,15 @@ export class CaliburnEditorComponent
     }
 
     if (applyElementLinkHoverAffordance(this)) {
+      // upstream's dim affordance sits outside the affordance's own `if`
+      // (App.tsx), so the link icon taking the hover still dims the rest
+      this.updateHoveredElementIds(hitElement);
       return;
     }
 
     // upstream's `if (isLaserTool) { return; }` — the laser tool keeps the
-    // cursor it painted, skipping the hyperlink popup and the branches below
+    // cursor it painted, skipping the hyperlink popup and the branches below,
+    // the dim affordance among them
     if (this.state.activeTool.type === "laser") {
       return;
     }
@@ -4526,24 +4530,30 @@ export class CaliburnEditorComponent
         // if using cmd/ctrl, we're not dragging
         !event[KEYS.CTRL_OR_CMD] &&
         // editing text -> don't show move cursor when hovering over its bbox
-        hitElement?.id !== this.state.editingTextElement?.id &&
-        (hitElement ||
-          isHittingCommonBoundingBoxOfSelectedElements(
-            this,
-            scenePointer,
-            this.scene.getSelectedElements(this.state),
-          )) &&
-        !hitElement?.locked &&
-        (!hitElement ||
-          // Elbow arrows can only be moved when unconnected
-          !isElbowArrow(hitElement) ||
-          !(hitElement.startBinding || hitElement.endBinding)) &&
-        (this.state.activeTool.type !== "lasso" ||
-          this.scene.getSelectedElements(this.state).length > 0)
+        hitElement?.id !== this.state.editingTextElement?.id
       ) {
-        this.cursor.set(CURSOR_TYPE.MOVE);
+        // upstream's three nested `if`s (App.tsx), merged into one condition
+        // — none of them carries an `else`, so failing any of them paints
+        // nothing and the cursor the idle per-move pass applied stands
+        if (
+          (hitElement ||
+            isHittingCommonBoundingBoxOfSelectedElements(
+              this,
+              scenePointer,
+              this.scene.getSelectedElements(this.state),
+            )) &&
+          !hitElement?.locked &&
+          (!hitElement ||
+            // Elbow arrows can only be moved when unconnected
+            !isElbowArrow(hitElement) ||
+            !(hitElement.startBinding || hitElement.endBinding)) &&
+          (this.state.activeTool.type !== "lasso" ||
+            this.scene.getSelectedElements(this.state).length > 0)
+        ) {
+          this.cursor.set(CURSOR_TYPE.MOVE);
+        }
       } else {
-        this.cursor.reset();
+        this.cursor.set(CURSOR_TYPE.AUTO);
       }
     }
 
@@ -4566,6 +4576,43 @@ export class CaliburnEditorComponent
         scenePointer.x,
         scenePointer.y,
       );
+    }
+
+    this.updateHoveredElementIds(hitElement);
+  }
+
+  /**
+   * upstream's tail of the hover pass (`App.tsx`): while the element-link
+   * selector is open, the hovered element (and the group it belongs to) is
+   * the one the renderer leaves at full opacity — `renderElement` reduces the
+   * alpha of everything that is neither selected nor hovered.
+   */
+  private updateHoveredElementIds(
+    hitElement: NonDeleted<ExcalidrawElement> | null,
+  ) {
+    if (this.state.openDialog?.name !== "elementLinkSelector") {
+      return;
+    }
+
+    if (hitElement) {
+      this.setState((prevState) => ({
+        hoveredElementIds: updateStable(
+          prevState.hoveredElementIds,
+          selectGroupsForSelectedElements(
+            {
+              editingGroupId: prevState.editingGroupId,
+              selectedElementIds: { [hitElement.id]: true },
+            },
+            this.scene.getNonDeletedElements(),
+            prevState,
+            this as any,
+          ).selectedElementIds,
+        ),
+      }));
+    } else {
+      this.setState((prevState) => ({
+        hoveredElementIds: updateStable(prevState.hoveredElementIds, {}),
+      }));
     }
   }
 

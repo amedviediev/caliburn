@@ -771,7 +771,8 @@ export const refreshSuggestedBindingOnHover = (
 };
 
 /**
- * Suggests a binding target while hovering with the arrow tool.
+ * Suggests a binding target while hovering with the arrow tool — upstream's
+ * second pass (`App.tsx:7882-7905`), which runs after the multi-point block.
  */
 export const maybeSuggestBindingOnHover = (
   editor: CaliburnEditorComponent,
