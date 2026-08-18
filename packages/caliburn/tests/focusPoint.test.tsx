@@ -322,6 +322,30 @@ describe("focus point", () => {
   });
 
   describe("bind mode", () => {
+    it("returns to orbit when a link click ends the release", () => {
+      const open = vi.spyOn(window, "open").mockReturnValue(null);
+      const linked = {
+        ...API.createElement({
+          type: "rectangle",
+          x: 100,
+          y: 100,
+          width: 100,
+          height: 100,
+        }),
+        link: "https://example.com",
+      };
+      API.setElements([linked]);
+      (h.app.editorInterface as { isTouchScreen: boolean }).isTouchScreen =
+        true;
+      API.setAppState({ bindMode: "inside" });
+
+      // the link icon, at the element's top-right corner
+      mouse.clickAt(208, 92);
+
+      expect(open).toHaveBeenCalled();
+      expect(h.state.bindMode).toBe("orbit");
+    });
+
     it("returns to orbit when a key release leaves binding disabled", () => {
       selectedBoundArrow();
       API.setAppState({ bindMode: "inside", isBindingEnabled: false });
