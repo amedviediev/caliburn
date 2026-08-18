@@ -3032,6 +3032,17 @@ export class CaliburnEditorComponent
     if (isEraserActive(prevState) && !isEraserActive(this.state)) {
       this.eraserTrail.endPath();
     }
+    // cleanup
+    if (
+      (prevState.openDialog?.name === "elementLinkSelector" ||
+        this.state.openDialog?.name === "elementLinkSelector") &&
+      prevState.openDialog?.name !== this.state.openDialog?.name
+    ) {
+      deselectElements(this);
+      this.setState({
+        hoveredElementIds: {},
+      });
+    }
     if (prevState.viewModeEnabled !== this.state.viewModeEnabled) {
       this.cursor.reset();
       // textWysiwyg's and frame-name's submit paths run through setState.
@@ -4735,14 +4746,11 @@ export class CaliburnEditorComponent
         viewportCoordsToSceneCoords(event, this.state),
       );
 
-    // upstream's canvas handler ends on a handled link click, but the
-    // gesture's window listener — which the rest of this method stands in for
-    // — is a second, independent listener and still runs its teardown. It is
-    // installed only where a gesture opened: a press ON the link icon leaves
-    // upstream's pointer down before the install (`App.tsx`'s
-    // `handleSelectionOnPointerDown` early exit), which is caliburn's
-    // `pointerDownState`-less release, and there this exit is the whole
-    // teardown.
+    // upstream's canvas handler ends on a handled link click, but its window
+    // listener — the rest of this method — still tears the gesture down. A
+    // press ON the link icon returns before that listener is installed
+    // (`App.tsx`), which is caliburn's `pointerDownState`-less release: there
+    // this exit is the whole teardown.
     if (elementLinkClickHandled && !this.pointerDownState) {
       this.finishPointerUp();
       return;
@@ -4769,11 +4777,13 @@ export class CaliburnEditorComponent
       // it, not just the ones reaching `cleanupAfterDragOnPointerUp`, and
       // the next gesture's first move measures from its own origin
       this.previousPointerMoveCoords = null;
-      // upstream runs its pointer-up linear-editor block (`App.tsx`) here —
+      // upstream's slot for its pointer-up linear-editor block (`App.tsx`):
       // ahead of the host callbacks, the tool early returns and the
-      // new-element branches — so a tool switch mid focus-point drag cannot
-      // strand `draggedFocusPointBinding` armed into the next gesture
+      // new-element branches
       handleLinearEditorPointerUp(this, this.pointerDownState, event);
+      // upstream's deselect ends its handler; caliburn's branch carries on to
+      // the shared tail, so what the return would have skipped is flagged
+      let deselected = false;
       this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
       this.onPointerUpEmitter.trigger(
         this.state.activeTool,
@@ -4833,10 +4843,7 @@ export class CaliburnEditorComponent
         }
         // a click that deselected ends upstream's pointer-up handler right
         // there — only the teardown it had already run stays
-        const deselected = maybeDeselectOnPointerUp(
-          this,
-          this.pointerDownState,
-        );
+        deselected = maybeDeselectOnPointerUp(this, this.pointerDownState);
         if (!deselected) {
           if (
             maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
@@ -4846,24 +4853,6 @@ export class CaliburnEditorComponent
           }
         }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
-        // upstream's own rebind slot (`App.tsx`), between the scheduled
-        // capture that `cleanupAfterDragOnPointerUp` carries and the tool
-        // revert below. Inert at this pin — a release leaves no dragging
-        // points, which short-circuits both of the helper's strategies — but
-        // the call belongs where upstream makes it.
-        if (
-          (this.pointerDownState.drag.hasOccurred &&
-            !this.state.selectedLinearElement) ||
-          isResizing ||
-          isRotating ||
-          isCropping
-        ) {
-          bindOrUnbindBindingElements(
-            this.scene.getSelectedElements(this.state).filter(isArrowElement),
-            this.scene,
-            this.state,
-          );
-        }
         // upstream's tail — the tool revert every branch above carries its
         // own copy of. Only a deselect skips it: that ends upstream's handler
         // before the tail. A missing-pointer-up replay reaches it as any
@@ -4873,6 +4862,24 @@ export class CaliburnEditorComponent
         if (!deselected) {
           revertActiveToolOnPointerUp(this);
         }
+      }
+      // upstream's rebind slot (`App.tsx`): the shared tail, past every
+      // branch, which its deselect return skips. Inert at this pin — a
+      // release leaves no dragging points, and that short-circuits both of
+      // the helper's strategies.
+      if (
+        !deselected &&
+        ((this.pointerDownState.drag.hasOccurred &&
+          !this.state.selectedLinearElement) ||
+          isResizing ||
+          isRotating ||
+          isCropping)
+      ) {
+        bindOrUnbindBindingElements(
+          this.scene.getSelectedElements(this.state).filter(isArrowElement),
+          this.scene,
+          this.state,
+        );
       }
       this.finishPointerUp();
     }

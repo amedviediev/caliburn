@@ -230,11 +230,15 @@ describe("element links", () => {
       width: 100,
     });
     API.setElements([source, target]);
+    // the selector clears the selection as it opens, so the target is picked
+    // after it — the order a user goes through
     act(() => {
       API.setAppState({
-        selectedElementIds: { [target.id]: true },
         openDialog: { name: "elementLinkSelector", sourceElementId: source.id },
       });
+    });
+    act(() => {
+      API.setAppState({ selectedElementIds: { [target.id]: true } });
     });
 
     expect(dialog()).not.toBeNull();
@@ -308,6 +312,28 @@ describe("element links", () => {
       expect(h.state.hoveredElementIds[target.id]).toBe(true);
 
       mouse.moveTo(600, 600);
+
+      expect(h.state.hoveredElementIds).toEqual({});
+    });
+
+    it("starts over when the selector closes and opens again", () => {
+      const { target } = pickingFor();
+      mouse.moveTo(250, 250);
+      API.setSelectedElements([target]);
+      expect(h.state.hoveredElementIds[target.id]).toBe(true);
+
+      act(() => {
+        API.setAppState({ openDialog: null });
+      });
+
+      expect(h.state.hoveredElementIds).toEqual({});
+      expect(h.state.selectedElementIds).toEqual({});
+
+      act(() => {
+        API.setAppState({
+          openDialog: { name: "elementLinkSelector", sourceElementId: "any" },
+        });
+      });
 
       expect(h.state.hoveredElementIds).toEqual({});
     });
