@@ -56,6 +56,8 @@ import {
   ShapeCache,
   Store,
   StoreDelta,
+  bindOrUnbindBindingElements,
+  calculateFixedPointForNonElbowArrowBinding,
   embeddableURLValidator,
   getActiveTextElement,
   getCommonBounds,
@@ -69,6 +71,7 @@ import {
   hasBackground,
   isElementCompletelyInViewport,
   isElementInGroup,
+  isArrowElement,
   isBindingElement,
   isBindingEnabled,
   isElbowArrow,
@@ -80,6 +83,7 @@ import {
   isLinearElement,
   isLinearElementType,
   isMeasureTextSupported,
+  isSimpleArrow,
   isTextElement,
   makeNextSelectedElementIds,
   maybeHandleArrowPointlikeDrag,
@@ -148,6 +152,7 @@ import type {
 import type { GlobalPoint } from "@excalidraw/math";
 import type {
   ExcalidrawArrowElement,
+  ExcalidrawBindableElement,
   ExcalidrawElement,
   ExcalidrawEmbeddableElement,
   ExcalidrawFreeDrawElement,
@@ -2184,10 +2189,6 @@ export class CaliburnEditorComponent
     this.batchCommits(() => this.onKeyDownImpl(event));
   };
 
-  /**
-   * Upstream's `onKeyUp`, restricted to the branches caliburn has a landing
-   * place for: the arrow-key block drives machinery no task has ported.
-   */
   private onKeyUp = (event: KeyboardEvent) => {
     if (!this.isInteractionEnabled()) {
       return;
@@ -2273,6 +2274,59 @@ export class CaliburnEditorComponent
       this.batchCommits(() =>
         maybeHandleArrowPointlikeDrag({ app: this as any, event }),
       );
+    }
+
+    if (isArrowKey(event.key)) {
+      this.batchCommits(() => {
+        bindOrUnbindBindingElements(
+          this.scene.getSelectedElements(this.state).filter(isArrowElement),
+          this.scene,
+          this.state,
+        );
+
+        const elementsMap = this.scene.getNonDeletedElementsMap();
+
+        this.scene
+          .getSelectedElements(this.state)
+          .filter(isSimpleArrow)
+          .forEach((element) => {
+            // Update the fixed point bindings for non-elbow arrows
+            // when the pointer is released, so that they are correctly positioned
+            // after the drag.
+            if (element.startBinding) {
+              this.scene.mutateElement(element, {
+                startBinding: {
+                  ...element.startBinding,
+                  ...calculateFixedPointForNonElbowArrowBinding(
+                    element,
+                    elementsMap.get(
+                      element.startBinding.elementId,
+                    ) as NonDeleted<ExcalidrawBindableElement>,
+                    "start",
+                    elementsMap,
+                  ),
+                },
+              });
+            }
+            if (element.endBinding) {
+              this.scene.mutateElement(element, {
+                endBinding: {
+                  ...element.endBinding,
+                  ...calculateFixedPointForNonElbowArrowBinding(
+                    element,
+                    elementsMap.get(
+                      element.endBinding.elementId,
+                    ) as NonDeleted<ExcalidrawBindableElement>,
+                    "end",
+                    elementsMap,
+                  ),
+                },
+              });
+            }
+          });
+
+        this.setState({ suggestedBinding: null });
+      });
     }
 
     if (restoreOrbitBindMode) {
