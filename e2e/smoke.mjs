@@ -3830,6 +3830,65 @@ export const runSuite = async (browser, url, runner) => {
       );
 
       await runner.check(
+        "mobile.tool-popover-focus",
+        "picking a grouped tool hands focus back to the editor container",
+        async () => {
+          const trigger = '.mobile-toolbar [data-testid="toolbar-rectangle"]';
+          // start from a closed popover whatever the previous check left
+          if (
+            await page.evaluate(
+              () => !!document.querySelector(".tool-popover-content"),
+            )
+          ) {
+            await tapCenter(page, trigger);
+            await waitFor(
+              page,
+              () => !document.querySelector(".tool-popover-content"),
+              { message: "the tool popover would not close" },
+            );
+          }
+
+          await tapCenter(page, trigger);
+          await waitFor(
+            page,
+            () => !!document.querySelector(".tool-popover-content"),
+            { message: "tapping the shape trigger opened no tool popover" },
+          );
+
+          // the trigger's own `setActiveTool` must not have closed the popover
+          // before the second tap can land on one of its options
+          await tapCenter(
+            page,
+            '.tool-popover-content [data-testid="toolbar-diamond"]',
+          );
+          await waitFor(
+            page,
+            () => window.h.state.activeTool.type === "diamond",
+            { message: "tapping the diamond option did not activate it" },
+          );
+
+          const focus = await page.evaluate(() => ({
+            isContainer:
+              document.activeElement === document.querySelector(".excalidraw"),
+            active: document.activeElement?.className ?? null,
+          }));
+          expect(
+            focus.isContainer,
+            `focus stayed on ${focus.active} instead of the editor container`,
+          );
+        },
+        {
+          evidence: {
+            page,
+            selectors: [
+              ".tool-popover-content",
+              '.mobile-toolbar [data-testid="toolbar-rectangle"]',
+            ],
+          },
+        },
+      );
+
+      await runner.check(
         "mobile.styles-panel",
         "the mobile styles panel renders with the compact color triggers",
         async () => {

@@ -40,6 +40,7 @@ import {
   isBrave,
   isInputLike,
   isSelectionLikeTool,
+  isToolIcon,
   isWritableElement,
   loadDesktopUIModePreference,
   supportsResizeObserver,
@@ -74,6 +75,7 @@ import {
   isImageElement,
   isInitializedImageElement,
   isLinearElement,
+  isLinearElementType,
   isMeasureTextSupported,
   isTextElement,
   makeNextSelectedElementIds,
@@ -2866,7 +2868,11 @@ export class CaliburnEditorComponent
         this.state.zoom,
       );
     }
-    this.cdr.detectChanges();
+    if (this.batchDepth === 0) {
+      // batched writes render once, when the batch ends — the intermediate
+      // views React's batching never produces must not be produced here either
+      this.cdr.detectChanges();
+    }
     callback?.();
   }
 
@@ -2929,6 +2935,19 @@ export class CaliburnEditorComponent
       toggle?: boolean;
     } = {},
   ) => {
+    // upstream's `setActiveTool` is a single React update: its two `setState`
+    // calls are batched into one render, so the intermediate state — the tool
+    // that is about to be replaced, with the reset already applied — is never
+    // rendered. Caliburn's `setState` renders synchronously, so the batch is
+    // what keeps that state off screen; the grouped-tool popover reads a
+    // render of it as "the active tool left my group" and closes itself
+    this.batchCommits(() => this.setActiveToolImpl(tool, opts));
+  };
+
+  private setActiveToolImpl(
+    tool: Parameters<CaliburnEditorComponent["setActiveTool"]>[0],
+    opts: NonNullable<Parameters<CaliburnEditorComponent["setActiveTool"]>[1]>,
+  ) {
     const { keepSelection = false } = opts;
 
     if (!this.isToolSupported(tool.type)) {
@@ -2980,6 +2999,14 @@ export class CaliburnEditorComponent
       this.cursor.set(CURSOR_TYPE.GRAB);
     } else if (!isHoldingSpace()) {
       this.cursor.applyForTool(nextActiveTool);
+    }
+
+    if (isToolIcon(document.activeElement)) {
+      this.focusContainer();
+    }
+
+    if (!isLinearElementType(nextActiveTool.type)) {
+      this.setState({ suggestedBinding: null });
     }
 
     if (nextActiveTool.type === "image") {
@@ -3035,7 +3062,7 @@ export class CaliburnEditorComponent
         activeTool: nextActiveTool,
       };
     });
-  };
+  }
 
   setToast = (toast: AppState["toast"]) => {
     this.setState({ toast });

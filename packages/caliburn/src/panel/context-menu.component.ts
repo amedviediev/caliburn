@@ -121,6 +121,7 @@ export class CaliburnContextMenuComponent {
     // the action uses the appState it's being passed (that still
     // contains a defined contextMenu) to return the next state.
     editor.setState({ contextMenu: null }, () => {
+      editor.focusContainer();
       editor.actionManager.executeAction(action, "contextMenu");
     });
   }

@@ -65,7 +65,18 @@ export const handleCanvasPanUsingWheelOrSpaceDrag = (
   }
   isPanning = true;
 
-  event.preventDefault();
+  // due to event.preventDefault below, container wouldn't get focus
+  // automatically
+  editor.focusContainer();
+
+  // preventing defualt while text editing messes with cursor/focus
+  if (!editor.state.editingTextElement) {
+    // necessary to prevent browser from scrolling the page if excalidraw
+    // not full-page #4489
+    //
+    // as such, the above is broken when panning canvas while in wysiwyg
+    event.preventDefault();
+  }
 
   editor.cursor.set(CURSOR_TYPE.GRABBING);
   let { clientX: lastX, clientY: lastY } = event;
