@@ -2,7 +2,6 @@ import { Component, forwardRef, inject } from "@angular/core";
 
 import {
   BUCKET_FILL_BACKGROUND_PICKS,
-  CLASSES,
   COLOR_PALETTE,
   DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE,
   DEFAULT_ELEMENT_BACKGROUND_PICKS,
@@ -103,6 +102,9 @@ interface RadioOption {
  */
 @Component({
   selector: "caliburn-shape-actions",
+  host: {
+    style: "display: contents;",
+  },
   imports: [
     CaliburnAlignFieldsetComponent,
     CaliburnArrowTypeFieldsetComponent,
@@ -122,8 +124,6 @@ export class CaliburnShapeActionsComponent {
   );
 
   readonly editor = () => this.host;
-
-  readonly shapeActionsMenuClass = CLASSES.SHAPE_ACTIONS_MENU;
 
   readonly labels = translated(() => ({
     stroke: t("labels.stroke"),

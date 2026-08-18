@@ -79,6 +79,9 @@ const ADDITIONAL_WIDTH = WIDTH + GAP;
 @Component({
   selector: "caliburn-compact-shape-actions",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    style: "display: contents;",
+  },
   imports: [
     CaliburnAlignFieldsetComponent,
     CaliburnArrowTypeFieldsetComponent,

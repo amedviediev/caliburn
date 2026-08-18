@@ -281,9 +281,20 @@ describe("the styles panel as a viewport surface", () => {
     );
     expect(island).not.toBeNull();
     expect(island!.style.maxHeight).toBe("634px");
+    expect(island!.style.overflowX).toBe("hidden");
     expect(island!.style.getPropertyValue("--padding")).toBe("2");
     expect(island!.getAttribute("data-viewport-ui")).toBe("side");
     expect(island!.getAttribute("data-viewport-ui-name")).toBe("stylesPanel");
+    expect(island!.querySelector(".App-menu__left")).toBeNull();
+    expect(
+      island!.querySelector('[data-viewport-ui-name="stylesPanel"]'),
+    ).toBeNull();
+
+    const actions = island!.querySelector<HTMLElement>(
+      ":scope > caliburn-shape-actions",
+    );
+    expect(actions).not.toBeNull();
+    expect(actions!.style.display).toBe("contents");
   });
 
   it("reports the full panel's own footprint, measured not reserved", async () => {
@@ -311,6 +322,16 @@ describe("the styles panel as a viewport surface", () => {
     measurePanel(
       '.compact-shape-actions-island[data-viewport-ui-name="stylesPanel"]',
     );
+
+    const compactIsland = document.querySelector(
+      "caliburn-island.compact-shape-actions-island",
+    )!;
+    expect(compactIsland.querySelector("caliburn-island.Island")).toBeNull();
+    const compactActions = compactIsland.querySelector<HTMLElement>(
+      ":scope > caliburn-compact-shape-actions",
+    );
+    expect(compactActions).not.toBeNull();
+    expect(compactActions!.style.display).toBe("contents");
 
     expect(h.app.viewport.getOffsets({ padding: 0 }).left).toBe(208);
     expect(
