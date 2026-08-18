@@ -6,18 +6,52 @@ on:
 
 jobs:
   test:
-    name: Vitest (${{ matrix.project }})
+    name: Vitest (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - project: editor
+          - name: editor
+            project: editor
             workers: 2
-          - project: caliburn
+            shard: 1/1
+          - name: caliburn 1/8
+            project: caliburn
             workers: 1
-          - project: caliburn-app
+            shard: 1/8
+          - name: caliburn 2/8
+            project: caliburn
+            workers: 1
+            shard: 2/8
+          - name: caliburn 3/8
+            project: caliburn
+            workers: 1
+            shard: 3/8
+          - name: caliburn 4/8
+            project: caliburn
+            workers: 1
+            shard: 4/8
+          - name: caliburn 5/8
+            project: caliburn
+            workers: 1
+            shard: 5/8
+          - name: caliburn 6/8
+            project: caliburn
+            workers: 1
+            shard: 6/8
+          - name: caliburn 7/8
+            project: caliburn
+            workers: 1
+            shard: 7/8
+          - name: caliburn 8/8
+            project: caliburn
+            workers: 1
+            shard: 8/8
+          - name: caliburn-app
+            project: caliburn-app
             workers: 2
+            shard: 1/1
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Setup Node.js
@@ -27,4 +61,4 @@ jobs:
       - name: Install and test
         run: |
           yarn install
-          yarn vitest run --project "${{ matrix.project }}" --maxWorkers=${{ matrix.workers }}
+          yarn vitest run --project "${{ matrix.project }}" --maxWorkers=${{ matrix.workers }} --shard=${{ matrix.shard }}
