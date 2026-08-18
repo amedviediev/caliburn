@@ -266,6 +266,26 @@ describe("the styles panel as a viewport surface", () => {
     stubRect(panel!, { left: 8, top: 100, width: 200, height: 400 });
   };
 
+  it("renders the full styles panel in the upstream scrollable Island", async () => {
+    await render(<Excalidraw />);
+    resizeTo({ width: 1920, height: 1080 });
+    withSelectedElement();
+
+    const section = document.querySelector(
+      "section.selected-shape-actions.zen-mode-transition",
+    );
+    expect(section).not.toBeNull();
+
+    const island = section!.querySelector<HTMLElement>(
+      ":scope > caliburn-island.Island.App-menu__left",
+    );
+    expect(island).not.toBeNull();
+    expect(island!.style.maxHeight).toBe("634px");
+    expect(island!.style.getPropertyValue("--padding")).toBe("2");
+    expect(island!.getAttribute("data-viewport-ui")).toBe("side");
+    expect(island!.getAttribute("data-viewport-ui-name")).toBe("stylesPanel");
+  });
+
   it("reports the full panel's own footprint, measured not reserved", async () => {
     await render(<Excalidraw />);
     resizeTo({ width: 1920, height: 1080 });

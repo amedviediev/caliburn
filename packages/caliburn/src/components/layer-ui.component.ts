@@ -8,6 +8,7 @@ import {
 } from "@angular/core";
 
 import {
+  CLASSES,
   DEFAULT_SIDEBAR,
   capitalizeString,
   deriveStylesPanelMode,
@@ -34,12 +35,14 @@ import { CaliburnFixedSideContainerComponent } from "./fixed-side-container.comp
 import { CaliburnFooterComponent } from "./footer.component";
 import { CaliburnHelpDialogComponent } from "./help-dialog.component";
 import { CaliburnImageExportDialogComponent } from "./image-export-dialog.component";
+import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnJSONExportDialogComponent } from "./json-export-dialog.component";
 import { CaliburnDefaultMainMenuComponent } from "./main-menu/default-main-menu.component";
 import { CaliburnMobileMenuComponent } from "./mobile-menu.component";
 import { CaliburnOverwriteConfirmComponent } from "./overwrite-confirm/overwrite-confirm.component";
 import { CaliburnPasteChartDialogComponent } from "./paste-chart-dialog.component";
 import { CaliburnPenModeButtonComponent } from "./pen-mode-button.component";
+import { CaliburnSectionComponent } from "./section.component";
 import { isSidebarDocked } from "./sidebar/common";
 import { CaliburnStatsComponent } from "./stats/stats.component";
 import { CaliburnDefaultSidebarComponent } from "./sidebar/default-sidebar.component";
@@ -109,11 +112,13 @@ let nextLayerUIId = 0;
     CaliburnCompactShapeActionsComponent,
     CaliburnHelpDialogComponent,
     CaliburnImageExportDialogComponent,
+    CaliburnIslandComponent,
     CaliburnJSONExportDialogComponent,
     CaliburnMobileMenuComponent,
     CaliburnOverwriteConfirmComponent,
     CaliburnPasteChartDialogComponent,
     CaliburnPenModeButtonComponent,
+    CaliburnSectionComponent,
     CaliburnShapeActionsComponent,
     CaliburnSidebarTriggerComponent,
     CaliburnStackColComponent,
@@ -144,6 +149,7 @@ export class CaliburnLayerUIComponent {
   protected readonly defaultToastDuration = DEFAULT_TOAST_TIMEOUT;
   protected readonly defaultSidebarName = DEFAULT_SIDEBAR.name;
   protected readonly defaultSidebarTab = DEFAULT_SIDEBAR.defaultTab;
+  protected readonly shapeActionsMenuClass = CLASSES.SHAPE_ACTIONS_MENU;
   protected readonly libraryTitle = translated(() =>
     capitalizeString(t("toolBar.library")),
   );

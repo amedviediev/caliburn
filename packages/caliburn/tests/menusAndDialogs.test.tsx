@@ -70,6 +70,8 @@ describe("MainMenu", () => {
     const menu = queryByTestId(container, "dropdown-menu");
     expect(menu).not.toBeNull();
     expect(menu!.classList).toContain("main-menu");
+    expect(menu!.style.position).toBe("fixed");
+    expect(menu!.querySelector(":scope > .Island")).not.toBeNull();
 
     for (const testId of [
       "load-button",

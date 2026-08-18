@@ -105,10 +105,35 @@
               isCompactStylesPanel()
             "
           >
-            @if (isCompactStylesPanel()) {
-              <caliburn-compact-shape-actions variant="compact" />
-            } @else {
-              <caliburn-shape-actions />
+            @if (shouldRenderSelectedShapeActions()) {
+              <section
+                caliburn-section
+                heading="selectedShapeActions"
+                class="selected-shape-actions zen-mode-transition"
+                [class.transition-left]="state().zenModeEnabled"
+              >
+                @if (isCompactStylesPanel()) {
+                  <caliburn-island
+                    class="compact-shape-actions-island"
+                    [padding]="0"
+                    [style.max-height.px]="state().height - 166"
+                    viewportUi="side"
+                    viewportUiName="stylesPanel"
+                  >
+                    <caliburn-compact-shape-actions variant="compact" />
+                  </caliburn-island>
+                } @else {
+                  <caliburn-island
+                    [class]="shapeActionsMenuClass"
+                    [padding]="2"
+                    [style.max-height.px]="state().height - 166"
+                    viewportUi="side"
+                    viewportUiName="stylesPanel"
+                  >
+                    <caliburn-shape-actions />
+                  </caliburn-island>
+                }
+              </section>
             }
           </div>
         }
