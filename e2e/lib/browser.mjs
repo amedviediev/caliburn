@@ -407,6 +407,12 @@ export const tapCenter = async (page, selector) => {
 export const suppressNativeEvent = (page, type) =>
   page.evaluate((eventType) => {
     window.__suppressedNative = window.__suppressedNative || {};
+    // idempotent: a second call for the same event must not leave the first
+    // listener behind with nothing holding onto it
+    const previous = window.__suppressedNative[eventType];
+    if (previous) {
+      window.removeEventListener(eventType, previous, true);
+    }
     const stop = (event) => event.stopImmediatePropagation();
     window.__suppressedNative[eventType] = stop;
     window.addEventListener(eventType, stop, true);
@@ -421,13 +427,41 @@ export const restoreNativeEvent = (page, type) =>
     }
   }, type);
 
+/** the margin on top of the vendored timeout, so the wait clears it */
+const TAP_TWICE_SETTLE_MARGIN = 100;
+
+let tapTwiceTimeout = null;
+
+/** reads `TAP_TWICE_TIMEOUT` off the vendored constants — the harness is plain
+ * Node ESM and cannot import the TypeScript source, but it can still take the
+ * value from it rather than keeping a copy that drifts */
+const readTapTwiceTimeout = async () => {
+  if (tapTwiceTimeout === null) {
+    const source = await fs.readFile(
+      path.resolve(HERE, "../../packages/common/src/constants.ts"),
+      "utf8",
+    );
+    const match = /export const TAP_TWICE_TIMEOUT = (\d+)/.exec(source);
+    if (!match) {
+      throw new Error("TAP_TWICE_TIMEOUT not found in the vendored constants");
+    }
+    tapTwiceTimeout = Number(match[1]);
+  }
+  return tapTwiceTimeout;
+};
+
 /**
- * Wait out the vendored `TAP_TWICE_TIMEOUT` (300 ms) so the next touch opens a
- * gesture of its own instead of completing the previous one's tap twice. A
- * fixed protocol delay, not a poll — the timer exposes no state to observe.
+ * Wait out the vendored `TAP_TWICE_TIMEOUT` so the next touch opens a gesture
+ * of its own instead of completing the previous one's tap twice. A fixed
+ * protocol delay, not a poll — the timer exposes no state to observe.
  */
-export const settleTapTwiceWindow = (page) =>
-  page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+export const settleTapTwiceWindow = async (page) => {
+  const timeout = await readTapTwiceTimeout();
+  await page.evaluate(
+    (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    timeout + TAP_TWICE_SETTLE_MARGIN,
+  );
+};
 
 /**
  * Press and release a stylus at real pixels. Neither `page.mouse` nor

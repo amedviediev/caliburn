@@ -4174,9 +4174,11 @@ export const runSuite = async (browser, url, runner) => {
           // draw a rectangle with a finger — creating it leaves it selected.
           // It is filled, so that a press inside it hits the element and
           // keeps the selection instead of clearing it as a canvas miss
-          await page.evaluate(() => {
+          const previousBackground = await page.evaluate(() => {
+            const previous = window.h.state.currentItemBackgroundColor;
             window.h.setState({ currentItemBackgroundColor: "#ffec99" });
             window.h.app.setActiveTool({ type: "rectangle" });
+            return previous;
           });
           const drawing = await page.touchscreen.touchStart(120, 500);
           await drawing.move(260, 620);
@@ -4214,6 +4216,11 @@ export const runSuite = async (browser, url, runner) => {
           } finally {
             await second.end();
             await first.end();
+            // the fill was this check's own fixture — `resetEditor` does not
+            // touch the item defaults, so it is handed back here
+            await page.evaluate((color) => {
+              window.h.setState({ currentItemBackgroundColor: color });
+            }, previousBackground);
           }
           await resetEditor(page);
         },
