@@ -11,10 +11,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project:
-          - editor
-          - caliburn
-          - caliburn-app
+        include:
+          - project: editor
+            workers: 2
+          - project: caliburn
+            workers: 1
+          - project: caliburn-app
+            workers: 2
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Setup Node.js
@@ -24,4 +27,4 @@ jobs:
       - name: Install and test
         run: |
           yarn install
-          yarn vitest run --project "${{ matrix.project }}" --maxWorkers=2
+          yarn vitest run --project "${{ matrix.project }}" --maxWorkers=${{ matrix.workers }}

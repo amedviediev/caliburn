@@ -209,7 +209,11 @@ describe("export", () => {
 
     const svg = await exportToSvg(elements, appState, files);
 
-    const svgText = svg.outerHTML;
+    let elementIndex = 0;
+    const svgText = svg.outerHTML.replace(/data-id="[^"]+"/g, () => {
+      elementIndex += 1;
+      return `data-id="id${elementIndex}"`;
+    });
 
     // expect 1 <image> element (deduped)
     expect(svgText.match(/<image/g)?.length).toBe(1);
