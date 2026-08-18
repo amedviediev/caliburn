@@ -8,20 +8,98 @@ import { workspaceAliases } from "../../vitest.alias";
 
 const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+const frameworkNeutralOverrides = new Map([
+  [
+    path.resolve(projectDir, "../excalidraw/hooks/useLibraryItemSvg"),
+    path.resolve(projectDir, "src/vendor/library-item-svg-cache.ts"),
+  ],
+  [
+    path.resolve(projectDir, "../excalidraw/reactUtils"),
+    path.resolve(projectDir, "src/vendor/react-utils.ts"),
+  ],
+  [
+    path.resolve(projectDir, "../excalidraw/components/icons"),
+    path.resolve(projectDir, "src/vendor/icon-svg-paths.ts"),
+  ],
+]);
+const upstreamLibraryModule = path.resolve(
+  projectDir,
+  "../excalidraw/data/library.ts",
+);
+
+const frameworkNeutralOverridePlugin: import("vite").Plugin = {
+  name: "caliburn-framework-neutral-overrides",
+  enforce: "pre",
+  resolveId(source: string, importer?: string) {
+    if (!importer || !source.startsWith(".")) {
+      return null;
+    }
+
+    const importerPath = importer.split("?", 1)[0];
+    const resolved = path.resolve(path.dirname(importerPath), source);
+    return frameworkNeutralOverrides.get(resolved) ?? null;
+  },
+  transform(code: string, id: string) {
+    if (id.split("?", 1)[0] !== upstreamLibraryModule) {
+      return null;
+    }
+
+    // Caliburn consumes the framework-neutral Library class and helpers, not
+    // this module's exported React hook. Removing the hook-only import lets
+    // Rollup discard `useHandleLibrary` without preserving React's side effect.
+    return code.replace(
+      'import { useEffect, useRef } from "react";',
+      "const useEffect = () => {}; const useRef = (value) => ({ current: value });",
+    );
+  },
+};
+
+export default defineConfig(({ command }) => ({
   plugins: [
+    ...(command === "build" ? [frameworkNeutralOverridePlugin] : []),
     angular({
       jit: false,
-      tsconfig: path.join(projectDir, "tsconfig.spec.json"),
+      tsconfig: path.join(
+        projectDir,
+        command === "build" ? "tsconfig.json" : "tsconfig.spec.json",
+      ),
     }),
   ],
   resolve: {
     alias: workspaceAliases,
   },
-  // the angular plugin turns vite's esbuild transform off for the whole
-  // project; JSX-compat test files still need it
+  // The Angular plugin turns Vite's esbuild transform off for the whole
+  // project; JSX-compat test files still need it.
   esbuild: {
     include: [/\.tsx$/],
+  },
+  build: {
+    assetsInlineLimit: 0,
+    emptyOutDir: true,
+    rollupOptions: {
+      input: path.join(projectDir, "src/package-entry.ts"),
+      preserveEntrySignatures: "strict",
+      external: (id) => {
+        if (
+          id.startsWith("@excalidraw/excalidraw/") ||
+          id.startsWith("@excalidraw/utils/")
+        ) {
+          return false;
+        }
+        return !id.startsWith(".") && !path.isAbsolute(id);
+      },
+      output: {
+        format: "es",
+        entryFileNames: "index.js",
+        chunkFileNames: "[name]-[hash].js",
+        assetFileNames: (asset) =>
+          asset.names.some((name) => name.endsWith(".css"))
+            ? "index.css"
+            : asset.names.some((name) => name.endsWith(".woff2"))
+            ? "fonts/[name][extname]"
+            : "assets/[name]-[hash][extname]",
+      },
+    },
   },
   //@ts-ignore
   test: {
@@ -31,4 +109,4 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.{ts,tsx}"],
   },
-});
+}));

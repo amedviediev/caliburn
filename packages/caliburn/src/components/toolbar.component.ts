@@ -15,16 +15,9 @@ import {
 } from "@excalidraw/common";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
-import {
-  TOOLS,
-  getToolLetter,
-  getToolShortcut,
-} from "@excalidraw/excalidraw/components/Tools";
 import { t } from "@excalidraw/excalidraw/i18n";
 
 import { NgIcon } from "@ng-icons/core";
-
-import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
 
 import type { PointerType } from "@excalidraw/element/types";
 
@@ -43,7 +36,9 @@ import { CaliburnIslandComponent } from "./island.component";
 import { CaliburnPenModeButtonComponent } from "./pen-mode-button.component";
 import { CaliburnSelectionToolPopoverComponent } from "./selection-tool-popover.component";
 import { CaliburnStackRowComponent } from "./stack.component";
-import { TOOL_ICONS } from "./tools";
+import { TOOL_ICONS, TOOLS, getToolLetter, getToolShortcut } from "./tools";
+
+import type { ToolbarToolType } from "./tools";
 
 import type { CaliburnEditorComponent } from "../editor.component";
 

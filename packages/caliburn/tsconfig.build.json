@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "./dist/types",
+    "rootDir": "./src",
+    "paths": {
+      "@excalidraw/common": ["../excalidraw/dist/types/common/src/index.d.ts"],
+      "@excalidraw/common/*": ["../excalidraw/dist/types/common/src/*"],
+      "@excalidraw/element": ["../excalidraw/dist/types/element/src/index.d.ts"],
+      "@excalidraw/element/*": ["../excalidraw/dist/types/element/src/*"],
+      "@excalidraw/excalidraw": ["../excalidraw/dist/types/excalidraw/index.d.ts"],
+      "@excalidraw/excalidraw/*": ["../excalidraw/dist/types/excalidraw/*"],
+      "@excalidraw/math": ["../excalidraw/dist/types/math/src/index.d.ts"],
+      "@excalidraw/math/*": ["../excalidraw/dist/types/math/src/*"],
+      "@excalidraw/utils": ["../excalidraw/dist/types/utils/src/index.d.ts"],
+      "@excalidraw/utils/*": ["../excalidraw/dist/types/utils/src/*"]
+    },
+    "types": ["vite/client"],
+    "strictPropertyInitialization": false
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/package-entry.ts", "src/**/*.test.ts", "tests", "dist"]
+}

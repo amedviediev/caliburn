@@ -2,9 +2,9 @@ import { KEYS } from "@excalidraw/common";
 
 import { getTargetElements, isArrowElement } from "@excalidraw/element";
 
-import { getShapeActionPredicates } from "@excalidraw/excalidraw/components/shapeActionPredicates";
-
 import type { ExcalidrawTextElement } from "@excalidraw/element/types";
+
+import { getShapeActionPredicates } from "../src/components/shape-action-predicates";
 
 import { actionFinalize } from "../src/actions/actionFinalize";
 import { Excalidraw } from "../src/index";

@@ -7,12 +7,11 @@ import {
   updateActiveTool,
 } from "@excalidraw/common";
 
-import { findShapeByKey } from "@excalidraw/excalidraw/components/Tools";
-
 import type { AppClassProperties } from "@excalidraw/excalidraw/types";
 
 import { Excalidraw } from "../src/index";
 import { h } from "../src/test-hook";
+import { findShapeByKey, TOOLS } from "../src/components/tools";
 
 import { API } from "./helpers/api";
 import { Keyboard, Pointer } from "./helpers/ui";
@@ -123,6 +122,47 @@ describe("findShapeByKey()", () => {
 
     expect(findShapeByKey("R", app, true)).toBeNull();
     expect(findShapeByKey("V", app, true)).toBeNull();
+  });
+
+  it("owns the framework-free upstream tool configuration", () => {
+    expect(Object.keys(TOOLS)).toEqual([
+      "hand",
+      "selection",
+      "rectangle",
+      "diamond",
+      "ellipse",
+      "arrow",
+      "line",
+      "freedraw",
+      "text",
+      "image",
+      "eraser",
+      "frame",
+      "autoshape",
+      "embeddable",
+      "laser",
+      "bucketfill",
+      "lasso",
+    ]);
+    expect(TOOLS.selection).toMatchObject({
+      letterKey: "v",
+      numericKey: "1",
+      fillable: true,
+    });
+    expect(TOOLS.freedraw).toMatchObject({
+      letterKey: ["p", "x"],
+      numericKey: "7",
+    });
+    expect(TOOLS.eraser).toMatchObject({
+      letterKey: "e",
+      numericKey: "0",
+      toggle: true,
+    });
+    expect(TOOLS.autoshape).toMatchObject({
+      letterKey: "x",
+      shiftKey: true,
+      fillable: false,
+    });
   });
 });
 

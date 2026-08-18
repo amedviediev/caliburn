@@ -3,6 +3,7 @@ import React from "react";
 import { KEYS, THEME } from "@excalidraw/common";
 
 import { Excalidraw } from "../src/index";
+import { eyeDropperCursor } from "../src/components/eye-dropper";
 
 import { Keyboard } from "./helpers/ui";
 import { fireEvent, GlobalTestState, render, waitFor } from "./test-utils";
@@ -10,6 +11,15 @@ import { fireEvent, GlobalTestState, render, waitFor } from "./test-utils";
 const { h } = window;
 
 describe("eye dropper", () => {
+  it("owns the cursor SVG paths without the React icon module", () => {
+    expect(eyeDropperCursor).toContain(
+      encodeURIComponent(
+        "M4 16l11.7 -11.7a1 1 0 0 1 1.4 0l2.6 2.6a1 1 0 0 1 0 1.4l-11.7 11.7h-4v-4z",
+      ),
+    );
+    expect(eyeDropperCursor).toContain(encodeURIComponent("M11 7l6 6"));
+  });
+
   it("keeps the color preview within the editor container", async () => {
     await render(<Excalidraw autoFocus={true} handleKeyboardGlobally={true} />);
 

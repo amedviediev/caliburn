@@ -37,7 +37,6 @@ import { CaliburnPickerColorListComponent } from "./picker-color-list.component"
 import { CaliburnPickerHeadingComponent } from "./picker-heading.component";
 import { CaliburnShadeListComponent } from "./shade-list.component";
 
-import type React from "react";
 import type { OnDestroy, OnInit, ElementRef } from "@angular/core";
 
 /**
@@ -179,7 +178,9 @@ export class CaliburnPickerComponent implements OnInit, OnDestroy {
 
   protected onKeyDown(event: KeyboardEvent) {
     const handled = colorPickerKeyNavHandler({
-      event: event as unknown as React.KeyboardEvent,
+      event: event as unknown as Parameters<
+        typeof colorPickerKeyNavHandler
+      >[0]["event"],
       activeColorPickerSection: this.section.active(),
       palette: this.palette(),
       color: this.color(),

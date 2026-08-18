@@ -23,11 +23,6 @@ import { getSelectedElements } from "@excalidraw/element";
 import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { distributeLibraryItemsOnSquareGrid } from "@excalidraw/excalidraw/data/library";
-import { TOOLS, getToolLetter } from "@excalidraw/excalidraw/components/Tools";
-import {
-  canChangeBackgroundColor,
-  canChangeStrokeColor,
-} from "@excalidraw/excalidraw/components/shapeActionPredicates";
 import { deburr } from "@excalidraw/excalidraw/deburr";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
@@ -40,7 +35,6 @@ import type { MarkRequired } from "@excalidraw/common/utility-types";
 
 import type { ShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
-import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
 import type { TranslationKeys } from "@excalidraw/excalidraw/i18n";
 
 import {
@@ -54,15 +48,20 @@ import { getActionIconName } from "../action-icons";
 import { CaliburnDialogComponent } from "../dialog.component";
 import { CaliburnLibraryItemIconComponent } from "../library/library-item-icon.component";
 import { CaliburnTextFieldComponent } from "../text-field.component";
-import { TOOL_ICONS } from "../tools";
+import { TOOL_ICONS, TOOLS, getToolLetter } from "../tools";
+import {
+  canChangeBackgroundColor,
+  canChangeStrokeColor,
+} from "../shape-action-predicates";
 
 import { translated } from "../../i18n";
 
 import { DEFAULT_CATEGORIES } from "./categories";
 
-import type { CommandPaletteItem } from "./types";
-import type { CaliburnEditorComponent } from "../../editor.component";
 import type { OnDestroy } from "@angular/core";
+import type { CaliburnEditorComponent } from "../../editor.component";
+import type { ToolbarToolType } from "../tools";
+import type { CommandPaletteItem } from "./types";
 
 /**
  * Upstream keeps the last executed item in a module-level jotai atom, so it

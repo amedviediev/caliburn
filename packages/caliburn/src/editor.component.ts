@@ -119,8 +119,6 @@ import {
   isArrowKey,
 } from "@excalidraw/common";
 
-import { findShapeByKey } from "@excalidraw/excalidraw/components/Tools";
-
 import {
   getDefaultAppState,
   isEraserActive,
@@ -204,6 +202,8 @@ import type {
   Action,
   ActionResult,
 } from "@excalidraw/excalidraw/actions/types";
+
+import { findShapeByKey } from "./components/tools";
 
 import { CaliburnArrowText } from "./arrow-text";
 import { CaliburnBindMode } from "./bind-mode";

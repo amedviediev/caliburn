@@ -7,17 +7,16 @@ import {
 
 import { capitalizeString } from "@excalidraw/common";
 
-import { TOOLS } from "@excalidraw/excalidraw/components/Tools";
 import { t } from "@excalidraw/excalidraw/i18n";
-
-import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
 
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
 import { translated } from "../i18n";
 
 import { CaliburnToolPopoverComponent } from "./tool-popover.component";
-import { TOOL_ICONS } from "./tools";
+import { TOOL_ICONS, TOOLS } from "./tools";
+
+import type { ToolbarToolType } from "./tools";
 
 import type { CaliburnToolOption } from "./tool-popover.component";
 import type { CaliburnEditorComponent } from "../editor.component";

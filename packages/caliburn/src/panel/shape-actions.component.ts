@@ -23,7 +23,6 @@ import {
   isTextElement,
 } from "@excalidraw/element";
 
-import { getShapeActionPredicates } from "@excalidraw/excalidraw/components/shapeActionPredicates";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { getSelectedElements } from "@excalidraw/excalidraw/scene";
 import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
@@ -38,6 +37,8 @@ import type {
 } from "@excalidraw/element/types";
 import type { Action } from "@excalidraw/excalidraw/actions/types";
 import type { Primitive } from "@excalidraw/excalidraw/types";
+
+import { getShapeActionPredicates } from "../components/shape-action-predicates";
 
 import { actionDeleteSelected } from "../actions/actionDeleteSelected";
 import { actionDuplicateSelection } from "../actions/actionDuplicateSelection";

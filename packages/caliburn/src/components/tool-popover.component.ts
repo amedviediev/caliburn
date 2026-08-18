@@ -15,12 +15,11 @@ import { capitalizeString } from "@excalidraw/common";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 
-import type { ToolbarToolType } from "@excalidraw/excalidraw/components/Tools";
-
 import { CaliburnEditorComponent as CaliburnEditorComponentToken } from "../editor.component";
 
 import { CaliburnIconButtonComponent } from "./icon-button.component";
 
+import type { ToolbarToolType } from "./tools";
 import type { CaliburnEditorComponent } from "../editor.component";
 import type { OnDestroy, OnInit } from "@angular/core";
 

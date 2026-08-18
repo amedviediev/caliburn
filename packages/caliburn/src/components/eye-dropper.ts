@@ -1,8 +1,11 @@
 import { MIME_TYPES } from "@excalidraw/common";
 
-import { eyeDropperIconSvgPaths } from "@excalidraw/excalidraw/components/icons";
-
 import type { ColorPickerType } from "@excalidraw/excalidraw/components/ColorPicker/colorPickerUtils";
+
+const eyeDropperIconSvgPaths = [
+  "M4 16l11.7 -11.7a1 1 0 0 1 1.4 0l2.6 2.6a1 1 0 0 1 0 1.4l-11.7 11.7h-4v-4z",
+  "M11 7l6 6",
+] as const;
 
 const eyeDropperCursorPaths = eyeDropperIconSvgPaths
   .map((path, idx) => `<path fill="${idx === 0 ? `#fff` : ``}" d="${path}" />`)
