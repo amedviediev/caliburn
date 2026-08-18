@@ -8,8 +8,9 @@ import { getNormalizedZoom } from "@excalidraw/excalidraw/scene";
 import { getCenter, getDistance } from "@excalidraw/excalidraw/gesture";
 import { getViewportForZoomWithScrollConstraints } from "@excalidraw/excalidraw/viewport";
 import { isHandToolActive } from "@excalidraw/excalidraw/appState";
+import { makeNextSelectedElementIds } from "@excalidraw/element";
 
-import type { Gesture } from "@excalidraw/excalidraw/types";
+import type { Gesture, GestureEvent } from "@excalidraw/excalidraw/types";
 
 import type { CaliburnEditorComponent } from "./editor.component";
 
@@ -206,6 +207,106 @@ export const updateMultiTouchGesture = (
   } else {
     gesture.lastCenter = gesture.initialDistance = gesture.initialScale = null;
   }
+};
+
+/**
+ * returns whether user is making a gesture with >= 2 fingers (points)
+ * on o touch screen (not on a trackpad). Currently only relates to Darwin
+ * (iOS/iPadOS,MacOS), but may work on other devices in the future if
+ * GestureEvent is standardized.
+ */
+const isTouchScreenMultiTouchGesture = () => {
+  // we don't want to deselect when using trackpad, and multi-point gestures
+  // only work on touch screens, so checking for >= pointers means we're on a
+  // touchscreen
+  return gesture.pointers.size >= 2;
+};
+
+// fires only on Safari
+export const onGestureStart = (
+  editor: CaliburnEditorComponent,
+  event: GestureEvent,
+) => {
+  if (!editor.isNavigationEnabled()) {
+    return;
+  }
+  event.preventDefault();
+
+  // we only want to deselect on touch screens because user may have selected
+  // elements by mistake while zooming
+  if (isTouchScreenMultiTouchGesture()) {
+    editor.setState({
+      selectedElementIds: makeNextSelectedElementIds({}, editor.state),
+      activeEmbeddable: null,
+    });
+  }
+  gesture.initialScale = editor.state.zoom.value;
+};
+
+// fires only on Safari
+export const onGestureChange = (
+  editor: CaliburnEditorComponent,
+  event: GestureEvent,
+) => {
+  if (!editor.isNavigationEnabled()) {
+    return;
+  }
+  event.preventDefault();
+
+  // onGestureChange only has zoom factor but not the center.
+  // If we're on iPad or iPhone, then we recognize multi-touch and will
+  // zoom in at the right location in the touchmove handler
+  // (handleCanvasPointerMove).
+  //
+  // On Macbook trackpad, we don't have those events so will zoom in at the
+  // current location instead.
+  //
+  // As such, bail from this handler on touch devices.
+  if (isTouchScreenMultiTouchGesture()) {
+    return;
+  }
+
+  const initialScale = gesture.initialScale;
+  if (initialScale) {
+    editor.viewport.translate(
+      (state) => ({
+        ...getViewportForZoomWithScrollConstraints(
+          {
+            viewportX: editor.viewport.lastPosition.x,
+            viewportY: editor.viewport.lastPosition.y,
+            nextZoom: getNormalizedZoom(initialScale * event.scale),
+          },
+          state,
+        ),
+      }),
+      {
+        zoomPreConstrained: true,
+        preserveScrollConstraintsSnapBack: true,
+      },
+    );
+  }
+};
+
+// fires only on Safari
+export const onGestureEnd = (
+  editor: CaliburnEditorComponent,
+  event: GestureEvent,
+) => {
+  if (!editor.isNavigationEnabled()) {
+    return;
+  }
+  event.preventDefault();
+  // reselect elements only on touch screens (see onGestureStart)
+  if (isTouchScreenMultiTouchGesture()) {
+    editor.setState({
+      previousSelectedElementIds: {},
+      selectedElementIds: makeNextSelectedElementIds(
+        editor.state.previousSelectedElementIds,
+        editor.state,
+      ),
+    });
+  }
+  gesture.initialScale = null;
 };
 
 export const removePointer = (

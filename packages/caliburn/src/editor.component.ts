@@ -170,6 +170,7 @@ import type {
   EmbedsValidationStatus,
   FrameNameBoundsCache,
   Gesture,
+  GestureEvent,
   InteractionConfig,
   LibraryItems,
   LibraryItemsSource,
@@ -395,6 +396,9 @@ import {
   isGestureActive,
   isHoldingSpace,
   isPanSessionActive,
+  onGestureChange,
+  onGestureEnd,
+  onGestureStart,
   removePointer,
   resetGesture,
   setHoldingSpace,
@@ -1764,6 +1768,15 @@ export class CaliburnEditorComponent
     // the UI — would otherwise leave the pointer in `gesture.pointers`, and
     // the stale entry makes the next press look like a second finger
     document.addEventListener("pointerup", this.removeDocumentPointer);
+    document.addEventListener(
+      "gesturestart",
+      this.onGestureStart as EventListener,
+    );
+    document.addEventListener(
+      "gesturechange",
+      this.onGestureChange as EventListener,
+    );
+    document.addEventListener("gestureend", this.onGestureEnd as EventListener);
     document.addEventListener("paste", this.pasteFromClipboard);
     document.addEventListener("copy", this.onCopy);
     document.addEventListener("cut", this.onCut);
@@ -1807,6 +1820,41 @@ export class CaliburnEditorComponent
     this.viewport.lastPosition.x = event.clientX;
     this.viewport.lastPosition.y = event.clientY;
   };
+
+  /**
+   * Safari-only desktop pinch. Upstream registers the three handlers from
+   * both its navigation-only and its view+edit listener branch; caliburn
+   * registers once and the `isNavigationEnabled()` gate upstream's bodies
+   * already carry is what decides whether they run.
+   */
+  private onGestureStart = (event: GestureEvent) => {
+    this.batchCommits(() => onGestureStart(this, event));
+  };
+
+  private onGestureChange = (event: GestureEvent) => {
+    this.batchCommits(() => onGestureChange(this, event));
+  };
+
+  private onGestureEnd = (event: GestureEvent) => {
+    this.batchCommits(() => onGestureEnd(this, event));
+  };
+
+  /**
+   * Upstream's `disableEvent` bound to the container's three gesture events,
+   * registered only while the editor is non-interactive with neither
+   * navigation nor the browser's own zoom enabled — the pinch half of the
+   * case whose wheel half `handleWheel` carries. Caliburn binds it from the
+   * template and folds that registration gate into the handler.
+   */
+  disableGestureEvent(event: Event) {
+    if (
+      !this.isInteractionEnabled() &&
+      !this.isBrowserZoomEnabled() &&
+      !this.isNavigationEnabled()
+    ) {
+      event.preventDefault();
+    }
+  }
 
   /**
    * Upstream's `onBlur`: the space bar's keyup lands wherever the focus went,
@@ -1957,6 +2005,18 @@ export class CaliburnEditorComponent
       this.updateCurrentCursorPosition,
     );
     document.removeEventListener("pointerup", this.removeDocumentPointer);
+    document.removeEventListener(
+      "gesturestart",
+      this.onGestureStart as EventListener,
+    );
+    document.removeEventListener(
+      "gesturechange",
+      this.onGestureChange as EventListener,
+    );
+    document.removeEventListener(
+      "gestureend",
+      this.onGestureEnd as EventListener,
+    );
     document.removeEventListener("paste", this.pasteFromClipboard);
     document.removeEventListener("copy", this.onCopy);
     document.removeEventListener("cut", this.onCut);
