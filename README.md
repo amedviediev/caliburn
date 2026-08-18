@@ -79,8 +79,6 @@ git remote add upstream https://github.com/excalidraw/excalidraw.git
 ## Known limitations
 
 - Collaboration presence is verified against a protocol-compatible stand-in because `excalidraw-room` is not published to npm. The live two-client smoke test covers remote cursors, selections, the user list, and follow mode, but does not run against excalidraw.com's production room server.
-- Under load, `caliburn-app/tests/presence.test.tsx` and Excalidraw's vendored `MermaidToExcalidraw.test.tsx` can fail intermittently and pass on rerun. The `dialog.image-export-toggle-clickable` and `mermaid.codemirror-drives-preview` browser checks have the same known behavior.
-- The mixed full-suite run also exposes test-harness-only failures in the vendored React sidebar context and an SVG snapshot whose diff is limited to generated `data-id` numbering. The upstream SVG export suite and the release-focused Caliburn suites pass independently; snapshots have not been rewritten.
 - Two upstream `appStateHooks.test.tsx` cases remain skipped because they measure React component renders, which have no Angular signal-graph equivalent. Their underlying behavior is covered by Caliburn's `onStateChange` and `appStateValue()` tests.
 
 ## License
