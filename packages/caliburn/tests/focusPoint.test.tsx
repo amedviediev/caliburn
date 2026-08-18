@@ -1,10 +1,13 @@
 import { KEYS } from "@excalidraw/common";
 import { pointFrom } from "@excalidraw/math";
+import "@excalidraw/utils/test-utils";
 
 import type {
   ExcalidrawArrowElement,
+  ExcalidrawElbowArrowElement,
   ExcalidrawElement,
   NonDeleted,
+  NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../src/index";
@@ -12,12 +15,15 @@ import { h } from "../src/test-hook";
 
 import { API } from "./helpers/api";
 import { Keyboard, Pointer, UI } from "./helpers/ui";
-import { render } from "./test-utils";
+import { act, fireEvent, render } from "./test-utils";
 
 const mouse = new Pointer("mouse");
 
 const arrowById = (id: ExcalidrawElement["id"]) =>
   h.elements.find((element) => element.id === id) as ExcalidrawArrowElement;
+
+const elbowArrowById = (id: ExcalidrawElement["id"]) =>
+  arrowById(id) as ExcalidrawElbowArrowElement;
 
 /**
  * A rectangle at (200, 100)–(300, 200) and an arrow ending at its left edge,
@@ -183,6 +189,29 @@ describe("focus point", () => {
       expect(arrowById(arrow.id).endBinding?.mode).toBe("orbit");
     });
 
+    it("follows the binding toggle pressed and released mid-drag", () => {
+      const { arrow } = selectedBoundArrow();
+
+      mouse.downAt(250, 150);
+      mouse.moveTo(275, 150);
+      expect(arrowById(arrow.id).endBinding).not.toBe(null);
+
+      // ctrl/cmd turns binding off, which the drag in flight has to follow
+      fireEvent.keyDown(document, {
+        key: KEYS.CTRL_OR_CMD === "metaKey" ? "Meta" : "Control",
+        ctrlKey: true,
+        metaKey: true,
+      });
+      expect(arrowById(arrow.id).endBinding).toBe(null);
+
+      fireEvent.keyUp(document, {
+        key: KEYS.CTRL_OR_CMD === "metaKey" ? "Meta" : "Control",
+        ctrlKey: false,
+        metaKey: false,
+      });
+      expect(arrowById(arrow.id).endBinding).not.toBe(null);
+    });
+
     it("unbinds when the focus point is dragged off the shape", () => {
       const { arrow, rectangle } = selectedBoundArrow();
 
@@ -237,6 +266,47 @@ describe("focus point", () => {
       expect(h.state.bindMode).toBe("orbit");
     });
 
+    it("restores the orbit bind mode whichever gesture ends", () => {
+      // a shape drawn with the rectangle tool
+      API.setAppState({ bindMode: "inside" });
+      UI.clickTool("rectangle");
+      mouse.downAt(400, 400);
+      mouse.moveTo(500, 500);
+      mouse.up();
+      expect(h.state.bindMode).toBe("orbit");
+
+      // an arrow, whose release goes through the linear finalize instead
+      API.setAppState({ bindMode: "inside" });
+      UI.clickTool("arrow");
+      mouse.downAt(600, 400);
+      mouse.moveTo(700, 500);
+      mouse.up();
+      expect(h.state.bindMode).toBe("orbit");
+
+      // a laser stroke, whose release returns before every branch above
+      API.setAppState({ bindMode: "inside" });
+      act(() => {
+        h.app.setActiveTool({ type: "laser" });
+      });
+      mouse.downAt(300, 300);
+      mouse.moveTo(350, 350);
+      mouse.up();
+      expect(h.state.bindMode).toBe("orbit");
+
+      // a plain click on an element
+      act(() => {
+        h.app.setActiveTool({ type: "selection" });
+      });
+      API.setAppState({ bindMode: "inside" });
+      mouse.clickAt(450, 400);
+      expect(h.state.bindMode).toBe("orbit");
+
+      // a click that deselects, which ends the release early too
+      API.setAppState({ bindMode: "inside" });
+      mouse.clickAt(900, 900);
+      expect(h.state.bindMode).toBe("orbit");
+    });
+
     it("drops the linear editor when the release lands off a multi-selection", () => {
       const { arrow, rectangle } = selectedBoundArrow();
       API.setSelectedElements([arrow, rectangle]);
@@ -251,91 +321,97 @@ describe("focus point", () => {
     });
   });
 
+  describe("bind mode", () => {
+    it("returns to orbit when a key release leaves binding disabled", () => {
+      selectedBoundArrow();
+      API.setAppState({ bindMode: "inside", isBindingEnabled: false });
+
+      Keyboard.keyUp("a");
+
+      expect(h.state.bindMode).toBe("orbit");
+    });
+  });
+
   describe("elbow normalization on release", () => {
     it("renormalizes an elbow arrow bound to the dragged shape", () => {
-      const start = API.createElement({
-        type: "rectangle",
-        x: 0,
-        y: 0,
+      UI.createElement("rectangle", {
+        x: -100,
+        y: -50,
         width: 100,
         height: 100,
       });
-      const end = API.createElement({
-        type: "rectangle",
-        x: 400,
-        y: 0,
+      const second = UI.createElement("rectangle", {
+        x: 200,
+        y: 150,
         width: 100,
         height: 100,
       });
-      API.setElements([start, end]);
 
       UI.clickTool("arrow");
       UI.clickOnTestId("elbow-arrow");
       mouse.reset();
-      mouse.moveTo(50, 50);
+      mouse.moveTo(0, 0);
       mouse.click();
-      mouse.moveTo(450, 50);
+      mouse.moveTo(200, 200);
       mouse.click();
 
-      const arrow = h.elements.at(-1) as NonDeleted<ExcalidrawArrowElement>;
-      expect(arrow.startBinding?.elementId).toBe(start.id);
-      expect(arrow.endBinding?.elementId).toBe(end.id);
-
+      // pin the middle segment, so the route carries a fixed segment the move
+      // below makes redundant
       mouse.reset();
-      API.setSelectedElements([start, arrow]);
-      mouse.downAt(50, 0);
-      mouse.moveTo(50, 300);
-
-      // the drag itself keeps the route up to date, so the release's
-      // normalization pass is what has to be observed
-      const mutateElement = vi.spyOn(h.app.scene, "mutateElement");
-      const routeAtRelease = arrowById(arrow.id).points;
+      mouse.moveTo(100, 100);
+      mouse.down();
+      mouse.moveTo(115, 100);
       mouse.up();
 
-      expect(mutateElement).toHaveBeenCalledWith(
-        expect.objectContaining({ id: arrow.id }),
-        {},
-      );
-      expect(arrowById(arrow.id).points).toEqual(routeAtRelease);
+      const arrow = h.elements.find(
+        (element) => element.type === "arrow",
+      ) as NonDeleted<ExcalidrawElbowArrowElement>;
+      expect(arrow.fixedSegments).toHaveLength(1);
+      expect(arrow.points).toHaveLength(4);
+
+      // with no linear editor on the arrow, the indirect pass is the only
+      // normalization the release can run
+      API.setAppState({ selectedLinearElement: null });
+      API.setSelectedElements([second.get() as NonDeletedExcalidrawElement]);
+
+      // dragging the bound shape up flattens the pinned segment, and the drag
+      // itself keeps routing around it
+      mouse.reset();
+      mouse.downAt(250, 150);
+      mouse.moveTo(250, -50);
+      expect(arrowById(arrow.id).points).toHaveLength(4);
+
+      mouse.up();
+
+      expect(arrowById(arrow.id).points).toHaveLength(2);
+      expect(elbowArrowById(arrow.id).fixedSegments).toBe(null);
     });
 
     it("normalizes the selected elbow arrow's own route", () => {
-      const rectangle = API.createElement({
-        type: "rectangle",
-        x: 300,
-        y: 0,
-        width: 100,
-        height: 100,
+      const arrow = API.createElement({
+        type: "arrow",
+        elbowed: true,
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 0,
+        // a redundant collinear midpoint, which a normalization pass drops
+        points: [pointFrom(0, 0), pointFrom(100, 0), pointFrom(200, 0)],
       });
-      API.setElements([rectangle]);
+      API.setElements([arrow]);
 
-      UI.clickTool("arrow");
-      UI.clickOnTestId("elbow-arrow");
-      mouse.reset();
-      mouse.moveTo(0, 50);
-      mouse.click();
-      mouse.moveTo(150, 50);
-      mouse.click();
+      // the first click puts the linear editor on the arrow, the second is
+      // the release the normalization pass runs on
+      mouse.clickAt(200, 100);
+      expect(h.state.selectedLinearElement?.elbowed).toBe(true);
+      expect(arrowById(arrow.id).points).toHaveLength(3);
 
-      const arrow = h.elements.at(-1) as ExcalidrawArrowElement;
-      expect(h.state.selectedLinearElement?.elementId).toBe(arrow.id);
-      expect(h.state.selectedLinearElement?.isEditing).toBe(false);
+      mouse.clickAt(200, 100);
 
-      // drag the free endpoint over the rectangle, where the drag snaps it to
-      // the outline and the release recomputes the route from the binding
-      mouse.reset();
-      mouse.downAt(150, 50);
-      mouse.moveTo(340, 40);
-
-      const mutateElement = vi.spyOn(h.app.scene, "mutateElement");
-      const routeAtRelease = arrowById(arrow.id).points;
-      mouse.up();
-
-      expect(mutateElement).toHaveBeenCalledWith(
-        expect.objectContaining({ id: arrow.id }),
-        {},
-      );
-      expect(arrowById(arrow.id).points).toEqual(routeAtRelease);
+      expect(arrowById(arrow.id).points).toCloselyEqualPoints([
+        [0, 0],
+        [200, 0],
+      ]);
     });
   });
 });

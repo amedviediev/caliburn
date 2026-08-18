@@ -30,7 +30,10 @@ import {
   snapDraggedElements,
 } from "@excalidraw/excalidraw/snapping";
 
-import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+import type {
+  NonDeletedExcalidrawElement,
+  NonDeletedSceneElementsMap,
+} from "@excalidraw/element/types";
 import type { KeyboardModifiersObject } from "@excalidraw/excalidraw/types";
 
 import { getEffectiveGridSize } from "./create-interaction";
@@ -358,6 +361,7 @@ export const maybeDragSelectedElements = (
 export const renormalizeBoundElbowArrowsOnPointerUp = (
   editor: CaliburnEditorComponent,
   pointerDownState: PointerDownState,
+  elementsMap: NonDeletedSceneElementsMap,
 ) => {
   if (
     !pointerDownState.drag.hasOccurred ||
@@ -366,7 +370,6 @@ export const renormalizeBoundElbowArrowsOnPointerUp = (
     return;
   }
 
-  const elementsMap = editor.scene.getNonDeletedElementsMap();
   const element = elementsMap.get(pointerDownState.hit.element.id);
   if (isBindableElement(element)) {
     // Renormalize elbow arrows when they are changed via indirect move

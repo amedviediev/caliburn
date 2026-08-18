@@ -66,6 +66,7 @@ import {
   isElementCompletelyInViewport,
   isElementInGroup,
   isBindingElement,
+  isBindingEnabled,
   isElbowArrow,
   isEmbeddableElement,
   isFrameLikeElement,
@@ -2125,6 +2126,16 @@ export class CaliburnEditorComponent
         maybeHandleArrowPointlikeDrag({ app: this as any, event });
       });
     }
+
+    if (!event[KEYS.CTRL_OR_CMD] && !isBindingEnabled(this.state)) {
+      // Handle Alt key release for bind mode
+      this.batchCommits(() => {
+        this.setState({
+          bindMode: "orbit",
+        });
+      });
+    }
+
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
     if (!event[KEYS.CTRL_OR_CMD]) {
       const preferenceEnabled = this.state.bindingPreference === "enabled";
@@ -4313,6 +4324,10 @@ export class CaliburnEditorComponent
   };
 
   private handleCanvasPointerUpImpl(event: PointerEvent) {
+    // read once at the top, as upstream's own pointer-up handler does, so the
+    // branches below all measure against the scene the gesture ended on
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+
     // a missing-pointer-up cleanup replays this with the gesture's pointer
     // DOWN event, which must not be mistaken for a release
     const isGenuinePointerUp = event.type === "pointerup";
@@ -4409,14 +4424,12 @@ export class CaliburnEditorComponent
         event,
       );
       if (this.state.activeTool.type === "custom") {
-        this.clearHighlightsOnPointerUp();
-        this.pointerDownState = null;
+        this.finishPointerUp();
         return;
       }
       if (this.state.activeTool.type === "laser") {
         this.laserTrails.endPath();
-        this.clearHighlightsOnPointerUp();
-        this.pointerDownState = null;
+        this.finishPointerUp();
         return;
       }
       if (this.state.activeTool.type === "autoshape") {
@@ -4426,8 +4439,7 @@ export class CaliburnEditorComponent
         // which would select the recognized shape and revert the tool —
         // ever see the recognition preview sitting in `newElement`
         this.actionManager.executeAction(actionFinalize);
-        this.clearHighlightsOnPointerUp();
-        this.pointerDownState = null;
+        this.finishPointerUp();
         return;
       }
       if (this.state.newElement?.type === "freedraw") {
@@ -4441,16 +4453,11 @@ export class CaliburnEditorComponent
       } else {
         handleLinearEditorPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
-        // upstream pairs this with the `selectedElementsAreBeingDragged: false`
-        // that caliburn writes from `cleanupAfterDragOnPointerUp` instead:
-        // React hands the whole handler the state the gesture ran under, while
-        // caliburn's writes commit as they are made, and the frame-membership
-        // update below still has to see the drag flag set. Nothing left in the
-        // handler reads the bind mode, so this one lands at upstream's slot.
-        this.setState({
-          bindMode: "orbit",
-        });
-        renormalizeBoundElbowArrowsOnPointerUp(this, this.pointerDownState);
+        renormalizeBoundElbowArrowsOnPointerUp(
+          this,
+          this.pointerDownState,
+          elementsMap,
+        );
         handleSelectionPointerUp(this, this.pointerDownState, event);
         updateFrameMembershipOnPointerUp(this, this.pointerDownState, event);
         maybeSelectLinearElementOnPointerUp(this, this.pointerDownState);
@@ -4465,8 +4472,7 @@ export class CaliburnEditorComponent
         // gesture never produces a `newElement`, and the reachable restore
         // (a tool switch mid-gesture) still lands here.
         if (maybeEraseOnPointerUp(this)) {
-          this.clearHighlightsOnPointerUp();
-          this.pointerDownState = null;
+          this.finishPointerUp();
           return;
         }
         // a click that deselected ends upstream's pointer-up handler right
@@ -4479,8 +4485,7 @@ export class CaliburnEditorComponent
           if (
             maybeStartTextEditingOnPointerUp(this, this.pointerDownState, event)
           ) {
-            this.clearHighlightsOnPointerUp();
-            this.pointerDownState = null;
+            this.finishPointerUp();
             return;
           }
         }
@@ -4495,9 +4500,24 @@ export class CaliburnEditorComponent
           revertActiveToolOnPointerUp(this);
         }
       }
-      this.clearHighlightsOnPointerUp();
-      this.pointerDownState = null;
+      this.finishPointerUp();
     }
+  }
+
+  /**
+   * The teardown every exit from the gesture's pointer up passes through.
+   * Upstream writes the bind mode from the top of its own handler, where
+   * React's batching keeps the new value out of the reach of everything that
+   * follows — the finalize funnel reads the mode the gesture ran under
+   * (`binding.ts`). Caliburn's writes commit as they are made, so the write
+   * lands here instead, past every branch's reads and on every path out.
+   */
+  private finishPointerUp() {
+    this.setState({
+      bindMode: "orbit",
+    });
+    this.clearHighlightsOnPointerUp();
+    this.pointerDownState = null;
   }
 
   /**
