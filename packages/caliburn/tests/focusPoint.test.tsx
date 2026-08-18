@@ -257,6 +257,27 @@ describe("focus point", () => {
       expect(arrowById(arrow.id).endBinding?.fixedPoint).toEqual([0.5, 0.5]);
     });
 
+    it("disarms the drag before a short-circuiting tool ends the release", () => {
+      selectedBoundArrow();
+
+      mouse.downAt(250, 150);
+      mouse.moveTo(275, 175);
+      const editor = h.state.selectedLinearElement;
+      // the laser drops the editor along with the selection, so it is put
+      // back: the release then has both a live focus-point drag and a tool
+      // whose branch returns early, which is what upstream's order — the
+      // linear-editor block first, the tool branches after — is about
+      act(() => {
+        h.app.setActiveTool({ type: "laser" });
+      });
+      API.setAppState({ selectedLinearElement: editor });
+      mouse.up();
+
+      expect(h.state.selectedLinearElement?.draggedFocusPointBinding).toBe(
+        null,
+      );
+    });
+
     it("restores the orbit bind mode", () => {
       selectedBoundArrow();
       API.setAppState({ bindMode: "inside" });

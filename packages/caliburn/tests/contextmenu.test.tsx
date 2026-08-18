@@ -618,3 +618,26 @@ describe("contextMenu element", () => {
     ]);
   });
 });
+
+describe("dismissing the context menu", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+  });
+
+  it("hands the focus back to the container", () => {
+    fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
+      button: 2,
+      clientX: 1,
+      clientY: 1,
+    });
+    expect(UI.queryContextMenu()).not.toBeNull();
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    mouse.clickAt(300, 300);
+
+    expect(UI.queryContextMenu()).toBeNull();
+    expect(document.activeElement).toBe(
+      document.querySelector(".excalidraw-container"),
+    );
+  });
+});

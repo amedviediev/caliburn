@@ -2,6 +2,8 @@ import React from "react";
 
 import { CURSOR_TYPE, KEYS, reseed } from "@excalidraw/common";
 
+import * as elementModule from "@excalidraw/element";
+
 import { Excalidraw } from "../src/index";
 import { gesture } from "../src/pan-gesture";
 import { h } from "../src/test-hook";
@@ -90,6 +92,45 @@ describe("the tool revert on pointer up", () => {
   });
 });
 
+describe("the rebind on pointer up", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** the helper is a no-op for a release (it has no dragging points to work
+   * from), so the call itself is all there is to observe */
+  it("runs once a drag has moved something", async () => {
+    await render(<Excalidraw />);
+    const rebind = vi.spyOn(elementModule, "bindOrUnbindBindingElements");
+
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      backgroundColor: "#ffec99",
+    });
+    API.setElements([rectangle]);
+    API.setSelectedElements([rectangle]);
+
+    mouse.downAt(150, 150);
+    mouse.moveTo(200, 200);
+    mouse.up();
+
+    expect(rebind).toHaveBeenCalledTimes(1);
+  });
+
+  it("stands down for a release that dragged nothing", async () => {
+    await render(<Excalidraw />);
+    const rebind = vi.spyOn(elementModule, "bindOrUnbindBindingElements");
+
+    mouse.clickAt(500, 500);
+
+    expect(rebind).not.toHaveBeenCalled();
+  });
+});
+
 describe("a pointer released away from the canvas", () => {
   it("is dropped from the gesture", async () => {
     await render(<Excalidraw handleKeyboardGlobally={true} />);
@@ -157,7 +198,7 @@ describe("the binding-preference restore", () => {
   });
 });
 
-describe("a pointer-down dispatch that throws", () => {
+describe("a pointer dispatch that throws", () => {
   /** the DOM reports a listener's exception rather than rethrowing it, so the
    * test has to claim it or the runner counts it as unhandled */
   const swallowUncaught = (event: ErrorEvent) => event.preventDefault();
@@ -201,5 +242,24 @@ describe("a pointer-down dispatch that throws", () => {
     expect(h.state.selectedElementIds).toEqual({});
 
     mouse.upAt(100, 100);
+  });
+
+  it("still applies the binding restore the release had queued", async () => {
+    await render(
+      <Excalidraw
+        onPointerUp={() => {
+          throw new Error("host callback blew up");
+        }}
+      />,
+    );
+
+    mouse.downAt(100, 100);
+    // armed by the release below, and the throwing dispatch sits between the
+    // arming and the apply
+    API.setAppState({ isBindingEnabled: false, bindingPreference: "enabled" });
+
+    mouse.upAt(100, 100);
+
+    expect(h.state.isBindingEnabled).toBe(true);
   });
 });

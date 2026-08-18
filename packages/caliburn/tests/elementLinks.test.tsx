@@ -202,6 +202,26 @@ describe("element links", () => {
     expect(open).toHaveBeenCalled();
   });
 
+  it("tears the gesture down when only the release lands on a link icon", () => {
+    vi.spyOn(window, "open").mockReturnValue(null);
+    const rectangle = linkedRectangle();
+    API.setElements([rectangle]);
+    forceTouchScreen();
+
+    // the press opens a gesture on empty canvas, well clear of the element,
+    // and only the release re-derives the link hit — upstream's canvas
+    // handler ends there, its window listener still tears the gesture down
+    const { x, y } = linkIconCenter(200, 100);
+    act(() => {
+      mouse.downAt(500, 500);
+      mouse.moveTo(x, y);
+      mouse.upAt(x, y);
+    });
+
+    expect(h.state.selectionElement).toBe(null);
+    expect(h.state.cursorButton).toBe("up");
+  });
+
   it("the element-link dialog links the source element to the selection", () => {
     const source = API.createElement({ type: "rectangle", width: 100 });
     const target = API.createElement({

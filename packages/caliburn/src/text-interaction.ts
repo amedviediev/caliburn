@@ -792,16 +792,13 @@ export const handleTextElementOnPointerUp = (
   // interaction ends — without this, the next click's pointer-up would
   // treat the element as still-being-created and open a second editor
   if (!editor.isToolLocked()) {
-    editor.setState(
-      {
-        newElement: null,
-        suggestedBinding: null,
-        activeTool: updateActiveTool(editor.state, {
-          type: editor.state.preferredSelectionTool.type,
-        }),
-      },
-      () => editor.cursor.reset(),
-    );
+    editor.setStateRevertingActiveTool({
+      newElement: null,
+      suggestedBinding: null,
+      activeTool: updateActiveTool(editor.state, {
+        type: editor.state.preferredSelectionTool.type,
+      }),
+    });
   } else {
     editor.setState({
       newElement: null,

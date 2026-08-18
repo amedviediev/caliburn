@@ -2829,6 +2829,8 @@ export class CaliburnEditorComponent
       },
       keepOpenOnAlt: false,
     });
+    // the picker lives in a signal rather than in appState, so like the
+    // clear-canvas dialog it has no commit for the refresh to ride along with
     this.cdr.detectChanges();
   };
 
@@ -3061,9 +3063,7 @@ export class CaliburnEditorComponent
     }
     // batched state and scene writes render once, when the batch ends — the
     // intermediate views React's batching never produces must not be produced
-    // here either. The two deliberate exceptions are the signal-only flushes in
-    // `onKeyDownImpl` (the clear-canvas dialog) and `openEyeDropper`, which
-    // write no app state and so have no commit to ride along with.
+    // here either
     if (this.batchDepth === 0) {
       this.cdr.detectChanges();
     }
@@ -3603,7 +3603,11 @@ export class CaliburnEditorComponent
     // close the contextMenu before we update the selection on pointerDown
     // (e.g. resetting selection)
     if (this.state.contextMenu) {
-      this.setState({ contextMenu: null });
+      // upstream closes it from here AND from the popover's own outside-click
+      // request, which routes through `onClose` (`ContextMenu.tsx`) and hands
+      // the focus back to the container — caliburn's menu has no popover of
+      // its own, so this is the whole dismiss
+      this.setState({ contextMenu: null }, () => this.focusContainer());
     }
 
     if (this.state.openPopup) {
@@ -4587,8 +4591,14 @@ export class CaliburnEditorComponent
         this.delayedBindMode.resetDelayedBindMode();
       }
 
-      this.handleCanvasPointerUpImpl(event);
-      this.applyPendingIsBindingEnabledRestore();
+      try {
+        this.handleCanvasPointerUpImpl(event);
+      } finally {
+        // as on the pointer down: the restore is a write upstream has already
+        // queued by the time the dispatch runs, so a dispatch that throws
+        // must not swallow it
+        this.applyPendingIsBindingEnabledRestore();
+      }
     });
   }
 
@@ -4608,6 +4618,11 @@ export class CaliburnEditorComponent
     // read once at the top, as upstream's own pointer-up handler does, so the
     // branches below all measure against the scene the gesture ended on
     const elementsMap = this.scene.getNonDeletedElementsMap();
+
+    // upstream destructures these at the top of its handler as well
+    // (`App.tsx`), ahead of the drag teardown that clears them — the rebind
+    // at the tail reads that pre-teardown snapshot
+    const { isResizing, isRotating, isCropping } = this.state;
 
     // a missing-pointer-up cleanup replays this with the gesture's pointer
     // DOWN event, which must not be mistaken for a release
@@ -4673,7 +4688,15 @@ export class CaliburnEditorComponent
         viewportCoordsToSceneCoords(event, this.state),
       );
 
-    if (elementLinkClickHandled) {
+    // upstream's canvas handler ends on a handled link click, but the
+    // gesture's window listener — which the rest of this method stands in for
+    // — is a second, independent listener and still runs its teardown. It is
+    // installed only where a gesture opened: a press ON the link icon leaves
+    // upstream's pointer down before the install (`App.tsx`'s
+    // `handleSelectionOnPointerDown` early exit), which is caliburn's
+    // `pointerDownState`-less release, and there this exit is the whole
+    // teardown.
+    if (elementLinkClickHandled && !this.pointerDownState) {
       this.finishPointerUp();
       return;
     }
@@ -4683,6 +4706,7 @@ export class CaliburnEditorComponent
     // whatever embed was active and clears the selection
     if (
       !iframeLikeCenterClickHandled &&
+      !elementLinkClickHandled &&
       isGenuinePointerUp &&
       this.state.viewModeEnabled
     ) {
@@ -4698,6 +4722,11 @@ export class CaliburnEditorComponent
       // it, not just the ones reaching `cleanupAfterDragOnPointerUp`, and
       // the next gesture's first move measures from its own origin
       this.previousPointerMoveCoords = null;
+      // upstream runs its pointer-up linear-editor block (`App.tsx`) here —
+      // ahead of the host callbacks, the tool early returns and the
+      // new-element branches — so a tool switch mid focus-point drag cannot
+      // strand `draggedFocusPointBinding` armed into the next gesture
+      handleLinearEditorPointerUp(this, this.pointerDownState, event);
       this.onPointerUp()?.(this.state.activeTool, this.pointerDownState, event);
       this.onPointerUpEmitter.trigger(
         this.state.activeTool,
@@ -4732,7 +4761,6 @@ export class CaliburnEditorComponent
       } else if (this.state.newElement) {
         finalizeNewElementOnPointerUp(this, this.pointerDownState);
       } else {
-        handleLinearEditorPointerUp(this, this.pointerDownState, event);
         updateActiveLockedIdOnPointerUp(this, this.pointerDownState, event);
         renormalizeBoundElbowArrowsOnPointerUp(
           this,
@@ -4771,6 +4799,24 @@ export class CaliburnEditorComponent
           }
         }
         cleanupAfterDragOnPointerUp(this, this.pointerDownState);
+        // upstream's own rebind slot (`App.tsx`), between the scheduled
+        // capture that `cleanupAfterDragOnPointerUp` carries and the tool
+        // revert below. Inert at this pin — a release leaves no dragging
+        // points, which short-circuits both of the helper's strategies — but
+        // the call belongs where upstream makes it.
+        if (
+          (this.pointerDownState.drag.hasOccurred &&
+            !this.state.selectedLinearElement) ||
+          isResizing ||
+          isRotating ||
+          isCropping
+        ) {
+          bindOrUnbindBindingElements(
+            this.scene.getSelectedElements(this.state).filter(isArrowElement),
+            this.scene,
+            this.state,
+          );
+        }
         // upstream's tail — the tool revert every branch above carries its
         // own copy of. Only a deselect skips it: that ends upstream's handler
         // before the tail. A missing-pointer-up replay reaches it as any
@@ -4813,8 +4859,11 @@ export class CaliburnEditorComponent
    */
   handlePointerUpFromPointerDown(event: PointerEvent) {
     this.batchCommits(() => {
-      this.handleCanvasPointerUpImpl(event);
-      this.applyPendingIsBindingEnabledRestore();
+      try {
+        this.handleCanvasPointerUpImpl(event);
+      } finally {
+        this.applyPendingIsBindingEnabledRestore();
+      }
     });
   }
 
