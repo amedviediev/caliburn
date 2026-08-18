@@ -65,6 +65,7 @@ describe("Safari desktop pinch", () => {
     fireGesture("gesturestart");
 
     const initialScale = gesture.initialScale!;
+    expect(initialScale).toBe(1);
     const expected = getViewportForZoomWithScrollConstraints(
       {
         viewportX: h.app.viewport.lastPosition.x,
@@ -76,6 +77,11 @@ describe("Safari desktop pinch", () => {
 
     expect(fireGesture("gesturechange", 2)).toBe(false);
 
+    // the pinch doubled the zoom, anchored on the cursor: the scene point
+    // under (300, 220) stays under it, so the scroll halves the offset
+    expect(h.state.zoom.value).toBe(2);
+    expect(h.state.scrollX).toBe(-150);
+    expect(h.state.scrollY).toBe(-110);
     expect(h.state.zoom.value).toBe(expected.zoom.value);
     expect(h.state.scrollX).toBe(expected.scrollX);
     expect(h.state.scrollY).toBe(expected.scrollY);

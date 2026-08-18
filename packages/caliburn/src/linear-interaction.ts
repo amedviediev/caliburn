@@ -345,7 +345,7 @@ export const handleLinearElementOnPointerDown = (
     });
 
     if (isBindingElement(element) && getFeatureFlag("COMPLEX_BINDINGS")) {
-      editor.bindMode.handleDelayedBindModeChange(element, boundElement);
+      editor.delayedBindMode.handleDelayedBindModeChange(element, boundElement);
     }
   }
 };
@@ -509,7 +509,10 @@ export const maybeDragLinearPoint = (
     );
 
     if (getFeatureFlag("COMPLEX_BINDINGS")) {
-      editor.bindMode.handleDelayedBindModeChange(element, hoveredElement);
+      editor.delayedBindMode.handleDelayedBindModeChange(
+        element,
+        hoveredElement,
+      );
     }
   }
 
@@ -518,7 +521,7 @@ export const maybeDragLinearPoint = (
     !editor.state.selectedLinearElement?.initialState?.arrowStartIsInside &&
     getFeatureFlag("COMPLEX_BINDINGS")
   ) {
-    editor.bindMode.handleSkipBindMode();
+    editor.delayedBindMode.handleSkipBindMode();
   }
 
   // Ignore drag requests if the arrow modification already happened
@@ -691,7 +694,7 @@ export const handleMultiElementPointerMove = (
       );
 
       if (getFeatureFlag("COMPLEX_BINDINGS")) {
-        editor.bindMode.handleDelayedBindModeChange(
+        editor.delayedBindMode.handleDelayedBindModeChange(
           multiElement,
           hoveredElement,
         );

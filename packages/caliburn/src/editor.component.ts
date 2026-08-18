@@ -1104,7 +1104,7 @@ export class CaliburnEditorComponent
    * (`interactiveScene.ts`) to fade the binding highlight in */
   bindModeHandler: ReturnType<typeof setTimeout> | null = null;
 
-  readonly bindMode = new CaliburnBindMode(this);
+  readonly delayedBindMode = new CaliburnBindMode(this);
 
   readonly flowchart = new CaliburnFlowchart(this);
 
@@ -2206,7 +2206,9 @@ export class CaliburnEditorComponent
     // the new value out of reach of the rest of the handler — the
     // `maybeHandleArrowPointlikeDrag` below re-runs the drag under the mode
     // the key was released in (`binding.ts` reads it). Caliburn's writes
-    // commit as they are made, so the write is deferred to the end instead.
+    // commit as they are made, so the write is queued here and published
+    // where upstream's own flushes land it: the binding-preference
+    // `flushSync` below, else the end of the handler.
     let restoreOrbitBindMode = false;
 
     if (
@@ -2240,7 +2242,7 @@ export class CaliburnEditorComponent
             );
 
             if (isBindingElement(element)) {
-              this.bindMode.handleDelayedBindModeChange(
+              this.delayedBindMode.handleDelayedBindModeChange(
                 element,
                 hoveredElement,
               );
@@ -2255,6 +2257,13 @@ export class CaliburnEditorComponent
       const preferenceEnabled = this.state.bindingPreference === "enabled";
       if (this.state.isBindingEnabled !== preferenceEnabled) {
         this.batchCommits(() => {
+          // upstream's `flushSync` here publishes everything queued so far,
+          // the orbit write above included, so the drag below runs under it
+          if (restoreOrbitBindMode) {
+            restoreOrbitBindMode = false;
+            this.setState({ bindMode: "orbit" });
+          }
+
           this.setState({ isBindingEnabled: preferenceEnabled });
 
           this.arrowText.refresh();
@@ -2466,7 +2475,7 @@ export class CaliburnEditorComponent
         event.preventDefault();
         return;
       } else if (getFeatureFlag("COMPLEX_BINDINGS")) {
-        this.bindMode.handleSkipBindMode();
+        this.delayedBindMode.handleSkipBindMode();
       } else {
         maybeHandleArrowPointlikeDrag({ app: this as any, event });
       }
@@ -2546,7 +2555,7 @@ export class CaliburnEditorComponent
 
     if (event[KEYS.CTRL_OR_CMD] && !event.repeat) {
       if (getFeatureFlag("COMPLEX_BINDINGS")) {
-        this.bindMode.resetDelayedBindMode();
+        this.delayedBindMode.resetDelayedBindMode();
       }
 
       this.setState({
@@ -4494,7 +4503,7 @@ export class CaliburnEditorComponent
     }
     this.batchCommits(() => {
       if (getFeatureFlag("COMPLEX_BINDINGS")) {
-        this.bindMode.resetDelayedBindMode();
+        this.delayedBindMode.resetDelayedBindMode();
       }
 
       this.handleCanvasPointerUpImpl(event);
@@ -4705,7 +4714,7 @@ export class CaliburnEditorComponent
    */
   private finishPointerUp() {
     if (getFeatureFlag("COMPLEX_BINDINGS")) {
-      this.bindMode.resetDelayedBindMode();
+      this.delayedBindMode.resetDelayedBindMode();
     }
 
     this.setState({
