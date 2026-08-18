@@ -401,7 +401,10 @@ describe("hover affordances", () => {
       expect(cursor()).toBe("nwse-resize");
 
       // a drag that started elsewhere — the canvas never saw its pointer
-      // down, so only `event.buttons` tells the hover pass to stand down
+      // down, so only `event.buttons` tells the hover pass to stand down.
+      // The idle cursor block runs ahead of that gate, so what is left is the
+      // resting tool cursor — the selection tool's cleared one — and none of
+      // the hover affordances
       fireEvent.pointerMove(GlobalTestState.interactiveCanvas, {
         clientX: x,
         clientY: y,
@@ -411,9 +414,9 @@ describe("hover affordances", () => {
       });
 
       expect(h.state.selectedLinearElement).toBe(null);
-      expect(cursor()).toBe("nwse-resize");
+      expect(cursor()).toBe("");
 
-      // moving off the handle with the button held leaves the cursor alone
+      // moving off the handle with the button held keeps it that way
       fireEvent.pointerMove(GlobalTestState.interactiveCanvas, {
         clientX: 600,
         clientY: 600,
@@ -421,11 +424,11 @@ describe("hover affordances", () => {
         pointerId: 1,
         buttons: 1,
       });
-      expect(cursor()).toBe("nwse-resize");
+      expect(cursor()).toBe("");
 
       // released, the hover pass takes over again
-      mouse.moveTo(600, 600);
-      expect(cursor()).not.toBe("nwse-resize");
+      mouse.moveTo(x, y);
+      expect(cursor()).toBe("nwse-resize");
     });
   });
 });

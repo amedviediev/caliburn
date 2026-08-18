@@ -3889,6 +3889,18 @@ export class CaliburnEditorComponent
     }
 
     const isOverScrollBar = getScrollBarsAtPointer(this, event).isOverEither;
+    if (
+      !this.state.newElement &&
+      !this.state.selectionElement &&
+      !this.state.selectedElementsAreBeingDragged &&
+      !this.state.multiElement
+    ) {
+      if (isOverScrollBar) {
+        this.cursor.set(CURSOR_TYPE.AUTO);
+      } else {
+        this.cursor.applyForTool();
+      }
+    }
 
     if (handleMultiElementPointerMove(this, event)) {
       return;
@@ -4273,6 +4285,8 @@ export class CaliburnEditorComponent
       this.setState({ showHyperlinkPopup: "info" });
     } else if (this.state.viewModeEnabled) {
       this.cursor.set(CURSOR_TYPE.GRAB);
+    } else if (isOverScrollBar) {
+      this.cursor.set(CURSOR_TYPE.AUTO);
     } else if (isSelectionLikeTool(this.state.activeTool.type)) {
       if (
         // if using cmd/ctrl, we're not dragging
