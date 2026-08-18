@@ -254,6 +254,9 @@ describe("pasting a spreadsheet", () => {
     )!;
     expect(reshuffle.getAttribute("role")).toBe("button");
     expect(reshuffle.getAttribute("tabindex")).toBe("0");
+    // upstream's affordance is the bucket-fill icon, not a label
+    expect(reshuffle.querySelector("svg")).not.toBeNull();
+    expect(reshuffle.textContent?.trim()).toBe("");
 
     const afterEnter = await reshuffleWithKey(
       reshuffle,

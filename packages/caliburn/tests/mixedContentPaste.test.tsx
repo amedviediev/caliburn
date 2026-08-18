@@ -7,7 +7,7 @@ import { createPasteEvent } from "@excalidraw/excalidraw/clipboard";
 import * as blobModule from "@excalidraw/excalidraw/data/blob";
 import { t } from "@excalidraw/excalidraw/i18n";
 
-import type { FileId } from "@excalidraw/element/types";
+import type { ExcalidrawTextElement, FileId } from "@excalidraw/element/types";
 
 import type { ExcalidrawProps } from "@excalidraw/excalidraw/types";
 
@@ -148,9 +148,12 @@ describe("pasting mixed content", () => {
     await waitFor(() => {
       expect(h.elements).toHaveLength(2);
     });
-    expect(
-      h.elements.map((element) => (element as { text?: string }).text),
-    ).toEqual(["hello", "my friend!"]);
+    const [hello, friend] = h.elements as ExcalidrawTextElement[];
+    expect([hello.text, friend.text]).toEqual(["hello", "my friend!"]);
+    // the nodes are joined by `"\n\n"`, so a blank line sits between them:
+    // one line height and one gap more than a `"\n"` join would advance by
+    const LINE_GAP = 10;
+    expect(friend.y - hello.y).toBe(2 * (hello.height + LINE_GAP));
     expect(imageURLToFileSpy).not.toHaveBeenCalled();
   });
 
