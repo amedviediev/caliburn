@@ -2,6 +2,8 @@
 
 Caliburn is a production-ready Angular port of [Excalidraw](https://github.com/excalidraw/excalidraw): a hand-drawn infinite canvas with Excalidraw's element model, geometry engine, and `.excalidraw` file format behind a native Angular UI.
 
+[Open the live demo](https://amedviediev.github.io/caliburn/).
+
 The port was forked at [`abeeaeb`](https://github.com/excalidraw/excalidraw/commit/abeeaeba217ab3b5193b78c8d8d63c373b518ced) and continues to track Excalidraw upstream. Caliburn is not affiliated with the Excalidraw team.
 
 The name is Excalibur's older form — Latin _Caliburnus_, from the Welsh _Caledfwlch_.

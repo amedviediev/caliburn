@@ -10,6 +10,7 @@ const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: projectDir,
+  base: "./",
   plugins: [
     angular({
       jit: false,

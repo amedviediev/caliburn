@@ -76,6 +76,7 @@
     "rm:node_modules": "rimraf --glob node_modules packages/*/node_modules",
     "clean-install": "yarn rm:node_modules && yarn install",
     "demo": "vite --config examples/with-vite/vite.config.mts",
+    "demo:build": "vite build --config examples/with-vite/vite.config.mts",
     "e2e": "node e2e/run.mjs",
     "start": "vite --config caliburn-app/vite.config.mts"
   },

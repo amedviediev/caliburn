@@ -10,8 +10,11 @@ import { convertToExcalidrawElements } from "@excalidraw/element";
 
 import { CaliburnEditorComponent } from "../../packages/caliburn/src/index";
 
-// resolve font assets against the dev server rather than the npm CDN
-(window as { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH = "/";
+// Resolve runtime-loaded assets relative to the demo's deployment URL.
+(window as { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH = new URL(
+  import.meta.env.BASE_URL,
+  window.location.href,
+).href;
 
 const initialData = {
   elements: convertToExcalidrawElements([
