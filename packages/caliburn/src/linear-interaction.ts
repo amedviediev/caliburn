@@ -5,6 +5,7 @@ import {
   LINE_CONFIRM_THRESHOLD,
   MINIMUM_ARROW_SIZE,
   ROUNDNESS,
+  getFeatureFlag,
   getGridPoint,
   invariant,
   isShallowEqual,
@@ -27,6 +28,7 @@ import {
   isLinearElement,
   isPathALoop,
   isPointInElement,
+  isSimpleArrow,
   makeNextSelectedElementIds,
   maxBindingDistance_simple,
   newArrowElement,
@@ -341,6 +343,10 @@ export const handleLinearElementOnPointerDown = (
         selectedLinearElement: linearElementEditor,
       };
     });
+
+    if (isBindingElement(element) && getFeatureFlag("COMPLEX_BINDINGS")) {
+      editor.bindMode.handleDelayedBindModeChange(element, boundElement);
+    }
   }
 };
 
@@ -492,6 +498,31 @@ export const maybeDragLinearPoint = (
   );
 
   if (!element || element.isDeleted) {
+    return true;
+  }
+
+  if (isBindingElement(element)) {
+    const hoveredElement = getHoveredElementForBinding(
+      pointFrom<GlobalPoint>(pointerCoords.x, pointerCoords.y),
+      editor.scene.getNonDeletedElements(),
+      elementsMap,
+    );
+
+    if (getFeatureFlag("COMPLEX_BINDINGS")) {
+      editor.bindMode.handleDelayedBindModeChange(element, hoveredElement);
+    }
+  }
+
+  if (
+    event.altKey &&
+    !editor.state.selectedLinearElement?.initialState?.arrowStartIsInside &&
+    getFeatureFlag("COMPLEX_BINDINGS")
+  ) {
+    editor.bindMode.handleSkipBindMode();
+  }
+
+  // Ignore drag requests if the arrow modification already happened
+  if (linearElementEditor.initialState.lastClickedPoint === -1) {
     return true;
   }
 
@@ -647,6 +678,24 @@ export const handleMultiElementPointerMove = (
   } else {
     if (isPathALoop(points, editor.state.zoom.value)) {
       editor.cursor.set(CURSOR_TYPE.POINTER);
+    }
+
+    // Update arrow points
+    const elementsMap = editor.scene.getNonDeletedElementsMap();
+
+    if (isSimpleArrow(multiElement)) {
+      const hoveredElement = getHoveredElementForBinding(
+        pointFrom<GlobalPoint>(scenePointerX, scenePointerY),
+        editor.scene.getNonDeletedElements(),
+        elementsMap,
+      );
+
+      if (getFeatureFlag("COMPLEX_BINDINGS")) {
+        editor.bindMode.handleDelayedBindModeChange(
+          multiElement,
+          hoveredElement,
+        );
+      }
     }
 
     invariant(

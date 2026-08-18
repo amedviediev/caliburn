@@ -35,6 +35,7 @@ import {
   createUserAgentDescriptor,
   debounce,
   deriveStylesPanelMode,
+  getFeatureFlag,
   getFormFactor,
   getStrokeWidthByKey,
   isBrave,
@@ -50,6 +51,7 @@ import {
 } from "@excalidraw/common";
 import {
   CaptureUpdateAction,
+  LinearElementEditor,
   Scene,
   ShapeCache,
   Store,
@@ -60,6 +62,7 @@ import {
   getCursorForResizingElement,
   getElementWithTransformHandleType,
   getFrameChildrenInsertionIndex,
+  getHoveredElementForBinding,
   getBoundTextElement,
   getObservedAppState,
   getTransformHandleTypeFromCoords,
@@ -85,6 +88,7 @@ import {
   syncInvalidIndices,
   updateBoundElements,
 } from "@excalidraw/element";
+import { pointFrom } from "@excalidraw/math";
 
 import {
   dataURLToString,
@@ -141,6 +145,7 @@ import type {
   EXPORT_IMAGE_TYPES,
   IMAGE_MIME_TYPES,
 } from "@excalidraw/common";
+import type { GlobalPoint } from "@excalidraw/math";
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElement,
@@ -194,6 +199,7 @@ import type {
 } from "@excalidraw/excalidraw/actions/types";
 
 import { CaliburnArrowText } from "./arrow-text";
+import { CaliburnBindMode } from "./bind-mode";
 import { CaliburnBucketFill } from "./bucket-fill";
 import { CaliburnDrawShape } from "./draw-shape";
 import { CaliburnFlowchart } from "./flowchart";
@@ -1093,6 +1099,12 @@ export class CaliburnEditorComponent
 
   /** the element whose link icon the pointer is currently over, if any */
   hitLinkElement: NonDeletedExcalidrawElement | undefined;
+
+  /** the delayed bind mode's countdown, also read by the vendored renderer
+   * (`interactiveScene.ts`) to fade the binding highlight in */
+  bindModeHandler: ReturnType<typeof setTimeout> | null = null;
+
+  readonly bindMode = new CaliburnBindMode(this);
 
   readonly flowchart = new CaliburnFlowchart(this);
 
@@ -2174,8 +2186,7 @@ export class CaliburnEditorComponent
 
   /**
    * Upstream's `onKeyUp`, restricted to the branches caliburn has a landing
-   * place for: the rest of it (bind mode) drives machinery no task has
-   * ported.
+   * place for: the arrow-key block drives machinery no task has ported.
    */
   private onKeyUp = (event: KeyboardEvent) => {
     if (!this.isInteractionEnabled()) {
@@ -2191,13 +2202,52 @@ export class CaliburnEditorComponent
       });
     }
 
-    if (!event[KEYS.CTRL_OR_CMD] && !isBindingEnabled(this.state)) {
+    // upstream writes the orbit mode from here, where React's batching keeps
+    // the new value out of reach of the rest of the handler — the
+    // `maybeHandleArrowPointlikeDrag` below re-runs the drag under the mode
+    // the key was released in (`binding.ts` reads it). Caliburn's writes
+    // commit as they are made, so the write is deferred to the end instead.
+    let restoreOrbitBindMode = false;
+
+    if (
+      (event.key === KEYS.ALT && this.state.bindMode === "skip") ||
+      (!event[KEYS.CTRL_OR_CMD] && !isBindingEnabled(this.state))
+    ) {
       // Handle Alt key release for bind mode
-      this.batchCommits(() => {
-        this.setState({
-          bindMode: "orbit",
+      restoreOrbitBindMode = true;
+
+      // Restart the timer if we're creating/editing a linear element and hovering over an element
+      if (this.lastPointerMoveEvent && getFeatureFlag("COMPLEX_BINDINGS")) {
+        this.batchCommits(() => {
+          const scenePointer = viewportCoordsToSceneCoords(
+            {
+              clientX: this.lastPointerMoveEvent!.clientX,
+              clientY: this.lastPointerMoveEvent!.clientY,
+            },
+            this.state,
+          );
+
+          const hoveredElement = getHoveredElementForBinding(
+            pointFrom<GlobalPoint>(scenePointer.x, scenePointer.y),
+            this.scene.getNonDeletedElements(),
+            this.scene.getNonDeletedElementsMap(),
+          );
+
+          if (this.state.selectedLinearElement) {
+            const element = LinearElementEditor.getElement(
+              this.state.selectedLinearElement.elementId,
+              this.scene.getNonDeletedElementsMap(),
+            );
+
+            if (isBindingElement(element)) {
+              this.bindMode.handleDelayedBindModeChange(
+                element,
+                hoveredElement,
+              );
+            }
+          }
         });
-      });
+      }
     }
 
     // If Ctrl is not held, ensure isBindingEnabled reflects the user preference.
@@ -2214,6 +2264,14 @@ export class CaliburnEditorComponent
       this.batchCommits(() =>
         maybeHandleArrowPointlikeDrag({ app: this as any, event }),
       );
+    }
+
+    if (restoreOrbitBindMode) {
+      this.batchCommits(() => {
+        this.setState({
+          bindMode: "orbit",
+        });
+      });
     }
 
     this.batchCommits(() => this.flowchart.handleKeyEvent(event));
@@ -2407,8 +2465,11 @@ export class CaliburnEditorComponent
         this.bucketFill.openTemporaryEyeDropper();
         event.preventDefault();
         return;
+      } else if (getFeatureFlag("COMPLEX_BINDINGS")) {
+        this.bindMode.handleSkipBindMode();
+      } else {
+        maybeHandleArrowPointlikeDrag({ app: this as any, event });
       }
-      maybeHandleArrowPointlikeDrag({ app: this as any, event });
     }
 
     if (this.actionManager.handleKeyDown(event)) {
@@ -2484,6 +2545,10 @@ export class CaliburnEditorComponent
     }
 
     if (event[KEYS.CTRL_OR_CMD] && !event.repeat) {
+      if (getFeatureFlag("COMPLEX_BINDINGS")) {
+        this.bindMode.resetDelayedBindMode();
+      }
+
       this.setState({
         isBindingEnabled: this.state.bindingPreference !== "enabled",
       });
@@ -4428,6 +4493,10 @@ export class CaliburnEditorComponent
       return;
     }
     this.batchCommits(() => {
+      if (getFeatureFlag("COMPLEX_BINDINGS")) {
+        this.bindMode.resetDelayedBindMode();
+      }
+
       this.handleCanvasPointerUpImpl(event);
       this.applyPendingIsBindingEnabledRestore();
     });
@@ -4635,6 +4704,10 @@ export class CaliburnEditorComponent
    * lands here instead, past every branch's reads and on every path out.
    */
   private finishPointerUp() {
+    if (getFeatureFlag("COMPLEX_BINDINGS")) {
+      this.bindMode.resetDelayedBindMode();
+    }
+
     this.setState({
       bindMode: "orbit",
     });
@@ -5286,6 +5359,11 @@ export class CaliburnEditorComponent
     this.touchInput.terminate();
     resetPlainPasteTracking();
 
+    if (this.bindModeHandler) {
+      clearTimeout(this.bindModeHandler);
+      this.bindModeHandler = null;
+    }
+
     this.flowchart.clear();
 
     // These components install their own DOM listeners rather than going
@@ -5317,6 +5395,7 @@ export class CaliburnEditorComponent
       openMenu: null,
       openPopup: null,
       cursorButton: "up",
+      bindMode: "orbit",
       activeEmbeddable: null,
       activeLockedId: null,
       selectedElementsAreBeingDragged: false,

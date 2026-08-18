@@ -3696,6 +3696,56 @@ export const runSuite = async (browser, url, runner) => {
     );
   });
 
+  // ----------------------------------------------------------- bindings
+  await withPage("bindings", async (page) => {
+    runner.group("delayed bind mode (COMPLEX_BINDINGS)");
+
+    await runner.check(
+      "bindings.delayed-inside-binding",
+      "holding an arrow's endpoint inside a shape promotes its binding to inside",
+      async () => {
+        await resetEditor(page);
+        // `getFeatureFlag` re-reads localStorage until the key is there, so
+        // the flag turns on without booting a second editor
+        await page.evaluate(() =>
+          localStorage.setItem(
+            "excalidraw-feature-flags",
+            JSON.stringify({ COMPLEX_BINDINGS: true }),
+          ),
+        );
+
+        await drawRectangle(page, [500, 300], [800, 600]);
+
+        await page.keyboard.press("a");
+        await waitFor(page, () => window.h.state.activeTool.type === "arrow", {
+          message: "the arrow tool's shortcut did not activate it",
+        });
+
+        await page.mouse.move(300, 450);
+        await page.mouse.down();
+        await page.mouse.move(650, 450, { steps: 12 });
+        await waitFor(page, () => window.h.state.bindMode === "inside", {
+          message: "holding inside the rectangle never promoted the bind mode",
+        });
+        await page.mouse.up();
+
+        const endBinding = await page.evaluate(
+          () =>
+            window.h.elements.find((el) => el.type === "arrow")?.endBinding ??
+            null,
+        );
+        expect(endBinding, "the arrow did not bind to the rectangle");
+        expectEqual(endBinding.mode, "inside", "the arrow's end binding mode");
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+  });
+
   // ------------------------------------------------------------- mobile
   await withPage(
     "mobile",
