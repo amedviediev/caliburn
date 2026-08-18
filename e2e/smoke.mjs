@@ -3698,6 +3698,51 @@ export const runSuite = async (browser, url, runner) => {
 
   // ----------------------------------------------------------- bindings
   await withPage("bindings", async (page) => {
+    runner.group("suggested binding");
+
+    await runner.check(
+      "bindings.hover-suggests-and-clears",
+      "hovering a shape with the arrow tool suggests binding to it, leaving clears it",
+      async () => {
+        await resetEditor(page);
+        await drawRectangle(page, [500, 300], [800, 600]);
+
+        await page.keyboard.press("a");
+        await waitFor(page, () => window.h.state.activeTool.type === "arrow", {
+          message: "the arrow tool's shortcut did not activate it",
+        });
+
+        // well inside the shape, where only the binding-gated hover pass
+        // suggests anything
+        await page.mouse.move(650, 450);
+        await waitFor(page, () => window.h.state.suggestedBinding != null, {
+          message: "hovering inside the rectangle suggested no binding",
+        });
+        const suggested = await page.evaluate(() => ({
+          suggestedId: window.h.state.suggestedBinding.element.id,
+          rectangleId: window.h.elements.find((el) => el.type === "rectangle")
+            .id,
+        }));
+        expectEqual(
+          suggested.suggestedId,
+          suggested.rectangleId,
+          "the suggested binding's element",
+        );
+
+        // off the shape and out of binding range
+        await page.mouse.move(150, 150, { steps: 8 });
+        await waitFor(page, () => window.h.state.suggestedBinding === null, {
+          message: "leaving the rectangle did not clear the suggested binding",
+        });
+      },
+      {
+        evidence: {
+          page,
+          selectors: ["canvas.excalidraw__canvas.interactive"],
+        },
+      },
+    );
+
     runner.group("delayed bind mode (COMPLEX_BINDINGS)");
 
     await runner.check(

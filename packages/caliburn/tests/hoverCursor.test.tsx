@@ -1,5 +1,18 @@
 import React from "react";
 
+import { CURSOR_TYPE } from "@excalidraw/common";
+
+import { bindBindingElement } from "@excalidraw/element";
+
+import { pointFrom } from "@excalidraw/math";
+
+import type { LocalPoint } from "@excalidraw/math";
+import type {
+  ExcalidrawArrowElement,
+  ExcalidrawBindableElement,
+  NonDeleted,
+} from "@excalidraw/element/types";
+
 import { Excalidraw } from "../src/index";
 import { getElementAtPosition } from "../src/selection-interaction";
 import { h } from "../src/test-hook";
@@ -7,6 +20,8 @@ import { h } from "../src/test-hook";
 import { API } from "./helpers/api";
 import { Pointer, UI } from "./helpers/ui";
 import { GlobalTestState, act, render } from "./test-utils";
+
+const cursor = () => GlobalTestState.interactiveCanvas.style.cursor;
 
 // the hover path derives every branch from a single hit test — spied on here
 // so the count is proven rather than assumed
@@ -177,5 +192,128 @@ describe("hover cursor", () => {
       preferSelected: true,
       includeLockedElements: true,
     });
+  });
+
+  describe("the text tool", () => {
+    const arrow = () =>
+      API.createElement({
+        type: "arrow",
+        x: 100,
+        y: 300,
+        width: 0,
+        height: -200,
+        points: [pointFrom<LocalPoint>(0, 0), pointFrom<LocalPoint>(0, -200)],
+      });
+
+    it("shows the text cursor over a text element", () => {
+      API.setElements([
+        API.createElement({ type: "text", x: 100, y: 100, text: "hello" }),
+      ]);
+      UI.clickTool("text");
+
+      mouse.moveTo(110, 110);
+
+      expect(cursor()).toBe(CURSOR_TYPE.TEXT);
+    });
+
+    it("shows the crosshair over anything else", () => {
+      API.setElements([
+        API.createElement({
+          type: "rectangle",
+          x: 100,
+          y: 100,
+          width: 100,
+          height: 100,
+          backgroundColor: "#ffec99",
+        }),
+      ]);
+      UI.clickTool("text");
+
+      mouse.moveTo(150, 150);
+      expect(cursor()).toBe(CURSOR_TYPE.CROSSHAIR);
+
+      // empty canvas
+      mouse.moveTo(500, 500);
+      expect(cursor()).toBe(CURSOR_TYPE.CROSSHAIR);
+    });
+
+    it("shows the pointer over an arrow's text anchor", () => {
+      API.setElements([arrow()]);
+      UI.clickTool("text");
+
+      // the free end of the arrow
+      mouse.moveTo(100, 100);
+
+      expect(h.state.hoveredArrowTextAnchor).not.toBe(null);
+      expect(cursor()).toBe(CURSOR_TYPE.POINTER);
+    });
+  });
+
+  it("shows the default cursor while picking an element to link to", () => {
+    const source = API.createElement({ type: "rectangle", x: 0, y: 0 });
+    const target = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      backgroundColor: "#ffec99",
+    });
+    API.setElements([source, target]);
+    API.setAppState({
+      openDialog: { name: "elementLinkSelector", sourceElementId: source.id },
+    });
+
+    mouse.moveTo(150, 150);
+
+    expect(cursor()).toBe(CURSOR_TYPE.AUTO);
+  });
+
+  it("shows no move cursor over a bound elbow arrow", () => {
+    const rect = API.createElement({
+      type: "rectangle",
+      x: 200,
+      y: 0,
+      width: 100,
+      height: 100,
+    }) as NonDeleted<ExcalidrawBindableElement>;
+    const elbow = API.createElement({
+      type: "arrow",
+      elbowed: true,
+      x: 0,
+      y: 50,
+      width: 190,
+      height: 0,
+      points: [pointFrom<LocalPoint>(0, 0), pointFrom<LocalPoint>(190, 0)],
+    }) as NonDeleted<ExcalidrawArrowElement>;
+    API.setElements([rect, elbow]);
+    act(() => {
+      bindBindingElement(elbow, rect, "orbit", "end", h.app.scene);
+    });
+
+    mouse.moveTo(100, 50);
+
+    expect(cursor()).not.toBe(CURSOR_TYPE.MOVE);
+  });
+
+  it("shows no move cursor for the lasso tool with nothing selected", () => {
+    API.setElements([
+      API.createElement({
+        type: "rectangle",
+        x: 100,
+        y: 100,
+        width: 100,
+        height: 100,
+        backgroundColor: "#ffec99",
+      }),
+    ]);
+    act(() => {
+      h.app.setActiveTool({ type: "lasso" });
+    });
+    API.clearSelection();
+
+    mouse.moveTo(150, 150);
+
+    expect(cursor()).not.toBe(CURSOR_TYPE.MOVE);
   });
 });

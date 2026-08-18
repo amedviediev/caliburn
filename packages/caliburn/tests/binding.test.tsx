@@ -9,6 +9,7 @@ import { isLinearElement } from "@excalidraw/excalidraw";
 import {
   bindBindingElement,
   updateBoundElements,
+  getSnapOutlineMidPoint,
   getTransformHandles,
 } from "@excalidraw/element";
 
@@ -809,4 +810,101 @@ describe("binding to a point-like (sub-pixel) element", () => {
       expect(Math.abs(arrow.height)).toBeLessThan(1000);
     },
   );
+});
+
+describe("the suggested binding while hovering", () => {
+  beforeEach(async () => {
+    mouse.reset();
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+  });
+
+  /** a rectangle at (100, 100)-(200, 200), with the arrow tool picked up */
+  const hoverable = () => {
+    const rect = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as NonDeleted<ExcalidrawBindableElement>;
+    API.setElements([rect]);
+    UI.clickTool("arrow");
+    return rect;
+  };
+
+  it("suggests the hovered element and where the outline is met", () => {
+    const rect = hoverable();
+
+    // 5px above the top edge, within the binding distance
+    mouse.moveTo(150, 95);
+
+    expect(h.state.suggestedBinding?.element.id).toBe(rect.id);
+    expect(h.state.suggestedBinding?.midPoint).toEqual(
+      getSnapOutlineMidPoint(
+        pointFrom(150, 95),
+        rect,
+        h.scene.getNonDeletedElementsMap(),
+        h.state.zoom,
+      ),
+    );
+  });
+
+  it("suggests it from inside the element as well", () => {
+    const rect = hoverable();
+
+    mouse.moveTo(150, 150);
+
+    expect(h.state.suggestedBinding?.element.id).toBe(rect.id);
+  });
+
+  it("clears it once nothing is hovered", () => {
+    hoverable();
+    mouse.moveTo(150, 95);
+    expect(h.state.suggestedBinding).not.toBe(null);
+
+    mouse.moveTo(500, 500);
+
+    expect(h.state.suggestedBinding).toBe(null);
+  });
+
+  it("neither suggests nor clears while binding is off", () => {
+    hoverable();
+    mouse.moveTo(150, 95);
+    expect(h.state.suggestedBinding).not.toBe(null);
+    API.setAppState({ isBindingEnabled: false });
+
+    // inside the element, which only the binding-gated pass suggests from
+    mouse.moveTo(150, 150);
+    expect(h.state.suggestedBinding).not.toBe(null);
+
+    // and away from it, where the same pass would clear it
+    mouse.moveTo(500, 500);
+    expect(h.state.suggestedBinding).not.toBe(null);
+  });
+
+  it("suggests nothing for a tool that cannot bind", () => {
+    hoverable();
+    UI.clickTool("line");
+
+    mouse.moveTo(150, 150);
+
+    expect(h.state.suggestedBinding).toBe(null);
+  });
+
+  it("suggests nothing while an element is being dragged out", () => {
+    hoverable();
+    // the element under creation is the drag's own, and the drag suggests its
+    // bindings itself — the hover pass has to stay out of it
+    API.setAppState({
+      newElement: API.createElement({
+        type: "arrow",
+        x: 500,
+        y: 500,
+      }) as NonDeleted<ExcalidrawArrowElement>,
+    });
+
+    mouse.moveTo(150, 150);
+
+    expect(h.state.suggestedBinding).toBe(null);
+  });
 });

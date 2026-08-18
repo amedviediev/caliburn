@@ -377,6 +377,7 @@ import {
   handleMultiElementPointerMove,
   maybeDragLinearPoint,
   maybeSuggestBindingOnHover,
+  refreshSuggestedBindingOnHover,
 } from "./linear-interaction";
 import {
   cleanupAfterDragOnPointerUp,
@@ -4095,18 +4096,27 @@ export class CaliburnEditorComponent
       }
     }
 
-    if (handleMultiElementPointerMove(this, event)) {
-      return;
-    }
-
-    maybeSuggestBindingOnHover(this, event);
     maybeUpdateFrameToHighlightOnPointerMove(
       this,
       scenePointer,
       isOverScrollBar,
     );
-    this.arrowText.updateHoveredAnchor(scenePointer);
-    this.maybeUpdateHoverCursor(scenePointer, event, isOverScrollBar);
+
+    refreshSuggestedBindingOnHover(this, scenePointer);
+
+    if (handleMultiElementPointerMove(this, event)) {
+      return;
+    }
+
+    maybeSuggestBindingOnHover(this, event);
+    const hoveredArrowTextAnchor =
+      this.arrowText.updateHoveredAnchor(scenePointer);
+    this.maybeUpdateHoverCursor(
+      scenePointer,
+      event,
+      isOverScrollBar,
+      hoveredArrowTextAnchor,
+    );
   }
 
   /**
@@ -4307,6 +4317,7 @@ export class CaliburnEditorComponent
     scenePointer: { x: number; y: number },
     event: PointerEvent,
     isOverScrollBar: boolean,
+    hoveredArrowTextAnchor: AppState["hoveredArrowTextAnchor"],
   ) {
     // upstream's pointer-move gate (App.tsx:7908), which ends its handler and
     // so covers this whole helper: a pointer that is pressing anything owns
@@ -4476,6 +4487,14 @@ export class CaliburnEditorComponent
       !this.state.showHyperlinkPopup
     ) {
       this.setState({ showHyperlinkPopup: "info" });
+    } else if (this.state.activeTool.type === "text") {
+      this.cursor.set(
+        hoveredArrowTextAnchor
+          ? CURSOR_TYPE.POINTER
+          : isTextElement(hitElement)
+          ? CURSOR_TYPE.TEXT
+          : CURSOR_TYPE.CROSSHAIR,
+      );
     } else if (
       // upstream's own arm (App.tsx:8060-8066) rather than a case of the
       // merged one below: it precedes the view-mode, element-link and
@@ -4494,6 +4513,8 @@ export class CaliburnEditorComponent
       this.cursor.set(CURSOR_TYPE.MOVE);
     } else if (this.state.viewModeEnabled) {
       this.cursor.set(CURSOR_TYPE.GRAB);
+    } else if (this.state.openDialog?.name === "elementLinkSelector") {
+      this.cursor.set(CURSOR_TYPE.AUTO);
     } else if (isOverScrollBar) {
       this.cursor.set(CURSOR_TYPE.AUTO);
     } else if (isSelectionLikeTool(this.state.activeTool.type)) {
@@ -4508,7 +4529,13 @@ export class CaliburnEditorComponent
             scenePointer,
             this.scene.getSelectedElements(this.state),
           )) &&
-        !hitElement?.locked
+        !hitElement?.locked &&
+        (!hitElement ||
+          // Elbow arrows can only be moved when unconnected
+          !isElbowArrow(hitElement) ||
+          !(hitElement.startBinding || hitElement.endBinding)) &&
+        (this.state.activeTool.type !== "lasso" ||
+          this.scene.getSelectedElements(this.state).length > 0)
       ) {
         this.cursor.set(CURSOR_TYPE.MOVE);
       } else {

@@ -23,6 +23,7 @@ import {
   handleFocusPointPointerUp,
   hitElementItself,
   isBindingElement,
+  isBindingElementType,
   isBindingEnabled,
   isElbowArrow,
   isLinearElement,
@@ -719,6 +720,54 @@ export const handleMultiElementPointerMove = (
   }
 
   return true;
+};
+
+/**
+ * The first of upstream's two hover suggestion passes (`App.tsx:7719-7752`),
+ * which runs ahead of the multi-point block: it both sets the suggestion —
+ * over the element's interior as much as around its outline — and clears a
+ * stale one once nothing is hovered, and it follows the binding toggle.
+ * `maybeSuggestBindingOnHover` below is the narrower second pass.
+ */
+export const refreshSuggestedBindingOnHover = (
+  editor: CaliburnEditorComponent,
+  scenePointer: { x: number; y: number },
+) => {
+  if (isBindingElementType(editor.state.activeTool.type)) {
+    // Hovering with a selected tool or creating new linear element via click
+    // and point
+    const { newElement } = editor.state;
+    if (!newElement && isBindingEnabled(editor.state)) {
+      const globalPoint = pointFrom<GlobalPoint>(
+        scenePointer.x,
+        scenePointer.y,
+      );
+      const elementsMap = editor.scene.getNonDeletedElementsMap();
+      const hoveredElement = getHoveredElementForBinding(
+        globalPoint,
+        editor.scene.getNonDeletedElements(),
+        elementsMap,
+        maxBindingDistance_simple(editor.state.zoom),
+      );
+      if (hoveredElement) {
+        editor.setState({
+          suggestedBinding: {
+            element: hoveredElement,
+            midPoint: getSnapOutlineMidPoint(
+              globalPoint,
+              hoveredElement,
+              elementsMap,
+              editor.state.zoom,
+            ),
+          },
+        });
+      } else if (editor.state.suggestedBinding) {
+        editor.setState({
+          suggestedBinding: null,
+        });
+      }
+    }
+  }
 };
 
 /**
