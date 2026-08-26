@@ -84,6 +84,9 @@ try {
           skipLibCheck: true,
           noEmit: false,
           experimentalDecorators: true,
+          // a Vite consumer's ambient declarations, needed for the CSS
+          // side-effect import
+          types: ["vite/client"],
         },
         angularCompilerOptions: { strictTemplates: true },
         include: ["src/**/*.ts"],
@@ -109,6 +112,30 @@ export default defineConfig({
 import { Component, provideZonelessChangeDetection } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 import { CaliburnEditorComponent } from "ngx-caliburn";
+import { arrayToMap } from "ngx-caliburn/common";
+import { reconcileElements } from "ngx-caliburn/data/reconcile";
+import { restoreElements } from "ngx-caliburn/data/restore";
+import { serializeAsJSON } from "ngx-caliburn/data/json";
+import { getSceneVersion } from "ngx-caliburn/element";
+import { pointFrom } from "ngx-caliburn/math";
+
+import type { OrderedExcalidrawElement } from "ngx-caliburn/element/types";
+import type { AppState } from "ngx-caliburn/types";
+
+// the vendored subpaths a collaborative host reaches for; referenced so the
+// bundler has to resolve them rather than drop the imports
+export const collaborationSurface = (
+  local: readonly OrderedExcalidrawElement[],
+  remote: readonly OrderedExcalidrawElement[],
+  appState: AppState,
+) => ({
+  reconciled: reconcileElements(local, remote as never, appState),
+  restored: restoreElements(remote, null),
+  version: getSceneVersion(local),
+  serialized: serializeAsJSON(local, appState, {}, "local"),
+  index: arrayToMap(local),
+  origin: pointFrom(0, 0),
+});
 
 @Component({
   selector: "app-root",
@@ -123,6 +150,14 @@ bootstrapApplication(AppComponent, {
 });
 `,
   );
+
+  // `vite build` never typechecks, so the exports map's "types" conditions
+  // would go unverified without a separate tsc pass over the same fixture.
+  const typescriptBin = join(repositoryRoot, "node_modules/typescript/bin/tsc");
+  execFileSync(process.execPath, [typescriptBin, "-p", ".", "--noEmit"], {
+    cwd: temporaryRoot,
+    stdio: "inherit",
+  });
 
   const viteBin = join(repositoryRoot, "node_modules/vite/bin/vite.js");
   execFileSync(process.execPath, [viteBin, "build"], {

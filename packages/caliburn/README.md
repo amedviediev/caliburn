@@ -140,6 +140,35 @@ export class EditorComponent {
 
 The imperative API exposes scene updates, element and file access, history, viewport controls, active-tool selection, library updates, and editor event subscriptions.
 
+## Vendored Excalidraw subpaths
+
+Caliburn bundles Excalidraw's core packages rather than depending on them, so the modules a host app needs for collaboration, persistence, and geometry are published as subpath entries alongside the root barrel:
+
+| Subpath | Contents |
+| --- | --- |
+| `ngx-caliburn/data/reconcile` | `reconcileElements`, `shouldDiscardRemoteElement` |
+| `ngx-caliburn/data/restore` | `restore*` helpers for elements, app state, and library items |
+| `ngx-caliburn/data/encryption` | `encryptData`, `decryptData`, `generateEncryptionKey` |
+| `ngx-caliburn/data/encode` | `compressData`, `decompressData` |
+| `ngx-caliburn/data/json` | `serializeAsJSON`, `serializeLibraryAsJSON` |
+| `ngx-caliburn/data/blob` | `loadFromBlob`, `getDataURL`, and related file helpers |
+| `ngx-caliburn/element` | the `@excalidraw/element` barrel (`getSceneVersion`, `newElementWith`, `CaptureUpdateAction`, …) |
+| `ngx-caliburn/element/types` | element type declarations |
+| `ngx-caliburn/common` | the `@excalidraw/common` barrel |
+| `ngx-caliburn/math` | the `@excalidraw/math` barrel |
+| `ngx-caliburn/utils` | the `@excalidraw/utils` barrel (`exportToBlob`, `exportToSvg`, …) |
+| `ngx-caliburn/types` | editor type declarations (`AppState`, `BinaryFiles`, …) |
+
+```ts
+import { reconcileElements } from "ngx-caliburn/data/reconcile";
+import { getSceneVersion } from "ngx-caliburn/element";
+
+import type { OrderedExcalidrawElement } from "ngx-caliburn/element/types";
+import type { AppState } from "ngx-caliburn/types";
+```
+
+Each subpath is its own build entry, and the code they share with the root barrel lives in common chunks — importing both does not duplicate module state.
+
 ## Self-hosting fonts
 
 By default, Caliburn downloads the fonts it needs from the package CDN.

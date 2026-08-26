@@ -28,6 +28,25 @@ const frameworkNeutralOverrides = new Map([
 const bundledWorkspacePackages =
   /^@excalidraw\/(excalidraw|common|element|math|utils|laser-pointer|fractional-indexing)(\/|$)/;
 
+// Vendored Excalidraw surfaces a host app has to reach directly (collaboration,
+// persistence, geometry). Each is its own Rollup entry so the exports map can
+// address it without widening the root barrel; Rollup hoists the code they
+// share with `index` into common chunks, so the modules stay single-instance.
+const subpathEntries = [
+  "common/index",
+  "data/blob",
+  "data/encode",
+  "data/encryption",
+  "data/json",
+  "data/reconcile",
+  "data/restore",
+  "element/index",
+  "element/types",
+  "math/index",
+  "types",
+  "utils/index",
+];
+
 const upstreamLibraryModule = path.resolve(
   projectDir,
   "../excalidraw/data/library.ts",
@@ -83,7 +102,12 @@ export default defineConfig(({ command }) => ({
     assetsInlineLimit: 0,
     emptyOutDir: true,
     rollupOptions: {
-      input: path.join(projectDir, "src/package-entry.ts"),
+      input: Object.fromEntries(
+        [
+          ["index", "src/package-entry.ts"],
+          ...subpathEntries.map((entry) => [entry, `src/${entry}.ts`]),
+        ].map(([name, source]) => [name, path.join(projectDir, source)]),
+      ),
       preserveEntrySignatures: "strict",
       external: (id) => {
         if (bundledWorkspacePackages.test(id)) {
@@ -93,7 +117,7 @@ export default defineConfig(({ command }) => ({
       },
       output: {
         format: "es",
-        entryFileNames: "index.js",
+        entryFileNames: "[name].js",
         chunkFileNames: "[name]-[hash].js",
         assetFileNames: (asset) =>
           asset.names.some((name) => name.endsWith(".css"))

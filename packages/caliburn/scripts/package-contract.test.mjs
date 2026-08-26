@@ -44,6 +44,57 @@ test("manifest exposes the public release contract", () => {
   assert.equal(manifest.publishConfig.access, "public");
 });
 
+test("every exports subpath resolves to emitted files", () => {
+  const conditionTargets = (entry) =>
+    typeof entry === "string" ? [entry] : Object.values(entry);
+
+  for (const [subpath, entry] of Object.entries(manifest.exports)) {
+    if (subpath === "./package.json") {
+      continue;
+    }
+
+    for (const target of conditionTargets(entry)) {
+      assert.ok(
+        existsSync(join(packageRoot, target)),
+        `exports["${subpath}"] points at missing ${target}`,
+      );
+    }
+  }
+});
+
+test("vendored subpath entries re-export runtime values", () => {
+  // A wildcard mapping every subpath onto the root bundle would resolve here
+  // too, so assert the emitted entry actually carries the named exports.
+  const expected = {
+    "./data/reconcile": ["reconcileElements", "shouldDiscardRemoteElement"],
+    "./data/restore": ["restoreAppState", "restoreElements"],
+    "./data/encryption": ["decryptData", "encryptData"],
+    "./data/encode": ["compressData", "decompressData"],
+    "./data/json": ["serializeAsJSON", "serializeLibraryAsJSON"],
+    "./data/blob": ["getDataURL", "loadFromBlob"],
+    "./element": ["CaptureUpdateAction", "getSceneVersion", "newElementWith"],
+    "./common": ["arrayToMap", "randomId"],
+    "./math": ["pointFrom", "pointDistance"],
+    "./utils": ["exportToBlob", "exportToSvg"],
+  };
+
+  for (const [subpath, names] of Object.entries(expected)) {
+    const source = readFileSync(
+      join(packageRoot, manifest.exports[subpath].import),
+      "utf8",
+    );
+    const exported = new Set(
+      [...source.matchAll(/(?:^|[,{])\s*\w+ as (\w+)/g)].map(
+        (match) => match[1],
+      ),
+    );
+
+    for (const name of names) {
+      assert.ok(exported.has(name), `${subpath} does not export ${name}`);
+    }
+  }
+});
+
 test("manifest records the vendored Excalidraw snapshot", () => {
   // The core packages are bundled into dist rather than resolved from npm, so
   // the upstream pin lives here instead of in the dependency range.

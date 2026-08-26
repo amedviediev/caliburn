@@ -1,6 +1,6 @@
 {
   "name": "ngx-caliburn",
-  "version": "0.18.1",
+  "version": "0.18.2",
   "description": "Hand-drawn style infinite canvas for Angular, built on Excalidraw's element engine",
   "excalidraw": {
     "version": "0.18.0",
@@ -16,6 +16,66 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./common": {
+      "types": "./dist/types/common/index.d.ts",
+      "import": "./dist/common/index.js",
+      "default": "./dist/common/index.js"
+    },
+    "./data/blob": {
+      "types": "./dist/types/data/blob.d.ts",
+      "import": "./dist/data/blob.js",
+      "default": "./dist/data/blob.js"
+    },
+    "./data/encode": {
+      "types": "./dist/types/data/encode.d.ts",
+      "import": "./dist/data/encode.js",
+      "default": "./dist/data/encode.js"
+    },
+    "./data/encryption": {
+      "types": "./dist/types/data/encryption.d.ts",
+      "import": "./dist/data/encryption.js",
+      "default": "./dist/data/encryption.js"
+    },
+    "./data/json": {
+      "types": "./dist/types/data/json.d.ts",
+      "import": "./dist/data/json.js",
+      "default": "./dist/data/json.js"
+    },
+    "./data/reconcile": {
+      "types": "./dist/types/data/reconcile.d.ts",
+      "import": "./dist/data/reconcile.js",
+      "default": "./dist/data/reconcile.js"
+    },
+    "./data/restore": {
+      "types": "./dist/types/data/restore.d.ts",
+      "import": "./dist/data/restore.js",
+      "default": "./dist/data/restore.js"
+    },
+    "./element": {
+      "types": "./dist/types/element/index.d.ts",
+      "import": "./dist/element/index.js",
+      "default": "./dist/element/index.js"
+    },
+    "./element/types": {
+      "types": "./dist/types/element/types.d.ts",
+      "import": "./dist/element/types.js",
+      "default": "./dist/element/types.js"
+    },
+    "./math": {
+      "types": "./dist/types/math/index.d.ts",
+      "import": "./dist/math/index.js",
+      "default": "./dist/math/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/types.d.ts",
+      "import": "./dist/types.js",
+      "default": "./dist/types.js"
+    },
+    "./utils": {
+      "types": "./dist/types/utils/index.d.ts",
+      "import": "./dist/utils/index.js",
+      "default": "./dist/utils/index.js"
     },
     "./index.css": "./dist/index.css",
     "./package.json": "./package.json"
