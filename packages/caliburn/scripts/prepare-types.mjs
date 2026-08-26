@@ -13,11 +13,27 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const typesRoot = join(packageRoot, "dist/types");
-const upstreamRoot = resolve(
-  packageRoot,
-  "../excalidraw/dist/types/excalidraw",
+const upstreamRoot = resolve(packageRoot, "../excalidraw/dist/types");
+const vendorRoot = join(typesRoot, "vendor");
+
+// The runtime bundle inlines these packages instead of resolving them from
+// npm, so their declarations have to travel with the published package too.
+const vendoredPackages = new Map([
+  ["excalidraw", "excalidraw"],
+  ["common", "common/src"],
+  ["element", "element/src"],
+  ["math", "math/src"],
+  ["utils", "utils/src"],
+  ["laser-pointer", "laser-pointer/src"],
+  ["fractional-indexing", "fractional-indexing/src"],
+]);
+
+const vendoredSpecifier = new RegExp(
+  `(["'])@excalidraw/(${[...vendoredPackages.keys()].join(
+    "|",
+  )})(?:/([^"']+))?\\1`,
+  "g",
 );
-const vendorRoot = join(typesRoot, "vendor/excalidraw");
 
 const walkFiles = (root) =>
   readdirSync(root).flatMap((entry) => {
@@ -44,6 +60,15 @@ if (!existsSync(upstreamRoot)) {
   );
 }
 
+for (const [packageName, packageRootPath] of vendoredPackages) {
+  const source = join(upstreamRoot, packageRootPath);
+  if (!existsSync(source)) {
+    throw new Error(
+      `Missing declarations for @excalidraw/${packageName} at ${source}`,
+    );
+  }
+}
+
 rmSync(vendorRoot, { force: true, recursive: true });
 copyTree(upstreamRoot, vendorRoot);
 
@@ -52,9 +77,13 @@ for (const file of walkFiles(typesRoot).filter((path) =>
 )) {
   const source = readFileSync(file, "utf8");
   const rewritten = source.replace(
-    /(["'])@excalidraw\/excalidraw(?:\/([^"']+))?\1/g,
-    (_match, quote, suffix) => {
-      const target = join(vendorRoot, suffix || "index");
+    vendoredSpecifier,
+    (_match, quote, packageName, suffix) => {
+      const target = join(
+        vendorRoot,
+        vendoredPackages.get(packageName),
+        suffix || "index",
+      );
       let specifier = relative(dirname(file), target).split(sep).join("/");
       if (!specifier.startsWith(".")) {
         specifier = `./${specifier}`;
@@ -70,8 +99,13 @@ const declarations = walkFiles(typesRoot)
   .map((file) => readFileSync(file, "utf8"))
   .join("\n");
 
-if (/(["'])@excalidraw\/excalidraw(?:\/[^"']*)?\1/.test(declarations)) {
-  throw new Error("Private @excalidraw/excalidraw type specifiers remain");
+const remaining = declarations.match(vendoredSpecifier);
+if (remaining) {
+  throw new Error(
+    `Unresolved vendored type specifiers remain: ${[
+      ...new Set(remaining),
+    ].join(", ")}`,
+  );
 }
 
 if (declarations.includes(resolve(packageRoot, "../.."))) {

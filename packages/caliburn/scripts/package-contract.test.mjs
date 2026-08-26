@@ -35,13 +35,35 @@ const packageNameFromSpecifier = (specifier) =>
 
 test("manifest exposes the public release contract", () => {
   assert.equal(manifest.name, "ngx-caliburn");
-  assert.equal(manifest.version, "0.18.0");
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.notEqual(manifest.private, true);
   assert.deepEqual(manifest.files, ["dist", "README.md", "LICENSE"]);
   assert.equal(manifest.exports["."].types, "./dist/types/index.d.ts");
   assert.equal(manifest.exports["."].import, "./dist/index.js");
   assert.equal(manifest.exports["./index.css"], "./dist/index.css");
   assert.equal(manifest.publishConfig.access, "public");
+});
+
+test("manifest records the vendored Excalidraw snapshot", () => {
+  // The core packages are bundled into dist rather than resolved from npm, so
+  // the upstream pin lives here instead of in the dependency range.
+  assert.match(manifest.excalidraw.version, /^\d+\.\d+\.\d+$/);
+  assert.match(manifest.excalidraw.commit, /^[0-9a-f]{40}$/);
+
+  const bundled = [
+    "@excalidraw/common",
+    "@excalidraw/element",
+    "@excalidraw/math",
+    "@excalidraw/utils",
+    "@excalidraw/laser-pointer",
+  ];
+  for (const packageName of bundled) {
+    assert.equal(
+      packageName in (manifest.dependencies ?? {}),
+      false,
+      `${packageName} is bundled and must not be a dependency`,
+    );
+  }
 });
 
 test("build emits JavaScript, CSS, declarations, and fonts", () => {

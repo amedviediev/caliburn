@@ -22,6 +22,12 @@ const frameworkNeutralOverrides = new Map([
     path.resolve(projectDir, "src/vendor/icon-svg-paths.ts"),
   ],
 ]);
+// Excalidraw's core packages are consumed from this checkout's sources rather
+// than npm, where they exist only as SHA-suffixed prereleases. Bundling them
+// keeps the published package installable.
+const bundledWorkspacePackages =
+  /^@excalidraw\/(excalidraw|common|element|math|utils|laser-pointer|fractional-indexing)(\/|$)/;
+
 const upstreamLibraryModule = path.resolve(
   projectDir,
   "../excalidraw/data/library.ts",
@@ -80,10 +86,7 @@ export default defineConfig(({ command }) => ({
       input: path.join(projectDir, "src/package-entry.ts"),
       preserveEntrySignatures: "strict",
       external: (id) => {
-        if (
-          id.startsWith("@excalidraw/excalidraw/") ||
-          id.startsWith("@excalidraw/utils/")
-        ) {
+        if (bundledWorkspacePackages.test(id)) {
           return false;
         }
         return !id.startsWith(".") && !path.isAbsolute(id);
