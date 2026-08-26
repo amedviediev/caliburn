@@ -28,6 +28,23 @@ const walkFiles = (root, extension) => {
 const readAll = (files) =>
   files.map((file) => readFileSync(file, "utf8")).join("\n");
 
+// Node walks node_modules upward from the importer; dist lives inside the
+// workspace, so the dependency may be hoisted to the repository root.
+const resolveDependency = (packageName) => {
+  let directory = distRoot;
+  for (;;) {
+    const candidate = join(directory, "node_modules", packageName);
+    if (existsSync(join(candidate, "package.json"))) {
+      return candidate;
+    }
+    const parent = dirname(directory);
+    if (parent === directory) {
+      return null;
+    }
+    directory = parent;
+  }
+};
+
 const packageNameFromSpecifier = (specifier) =>
   specifier.startsWith("@")
     ? specifier.split("/").slice(0, 2).join("/")
@@ -146,9 +163,12 @@ test("runtime bundle contains no React or private Excalidraw imports", () => {
   assert.ok(javaScriptFiles.length > 0, "missing emitted JavaScript");
   const javaScript = readAll(javaScriptFiles);
 
+  // `import "react"` — a bare side-effect import, which is what Rollup leaves
+  // behind when a vendored module's React bindings all tree-shake away — has
+  // no `from` and no parenthesis, so it has to be matched on its own.
   assert.doesNotMatch(
     javaScript,
-    /(?:from\s*|import\s*\()["']react(?:\/[^"']*)?["']/,
+    /(?:\bfrom\s*|\bimport\s*\(?\s*)["']react(?:\/[^"']*)?["']/,
   );
   assert.doesNotMatch(
     javaScript,
@@ -161,7 +181,10 @@ test("every emitted runtime dependency is declared", () => {
   assert.ok(javaScriptFiles.length > 0, "missing emitted JavaScript");
   const javaScript = readAll(javaScriptFiles);
   const specifiers = [
-    ...javaScript.matchAll(/(?:from\s*|import\s*\()["']([^"'./][^"']*)["']/g),
+    // `from "x"`, `import("x")` and the bare side-effect `import "x"`.
+    ...javaScript.matchAll(
+      /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"'./][^"']*)["']/g,
+    ),
   ]
     .map((match) => match[1])
     .filter((specifier) => /^(?:@[\w.-]+\/|[\w])/.test(specifier));
@@ -181,6 +204,101 @@ test("every emitted runtime dependency is declared", () => {
 
   assert.equal(declared.has("react"), false);
   assert.equal(declared.has("react-dom"), false);
+});
+
+test("deep runtime imports resolve under Node's ESM rules", () => {
+  // A bundler happily resolves `roughjs/bin/rough` by trying extensions, so a
+  // missing `.js` is invisible until a consumer loads the package as real ESM
+  // (Node, SSR, or any strict resolver). Node only permits an extensionless
+  // deep specifier when the dependency publishes an `exports` map; otherwise
+  // the specifier is a literal path and must name the file exactly.
+  const javaScript = readAll(walkFiles(distRoot, ".js"));
+  const specifiers = [
+    ...new Set(
+      [
+        ...javaScript.matchAll(
+          /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"'./][^"']*)["']/g,
+        ),
+      ]
+        .map((match) => match[1])
+        .filter(
+          (specifier) => specifier !== packageNameFromSpecifier(specifier),
+        ),
+    ),
+  ].sort();
+
+  const unresolvable = specifiers.filter((specifier) => {
+    const packageName = packageNameFromSpecifier(specifier);
+    const dependencyRoot = resolveDependency(packageName);
+    if (!dependencyRoot) {
+      return false;
+    }
+
+    const dependencyManifest = JSON.parse(
+      readFileSync(join(dependencyRoot, "package.json"), "utf8"),
+    );
+    if (dependencyManifest.exports) {
+      return false;
+    }
+
+    const target = join(
+      dependencyRoot,
+      specifier.slice(packageName.length + 1),
+    );
+    return !existsSync(target) || statSync(target).isDirectory();
+  });
+
+  assert.deepEqual(
+    unresolvable,
+    [],
+    `deep imports Node cannot resolve: ${unresolvable}`,
+  );
+});
+
+test("declarations carry Angular metadata", () => {
+  // `tsc` emits a bare `export declare class`, which a consumer's ngtsc reads
+  // as a plain class and rejects from a component's `imports` with NG2012 —
+  // with no workaround on the consumer's side. Only the Angular compiler emits
+  // the `ɵcmp`/`ɵfac` declarations that mark the class as a standalone
+  // component, so the declaration build must run `ngc`, not `tsc`.
+  const editorDeclaration = readFileSync(
+    join(distRoot, "types/editor.component.d.ts"),
+    "utf8",
+  );
+
+  assert.match(editorDeclaration, /ɵɵComponentDeclaration</);
+  assert.match(editorDeclaration, /ɵɵFactoryDeclaration</);
+  // The selector is part of that metadata; without it the component resolves
+  // but never matches `<caliburn-editor />` in a consumer's template.
+  assert.match(editorDeclaration, /"caliburn-editor"/);
+});
+
+test("runtime bundle is compiled in partial mode", () => {
+  // Full compilation inlines calls into `@angular/core`'s private instruction
+  // API, which is version-specific: the package would work only against the
+  // exact Angular it was built with. Partial declarations are linked by the
+  // consumer's own compiler, so one build serves every supported major.
+  const javaScript = readAll(walkFiles(distRoot, ".js"));
+
+  assert.match(javaScript, /ɵɵngDeclareComponent/);
+  assert.doesNotMatch(javaScript, /ɵɵdefineComponent/);
+});
+
+test("jotai is consumed through its React-free entry point", () => {
+  // `jotai-scope` depends on React outright and its `createIsolation()` runs
+  // at module scope, so it cannot tree-shake. `jotai/vanilla` has the same
+  // `atom` and `createStore` without pulling React into the tree.
+  const javaScript = readAll(walkFiles(distRoot, ".js"));
+  const jotaiSpecifiers = [
+    ...new Set(
+      [...javaScript.matchAll(/["'](jotai[^"']*)["']/g)].map(
+        (match) => match[1],
+      ),
+    ),
+  ].sort();
+
+  assert.deepEqual(jotaiSpecifiers, ["jotai/vanilla"]);
+  assert.equal("jotai-scope" in (manifest.dependencies ?? {}), false);
 });
 
 test("declarations are portable outside the monorepo", () => {

@@ -6,8 +6,6 @@ import {
   input,
 } from "@angular/core";
 
-import { CLASSES } from "@excalidraw/common";
-
 import { CaliburnDropdownMenuTriggerComponent } from "./dropdown-menu-trigger.component";
 
 /**
@@ -28,7 +26,10 @@ import { CaliburnDropdownMenuTriggerComponent } from "./dropdown-menu-trigger.co
   selector: "caliburn-dropdown-menu",
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: CLASSES.DROPDOWN_MENU_EVENT_WRAPPER,
+    // Inlined rather than read from `CLASSES`: the declaration build
+    // resolves `@excalidraw/common` to a `.d.ts`, where ngc cannot
+    // statically evaluate the constant (NG5001).
+    class: "dropdown-menu-event-wrapper",
     style: "display: contents;",
   },
   templateUrl: "./dropdown-menu.component.html",

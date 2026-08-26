@@ -2,9 +2,8 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "emitDeclarationOnly": true,
     "noEmit": false,
-    "outDir": "./dist/types",
+    "outDir": "./.ngc-scratch",
     "rootDir": "./src",
     "paths": {
       "@excalidraw/common": ["../excalidraw/dist/types/common/src/index.d.ts"],
@@ -19,7 +18,8 @@
       "@excalidraw/utils/*": ["../excalidraw/dist/types/utils/src/*"]
     },
     "types": ["vite/client"],
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "declarationDir": "./dist/types"
   },
   "angularCompilerOptions": {
     "strictTemplates": true

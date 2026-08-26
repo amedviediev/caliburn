@@ -30,3 +30,4 @@ meta*.json
 .claude
 .superpowers/
 docs/superpowers/
+.ngc-scratch

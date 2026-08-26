@@ -5,7 +5,8 @@
     "strictPropertyInitialization": false
   },
   "angularCompilerOptions": {
-    "strictTemplates": true
+    "strictTemplates": true,
+    "compilationMode": "partial"
   },
   "include": ["src", "tests"]
 }

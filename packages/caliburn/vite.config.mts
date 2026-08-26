@@ -21,7 +21,22 @@ const frameworkNeutralOverrides = new Map([
     path.resolve(projectDir, "../excalidraw/components/icons"),
     path.resolve(projectDir, "src/vendor/icon-svg-paths.ts"),
   ],
+  [
+    path.resolve(projectDir, "../excalidraw/editor-jotai"),
+    path.resolve(projectDir, "src/vendor/editor-jotai.ts"),
+  ],
 ]);
+
+// Neither `roughjs` nor `points-on-curve` publishes an `exports` map, so Node
+// reads a deep specifier as a literal path and needs the file extension.
+// Bundlers guess the extension; Node ESM and SSR do not, so rewrite the
+// specifier on the way out rather than leaving consumers to discover it.
+const extensionlessDeepImports = [
+  "points-on-curve/lib/curve-to-bezier",
+  "roughjs/bin/generator",
+  "roughjs/bin/math",
+  "roughjs/bin/rough",
+];
 // Excalidraw's core packages are consumed from this checkout's sources rather
 // than npm, where they exist only as SHA-suffixed prereleases. Bundling them
 // keeps the published package installable.
@@ -47,35 +62,54 @@ const subpathEntries = [
   "utils/index",
 ];
 
-const upstreamLibraryModule = path.resolve(
-  projectDir,
-  "../excalidraw/data/library.ts",
-);
+// `data/library.ts` imports React hooks for `useHandleLibrary`, a hook
+// Caliburn never calls; its framework-neutral `Library` class is the reason
+// the module is in the graph at all. Rewriting the import in a `transform`
+// hook does not work — the Angular plugin recompiles `.ts` from its own
+// TypeScript program, reading the original file from disk, so the rewrite is
+// discarded. Resolving `react` to an inert stub is what actually keeps it out
+// of `dist`, and out of the dependency list a consumer has to satisfy.
+const reactStubModuleId = "\0caliburn:react-stub";
 
 const frameworkNeutralOverridePlugin: import("vite").Plugin = {
   name: "caliburn-framework-neutral-overrides",
   enforce: "pre",
   resolveId(source: string, importer?: string) {
-    if (!importer || !source.startsWith(".")) {
-      return null;
+    if (source === "react") {
+      return reactStubModuleId;
     }
 
-    const importerPath = importer.split("?", 1)[0];
-    const resolved = path.resolve(path.dirname(importerPath), source);
-    return frameworkNeutralOverrides.get(resolved) ?? null;
+    // The vendored tree imports these relatively, but Caliburn's own sources
+    // reach them through the `@excalidraw/excalidraw/*` alias — and Vite's
+    // alias plugin has already rewritten those to an absolute path by the time
+    // this runs. Both forms have to hit the override, or the upstream module
+    // stays in the graph alongside its replacement.
+    const resolved = path.isAbsolute(source)
+      ? source
+      : importer && source.startsWith(".")
+      ? path.resolve(path.dirname(importer.split("?", 1)[0]), source)
+      : null;
+
+    return resolved ? frameworkNeutralOverrides.get(resolved) ?? null : null;
   },
-  transform(code: string, id: string) {
-    if (id.split("?", 1)[0] !== upstreamLibraryModule) {
+  load(id: string) {
+    if (id !== reactStubModuleId) {
       return null;
     }
 
-    // Caliburn consumes the framework-neutral Library class and helpers, not
-    // this module's exported React hook. Removing the hook-only import lets
-    // Rollup discard `useHandleLibrary` without preserving React's side effect.
-    return code.replace(
-      'import { useEffect, useRef } from "react";',
-      "const useEffect = () => {}; const useRef = (value) => ({ current: value });",
+    // Only the two hooks `useHandleLibrary` closes over are stubbed. Anything
+    // else reaching for React means a genuinely React-dependent module entered
+    // the bundle, which should fail loudly rather than no-op.
+    return `export const useEffect = () => {};
+export const useRef = (value) => ({ current: value });
+export default new Proxy({}, {
+  get: (_target, property) => {
+    throw new Error(
+      \`React.\${String(property)} is unavailable in Caliburn's bundle.\`,
     );
+  },
+});
+`;
   },
 };
 
@@ -110,13 +144,21 @@ export default defineConfig(({ command }) => ({
       ),
       preserveEntrySignatures: "strict",
       external: (id) => {
-        if (bundledWorkspacePackages.test(id)) {
+        // Rollup consults `external` before `resolveId`, so React has to be
+        // declared internal for the stub above to get a chance to replace it.
+        if (bundledWorkspacePackages.test(id) || id === "react") {
           return false;
         }
         return !id.startsWith(".") && !path.isAbsolute(id);
       },
       output: {
         format: "es",
+        paths: Object.fromEntries(
+          extensionlessDeepImports.map((specifier) => [
+            specifier,
+            `${specifier}.js`,
+          ]),
+        ),
         entryFileNames: "[name].js",
         chunkFileNames: "[name]-[hash].js",
         assetFileNames: (asset) =>
