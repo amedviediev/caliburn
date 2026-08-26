@@ -301,6 +301,42 @@ test("jotai is consumed through its React-free entry point", () => {
   assert.equal("jotai-scope" in (manifest.dependencies ?? {}), false);
 });
 
+test("declarations reference only what the package ships", () => {
+  // The published declarations are copied from upstream's React sources, so
+  // left unfiltered they name React, stylesheet side-effect imports, and
+  // packages this manifest does not declare. None of it is suppressible by a
+  // consumer type-checking with `skipLibCheck: false`.
+  const declarationFiles = walkFiles(join(distRoot, "types"), ".ts");
+  const declarations = readAll(declarationFiles);
+  const declared = new Set([
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+  ]);
+
+  const undeclared = [
+    ...new Set(
+      [
+        ...declarations.matchAll(
+          /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"'./][^"']*)["']/g,
+        ),
+      ]
+        .map((match) => packageNameFromSpecifier(match[1]))
+        .filter((packageName) => !declared.has(packageName)),
+    ),
+  ].sort();
+  assert.deepEqual(
+    undeclared,
+    [],
+    `declarations import undeclared packages: ${undeclared}`,
+  );
+
+  // Stylesheets carry no types; upstream imports them for a build-time side
+  // effect that has no meaning in a declaration file.
+  assert.doesNotMatch(declarations, /^import\s+["']\.[^"']*\.s?css["']/m);
+  assert.doesNotMatch(declarations, /["']react(?:\/[^"']*)?["']/);
+  assert.doesNotMatch(declarations, /["']jotai-scope["']/);
+});
+
 test("declarations are portable outside the monorepo", () => {
   const declarationFiles = walkFiles(join(distRoot, "types"), ".ts");
   assert.ok(declarationFiles.length > 0, "missing emitted declarations");

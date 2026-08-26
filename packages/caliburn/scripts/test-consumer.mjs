@@ -132,6 +132,16 @@ try {
     files: ["src/main.ts"],
   });
 
+  // `skipLibCheck: true` is the CLI default and what the build above uses, so
+  // nothing there ever reads the shipped declarations end to end. A consumer
+  // who turns it off type-checks every `.d.ts` in the package, which is how
+  // React references, stylesheet side-effect imports, and modules the package
+  // does not depend on turn into errors they cannot suppress.
+  writeJsonFixture("tsconfig.strict.json", {
+    extends: "./tsconfig.app.json",
+    compilerOptions: { skipLibCheck: false, noEmit: true },
+  });
+
   writeFixture(
     "src/index.html",
     '<!doctype html>\n<html>\n  <head><meta charset="utf-8" /><title>consumer</title></head>\n  <body><app-root></app-root></body>\n</html>\n',
@@ -191,6 +201,10 @@ bootstrapApplication(AppComponent, {
   }
 
   run(join(fixtureRoot, "node_modules/.bin/ng"), ["build"]);
+  run(join(fixtureRoot, "node_modules/.bin/tsc"), [
+    "-p",
+    "tsconfig.strict.json",
+  ]);
 
   if (!existsSync(join(fixtureRoot, "dist/browser/index.html"))) {
     throw new Error("Consumer build did not emit the Angular application");
