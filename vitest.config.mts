@@ -2,7 +2,36 @@ import path from "path";
 
 import { defineConfig } from "vitest/config";
 
+const excalidrawRoot = path.resolve(__dirname, "./packages/excalidraw");
+
+// A handful of vendored test helpers import the editor as `"../.."` — the
+// package root, where `package.json` points `main` at `dist/prod`. Once
+// `yarn build:excalidraw` has run, that directory exists, so those imports
+// load a second, already-built copy of the editor whose React context is a
+// different instance than the one the suite renders against: `useUIAppState()`
+// returns null and the sidebar tests fail against a stale bundle. Resolve the
+// package root to its source entry point so a leftover build cannot leak in.
+const resolveExcalidrawRootToSource: import("vite").Plugin = {
+  name: "excalidraw-root-to-source",
+  enforce: "pre",
+  resolveId(source: string, importer?: string) {
+    if (!importer || !source.startsWith(".")) {
+      return null;
+    }
+
+    const resolved = path.resolve(
+      path.dirname(importer.split("?", 1)[0]),
+      source,
+    );
+
+    return resolved === excalidrawRoot
+      ? path.join(excalidrawRoot, "index.tsx")
+      : null;
+  },
+};
+
 export default defineConfig({
+  plugins: [resolveExcalidrawRootToSource],
   resolve: {
     alias: [
       {
