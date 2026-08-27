@@ -3,5 +3,11 @@
   "compilerOptions": {
     "noEmit": false
   },
+  // the demo is an app build with no linker step, so it cannot use the
+  // library's partial declarations
+  "angularCompilerOptions": {
+    "strictTemplates": true,
+    "compilationMode": "full"
+  },
   "include": ["./*.ts", "../../packages/caliburn/src/**/*.ts"]
 }
