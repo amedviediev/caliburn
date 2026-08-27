@@ -1,6 +1,6 @@
 {
   "name": "ngx-caliburn",
-  "version": "0.18.4",
+  "version": "0.18.5",
   "description": "Hand-drawn style infinite canvas for Angular, built on Excalidraw's element engine",
   "excalidraw": {
     "version": "0.18.0",

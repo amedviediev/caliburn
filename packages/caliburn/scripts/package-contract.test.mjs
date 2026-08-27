@@ -176,6 +176,19 @@ test("runtime bundle contains no React or private Excalidraw imports", () => {
   );
 });
 
+test("runtime bundle reads browser-only globals off globalThis", () => {
+  const javaScriptFiles = walkFiles(distRoot, ".js");
+  assert.ok(javaScriptFiles.length > 0, "missing emitted JavaScript");
+  const javaScript = readAll(javaScriptFiles);
+
+  // `appState.ts` reads a bare `devicePixelRatio` at module scope, which is a
+  // ReferenceError the moment an entry like `data/restore` is imported outside
+  // a browser. The `define` in `vite.config.mts` rewrites it to a property
+  // read; a build path that skips that define would silently reintroduce the
+  // crash, so gate on the emitted bundle rather than on the config.
+  assert.doesNotMatch(javaScript, /(?<![.\w$])devicePixelRatio\b/);
+});
+
 test("every emitted runtime dependency is declared", () => {
   const javaScriptFiles = walkFiles(distRoot, ".js");
   assert.ok(javaScriptFiles.length > 0, "missing emitted JavaScript");

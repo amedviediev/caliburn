@@ -132,6 +132,14 @@ export default defineConfig(({ command }) => ({
   esbuild: {
     include: [/\.tsx$/],
   },
+  // `appState.ts` reads the bare `devicePixelRatio` global at module scope, so
+  // importing any entry that pulls it in — `data/restore` among them — throws a
+  // ReferenceError outside a browser. Reading it off `globalThis` is the same
+  // value in a browser and `undefined` under SSR, where the `EXPORT_SCALES`
+  // membership test then falls through to the default scale.
+  define: {
+    devicePixelRatio: "globalThis.devicePixelRatio",
+  },
   build: {
     assetsInlineLimit: 0,
     emptyOutDir: true,
