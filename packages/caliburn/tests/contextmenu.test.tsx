@@ -4,6 +4,10 @@ import { KEYS, STROKE_WIDTH, reseed } from "@excalidraw/common";
 
 import { setDateTimeForTests } from "@excalidraw/common";
 
+import type { ShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
+
+import type { ActionName } from "@excalidraw/excalidraw/actions/types";
+
 import { copiedStyles } from "../src/actions/actionStyles";
 import { Excalidraw } from "../src/index";
 
@@ -23,9 +27,6 @@ import {
   unmountComponent,
   checkpointHistory,
 } from "./test-utils";
-
-import type { ShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
-import type { ActionName } from "@excalidraw/excalidraw/actions/types";
 
 const checkpoint = (name: string) => {
   expect(h.state).toMatchSnapshot(`[${name}] appState`);

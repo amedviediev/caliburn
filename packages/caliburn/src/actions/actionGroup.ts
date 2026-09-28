@@ -30,12 +30,6 @@ import { syncMovedIndices } from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { t } from "@excalidraw/excalidraw/i18n";
-
-import { isSomeElementSelected } from "@excalidraw/excalidraw/scene";
-
-import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
-
 import type {
   ExcalidrawElement,
   ExcalidrawTextElement,

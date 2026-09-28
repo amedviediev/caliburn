@@ -1,8 +1,4 @@
-import {
-  KEYS,
-  MOBILE_ACTION_BUTTON_BG,
-  updateActiveTool,
-} from "@excalidraw/common";
+import { KEYS, updateActiveTool } from "@excalidraw/common";
 
 import { getNonDeletedElements } from "@excalidraw/element";
 import { fixBindingsAfterDeletion } from "@excalidraw/element";
@@ -23,7 +19,6 @@ import {
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { t } from "@excalidraw/excalidraw/i18n";
 import {
   getSelectedElements,
   isSomeElementSelected,

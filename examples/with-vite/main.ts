@@ -1,12 +1,13 @@
 import "@excalidraw/excalidraw/css/app.scss";
 import "@excalidraw/excalidraw/css/styles.scss";
 import "@excalidraw/excalidraw/fonts/fonts.css";
-import "../../packages/caliburn/src/styles.scss";
 
 import { Component, provideZonelessChangeDetection } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 
 import { convertToExcalidrawElements } from "@excalidraw/element";
+
+import "../../packages/caliburn/src/styles.scss";
 
 import { CaliburnEditorComponent } from "../../packages/caliburn/src/index";
 

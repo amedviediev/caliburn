@@ -1,9 +1,4 @@
-import {
-  DEFAULT_GRID_SIZE,
-  KEYS,
-  MOBILE_ACTION_BUTTON_BG,
-  arrayToMap,
-} from "@excalidraw/common";
+import { DEFAULT_GRID_SIZE, KEYS, arrayToMap } from "@excalidraw/common";
 
 import { getNonDeletedElements } from "@excalidraw/element";
 
@@ -19,10 +14,6 @@ import { syncMovedIndices } from "@excalidraw/element";
 import { duplicateElements } from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
-
-import { t } from "@excalidraw/excalidraw/i18n";
-import { isSomeElementSelected } from "@excalidraw/excalidraw/scene";
-import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
 
 import { register } from "./register";
 

@@ -9,6 +9,7 @@ import {
 } from "@excalidraw/common";
 
 import { Excalidraw } from "../src/index";
+
 import { API } from "./helpers/api";
 import { UI } from "./helpers/ui";
 import { render } from "./test-utils";

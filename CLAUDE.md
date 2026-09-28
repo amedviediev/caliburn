@@ -24,9 +24,7 @@ yarn vitest run      # Run all tests
 yarn fix             # Auto-fix formatting and linting issues
 ```
 
-**Never run `yarn test:update` (or any `--update`) against vendored packages'
-`__snapshots__`** — it prunes obsolete snapshot keys, and that churn must
-never be committed.
+**Never run `yarn test:update` (or any `--update`) against vendored packages' `__snapshots__`** — it prunes obsolete snapshot keys, and that churn must never be committed.
 
 ## Architecture Notes
 

@@ -91,7 +91,6 @@ import {
   newElementWith,
   normalizeSVG,
   selectGroupsForSelectedElements,
-  syncInvalidIndices,
   updateBoundElements,
 } from "@excalidraw/element";
 import { pointFrom } from "@excalidraw/math";

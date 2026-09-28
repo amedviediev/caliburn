@@ -1,4 +1,6 @@
 import { writeFileSync } from "node:fs";
+
+import prettier from "prettier";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -133,7 +135,13 @@ ${body}
 };
 `;
 
-writeFileSync(outFile, output);
+// Formatted with the repo's own config, so the lint that checks every
+// TypeScript file passes on generated output too.
+const prettierConfig = await prettier.resolveConfig(outFile);
+writeFileSync(
+  outFile,
+  prettier.format(output, { ...prettierConfig, filepath: outFile }),
+);
 
 console.log(`wrote ${sortedEntries.length} icons to ${outFile}`);
 console.log(

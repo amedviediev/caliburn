@@ -2,14 +2,14 @@ import "@excalidraw/excalidraw/css/app.scss";
 import "@excalidraw/excalidraw/css/styles.scss";
 import "@excalidraw/excalidraw/fonts/fonts.css";
 
-import "../../packages/caliburn/src/styles.scss";
-
-import "./index.scss";
-
 import { provideZonelessChangeDetection } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 
 import polyfill from "@excalidraw/excalidraw/polyfill";
+
+import "../../packages/caliburn/src/styles.scss";
+
+import "./index.scss";
 
 import { CaliburnAppComponent } from "./app.component";
 

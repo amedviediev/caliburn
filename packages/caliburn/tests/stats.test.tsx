@@ -1,5 +1,5 @@
 import { degreesToRadians, pointFrom, pointRotateRads } from "@excalidraw/math";
-import { act, fireEvent, queryByTestId } from "./test-utils";
+
 import React from "react";
 import { vi } from "vitest";
 
@@ -8,6 +8,12 @@ import { setDateTimeForTests, reseed } from "@excalidraw/common";
 import { isInGroup } from "@excalidraw/element";
 
 import { isTextElement } from "@excalidraw/element";
+
+import { getCommonBounds } from "@excalidraw/element";
+
+import { t } from "@excalidraw/excalidraw/i18n";
+
+import * as StaticScene from "@excalidraw/excalidraw/renderer/staticScene";
 
 import type { Degrees } from "@excalidraw/math";
 
@@ -18,11 +24,11 @@ import type {
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 
-import { getCommonBounds } from "@excalidraw/element";
 import { Excalidraw } from "../src/index";
 import { actionGroup } from "../src/actions/actionGroup";
-import { t } from "@excalidraw/excalidraw/i18n";
-import * as StaticScene from "@excalidraw/excalidraw/renderer/staticScene";
+
+import { getStepSizedValue } from "../src/components/stats/utils";
+
 import { API } from "./helpers/api";
 import { Keyboard, Pointer, UI } from "./helpers/ui";
 import { getTextEditor, updateTextEditor } from "./queries/dom";
@@ -33,7 +39,7 @@ import {
   restoreOriginalGetBoundingClientRect,
 } from "./test-utils";
 
-import { getStepSizedValue } from "../src/components/stats/utils";
+import { act, fireEvent, queryByTestId } from "./test-utils";
 
 const { h } = window;
 const mouse = new Pointer("mouse");

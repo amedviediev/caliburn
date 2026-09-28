@@ -9,9 +9,6 @@ import {
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { t } from "@excalidraw/excalidraw/i18n";
-import { getShortcutKey } from "@excalidraw/excalidraw/shortcut";
-
 import { register } from "./register";
 
 export const actionSendBackward = register({

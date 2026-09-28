@@ -19,7 +19,6 @@ import {
   bindBindingElement,
   calculateFixedPointForElbowArrowBinding,
   canBecomePolygon,
-  getBoundTextElement,
   getNonDeletedElements,
   hasStrokeColor,
   isArrowElement,

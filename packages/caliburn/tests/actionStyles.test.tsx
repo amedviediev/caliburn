@@ -6,15 +6,10 @@ import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 import { copiedStyles } from "../src/actions/actionStyles";
 import { Excalidraw } from "../src/index";
+
 import { API } from "./helpers/api";
 import { Keyboard, Pointer, UI } from "./helpers/ui";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  togglePopover,
-} from "./test-utils";
+import { act, fireEvent, render, screen, togglePopover } from "./test-utils";
 
 const { h } = window;
 

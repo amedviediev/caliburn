@@ -1,17 +1,8 @@
-import {
-  KEYS,
-  matchKey,
-  arrayToMap,
-  MOBILE_ACTION_BUTTON_BG,
-} from "@excalidraw/common";
+import { KEYS, matchKey, arrayToMap } from "@excalidraw/common";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { orderByFractionalIndex } from "@excalidraw/element";
-
-import { HistoryChangedEvent } from "@excalidraw/excalidraw/history";
-import { useEmitter } from "@excalidraw/excalidraw/hooks/useEmitter";
-import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { SceneElementsMap } from "@excalidraw/element/types";
 

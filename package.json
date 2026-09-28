@@ -20,6 +20,7 @@
     "@types/chai": "4.3.0",
     "@types/jest": "27.4.0",
     "@types/lodash.throttle": "4.1.7",
+    "@types/prettier": "2.7.3",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
     "@types/socket.io-client": "3.0.0",
