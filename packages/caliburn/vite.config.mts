@@ -137,8 +137,13 @@ export default defineConfig(({ command }) => ({
   // ReferenceError outside a browser. Reading it off `globalThis` is the same
   // value in a browser and `undefined` under SSR, where the `EXPORT_SCALES`
   // membership test then falls through to the default scale.
+  // `reconcile.ts` and `Scene.ts` read `window?.DEBUG_FRACTIONAL_INDICES`, and
+  // optional chaining does not guard an undeclared global, so merging a scene
+  // outside a browser throws a ReferenceError. `globalThis.window` is the same
+  // object in a browser and `undefined` under Node.
   define: {
     devicePixelRatio: "globalThis.devicePixelRatio",
+    window: "globalThis.window",
   },
   build: {
     assetsInlineLimit: 0,

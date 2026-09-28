@@ -187,6 +187,10 @@ test("runtime bundle reads browser-only globals off globalThis", () => {
   // read; a build path that skips that define would silently reintroduce the
   // crash, so gate on the emitted bundle rather than on the config.
   assert.doesNotMatch(javaScript, /(?<![.\w$])devicePixelRatio\b/);
+  // `reconcile.ts` and `Scene.ts` read `window?.DEBUG_FRACTIONAL_INDICES`,
+  // which throws under Node because optional chaining does not guard an
+  // undeclared global, so a server merging scenes crashes on its first call.
+  assert.doesNotMatch(javaScript, /(?<![.\w$])window\b/);
 });
 
 test("every emitted runtime dependency is declared", () => {
