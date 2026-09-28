@@ -31,12 +31,14 @@ const frameworkNeutralOverrides = new Map([
 // reads a deep specifier as a literal path and needs the file extension.
 // Bundlers guess the extension; Node ESM and SSR do not, so rewrite the
 // specifier on the way out rather than leaving consumers to discover it.
-const extensionlessDeepImports = [
-  "points-on-curve/lib/curve-to-bezier",
-  "roughjs/bin/generator",
-  "roughjs/bin/math",
-  "roughjs/bin/rough",
-];
+const extensionlessDeepImports = ["points-on-curve/lib/curve-to-bezier"];
+// roughjs's own modules import each other without extensions (`./canvas`),
+// which Node ESM refuses however the specifier into it is spelled. Bundling it,
+// with the dependencies it imports at the versions it pins, is what lets a
+// server or a worker load the package at all.
+const bundledThirdParty = /^roughjs(\/|$)/;
+const insideBundledThirdParty =
+  /[\\/]node_modules[\\/](roughjs|points-on-curve|points-on-path|path-data-parser|hachure-fill)[\\/]/;
 // Excalidraw's core packages are consumed from this checkout's sources rather
 // than npm, where they exist only as SHA-suffixed prereleases. Bundling them
 // keeps the published package installable.
@@ -156,10 +158,15 @@ export default defineConfig(({ command }) => ({
         ].map(([name, source]) => [name, path.join(projectDir, source)]),
       ),
       preserveEntrySignatures: "strict",
-      external: (id) => {
+      external: (id, importer) => {
         // Rollup consults `external` before `resolveId`, so React has to be
         // declared internal for the stub above to get a chance to replace it.
-        if (bundledWorkspacePackages.test(id) || id === "react") {
+        if (
+          bundledWorkspacePackages.test(id) ||
+          bundledThirdParty.test(id) ||
+          id === "react" ||
+          (importer !== undefined && insideBundledThirdParty.test(importer))
+        ) {
           return false;
         }
         return !id.startsWith(".") && !path.isAbsolute(id);

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distRoot = join(packageRoot, "dist");
@@ -192,6 +192,23 @@ test("runtime bundle reads browser-only globals off globalThis", () => {
   // undeclared global, so a server merging scenes crashes on its first call.
   assert.doesNotMatch(javaScript, /(?<![.\w$])window\b/);
 });
+
+// A server saving scenes and a worker merging a canvas nobody has open reach
+// these entries with no browser around them. The file-handling entries read
+// `document` as they load and are left to the browser.
+const headlessEntries = [
+  "data/reconcile",
+  "data/restore",
+  "element/index",
+  "common/index",
+  "math/index",
+];
+
+for (const entry of headlessEntries) {
+  test(`${entry} loads under plain Node`, async () => {
+    await import(pathToFileURL(join(distRoot, `${entry}.js`)).href);
+  });
+}
 
 test("every emitted runtime dependency is declared", () => {
   const javaScriptFiles = walkFiles(distRoot, ".js");
